@@ -344,6 +344,26 @@ async function init() {
   if (typeof maybeRunChapterCleanup === 'function') {
     setTimeout(() => { maybeRunChapterCleanup().catch(e => console.warn('chapterCleanup:', e)); }, 4000);
   }
+  // V4 feat (사용자 명시 2026-05-26 ultrathink): forceAnalyze batch polling — pending 있으면 init 시 + 주기적 폴링.
+  //   submit 후 5min / 15min / 30min 폴링 setTimeout — chapter cleanup polling 패턴 동일.
+  if (typeof _resumeForceAnalyzeBatch === 'function') {
+    setTimeout(() => {
+      if (state.pendingForceAnalyzeBatch && state.pendingForceAnalyzeBatch.batch_id) {
+        _resumeForceAnalyzeBatch().catch(e => console.warn('forceAnalyze batch resume:', e));
+        const _bid = state.pendingForceAnalyzeBatch.batch_id;
+        if (window._forceAnalyzeBatchPollingFor !== _bid) {
+          window._forceAnalyzeBatchPollingFor = _bid;
+          [300000, 900000, 1800000].forEach(ms => {
+            setTimeout(() => {
+              if (state.pendingForceAnalyzeBatch && state.pendingForceAnalyzeBatch.batch_id === _bid) {
+                _resumeForceAnalyzeBatch().catch(e => console.warn('forceAnalyze batch polling:', e));
+              }
+            }, ms);
+          });
+        }
+      }
+    }, 5000);
+  }
   // 사용자 보고 2026-05-12 ultrathink: init 시 _billingCache 자동 populating.
   //   옛: refreshBillingStatus 가 settings 화면 진입 시만 호출 → settings 안 들른 사용자 (예: 새 계정 + 결제 직후 chat 로 진입) 의 _billingCache 영원히 비어있음.
   //   영향: _maybeAutoForceAnalyzeFreeTier (chat 3턴마다) 가 isPaid=false 로 판정 → paid 구독자도 매 3턴 자동 분석 trigger.

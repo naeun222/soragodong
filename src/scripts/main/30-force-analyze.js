@@ -1,12 +1,16 @@
 // ═══════════════════════════════════════════════════════════════
-// FORCE ANALYZE
+// FORCE ANALYZE — batch 전환 (사용자 명시 2026-05-26 ultrathink)
 // ═══════════════════════════════════════════════════════════════
+// 옛 (~v4.0.239): callAnthropic inline 즉시 await. 사용자 spinner 1-2분.
+// 신 (v4.0.240+): Anthropic Message Batches API 50% 할인 + 백그라운드 polling.
+//   submit: forceAnalyze(opts) — batch 제출 후 state.pendingForceAnalyzeBatch 저장 + early return.
+//   poll: _resumeForceAnalyzeBatch() — init 시 + 4xx 즉시 timeout + 24h hard cap. ended 면 _processForceAnalyzeResult.
+//   merge: _processForceAnalyzeResult(text, isAuto) — 옛 inline merge 로직 그대로 (parse + traits/values/patterns/cf + dedup nudge + semantic_dedup hook).
 // 사용자 요청 2026-04-30: 일주일마다 자동 실행. 수동 호출 (개발자 도구 버튼)도 같은 함수.
-// opts.auto = true 시 confirm modal X, 토스트 silent ("일주일 분석 자동 실행됨").
+// opts.auto = true 시 confirm modal X, 토스트 silent.
 async function forceAnalyze(opts) {
   const isAuto = !!(opts && opts.auto);
   if (!_canAI()) {
-    // 사용자 보고 2026-04-30: Phase C 후 키 모델 폐기 — 로그인이 게이트.
     if (!isAuto) alert('로그인 안 되어있어 — 다시 로그인 해줘.');
     return;
   }
@@ -14,10 +18,19 @@ async function forceAnalyze(opts) {
     if (!isAuto) alert('분석하려면 체크인이나 대화가 최소 3개 이상 쌓여야 해.');
     return;
   }
+  // V4 feat (사용자 명시 2026-05-26 ultrathink): batch 진행 중 재제출 차단 — pending batch 한 개만.
+  if (state.pendingForceAnalyzeBatch && state.pendingForceAnalyzeBatch.batch_id) {
+    if (!isAuto) {
+      const submittedMs = state.pendingForceAnalyzeBatch.submitted_at || Date.now();
+      const elapsedMin = Math.floor((Date.now() - submittedMs) / 60000);
+      alert(`분석 진행 중 (${elapsedMin}분 경과). 결과 받으면 토스트로 알려줄게.`);
+    }
+    return;
+  }
   if (!isAuto) {
     const yes = await showConfirmModal({
       title: '나에 대한 모델 업데이트',
-      message: '지금까지의 데이터를 분석해서\n특성·가치·패턴을 새로 정리할게.\n1-2분 걸려.',
+      message: '지금까지의 데이터를 분석해서\n특성·가치·패턴을 새로 정리할게.\nbatch (50% 할인) 라 5-30분 후 결과 토스트.',
       okLabel: '분석 시작',
       cancelLabel: '나중에'
     });
@@ -26,7 +39,6 @@ async function forceAnalyze(opts) {
 
   setSyncStatus('syncing');
   try {
-    // V4-fix v3 (사용자 보고 — API 429): dataDump 크기 대폭 줄임 (token 한계 + rate limit)
     const sliceEntry = (e) => ({
       date: e.date, mood: e.mood, vitality: e.vitality,
       sleep: e.sleepStart && e.sleepEnd ? `${e.sleepStart}-${e.sleepEnd}` : null,
@@ -39,11 +51,9 @@ async function forceAnalyze(opts) {
       chatMessages: state.chatMessages.filter(m => !m.typing && !m.error).slice(-25).map(m => ({
         role: m.role, content: (m.content || '').slice(0, 200)
       })),
-      // 사용자 명시 2026-05-06: 메모 type 은 강제 분석 input 에서 제외 (순수 메모)
       archive: (state.archive || []).filter(a => !a._deleted && a.type !== 'memo' && !a._excludeFromAI).slice(0, 15).map(a => ({
         type: a.type, headline: a.headline, body: (a.body || '').slice(0, 100)
       })),
-      // 사용자 명시 2026-05-11: dismissed 미션은 AI substrate 에서 제외 (사용자 '치워둠' 의도 = 분석에서도 빼).
       missions: (state.missions || []).filter(m => m && m.status !== 'dismissed').slice(-15).map(m => ({
         title: m.title, status: m.status, attemptStatus: m.attemptStatus
       })),
@@ -51,9 +61,6 @@ async function forceAnalyze(opts) {
         topic: d.topic || d.title, status: d.status
       })),
       activeModes: Object.keys(state.modes || {}).filter(k => state.modes[k]),
-      // 사용자 명시 2026-05-26 ultrathink: dedup 인플레 잡기 — 기존 항목 이름 AI 한테 전달.
-      //   백엔드 프롬프트가 "이미 등록된 항목과 의미상 같으면 새로 만들지 말고 기존 이름 그대로 반환" 지시 사용.
-      //   slice(80) 토큰 가드. confidence DESC 정렬 후 슬라이스 — 강한 신호 우선 노출.
       existingTraitNames: (state.traits || [])
         .filter(t => !t._deleted)
         .sort((a, b) => (b.confidence || 0) - (a.confidence || 0))
@@ -66,49 +73,196 @@ async function forceAnalyze(opts) {
         .filter(p => !p._deleted)
         .sort((a, b) => (b.confidence || 0) - (a.confidence || 0))
         .map(p => p.name).filter(Boolean).slice(0, 80),
-      // V4 feat (사용자 명시 2026-05-26 ultrathink): 핵심 작동 패턴 클러스터 (traits ∪ patterns) 합본 — AI 가 cross-cluster 인식.
       existingOperatingPatternNames: [
         ...(state.traits || []).filter(t => !t._deleted),
         ...(state.patterns || []).filter(p => !p._deleted)
       ].sort((a, b) => (b.confidence || 0) - (a.confidence || 0))
         .map(x => x.name).filter(Boolean).slice(0, 100)
     };
-    // 사용자 명시 2026-05-11 ultrathink: prompt template backend 이전 — buildForceAnalyze 가 합성.
     const _dataDumpJson = JSON.stringify(dataDump, null, 2);
-    const response = await callAnthropic({
-      _endpoint: 'analyze_4stage',
-      _userContentType: 'force_analyze',
-      // 사용자 명시 2026-05-26 ultrathink: backend [이미 등록된 항목] 블록 합성용 list — dataDump 안 중복이지만 explicit 강조.
-      _vars: {
-        dataDumpJson: _dataDumpJson,
-        existingTraitNames: dataDump.existingTraitNames,
-        existingValueNames: dataDump.existingValueNames,
-        existingPatternNames: dataDump.existingPatternNames,
-        // V4 feat (사용자 명시 2026-05-26 ultrathink): 핵심 작동 패턴 클러스터 합본.
-        existingOperatingPatternNames: dataDump.existingOperatingPatternNames
-      },
-      model: 'claude-opus-4-7',
-      max_tokens: 2500,
-      messages: [{ role: 'user', content: '' }]
+    // V4 feat (사용자 명시 2026-05-26 ultrathink): batch submit. chat-batch.ts 가 applyEndpointSystem / applyUserContentTemplate 동일 적용.
+    //   _endpoint 는 backend 가 strip (Anthropic batch API strict reject), system / user content 는 backend 합성 후 forward.
+    const submitResp = await _authedFetch('/api/chat-batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') },
+      body: JSON.stringify({
+        action: 'submit',
+        requests: [{
+          custom_id: 'force_analyze',
+          params: {
+            model: 'claude-opus-4-7',
+            max_tokens: 2500,
+            messages: [{ role: 'user', content: '' }],
+            _endpoint: 'analyze_4stage',
+            _userContentType: 'force_analyze',
+            _vars: {
+              dataDumpJson: _dataDumpJson,
+              existingTraitNames: dataDump.existingTraitNames,
+              existingValueNames: dataDump.existingValueNames,
+              existingPatternNames: dataDump.existingPatternNames,
+              existingOperatingPatternNames: dataDump.existingOperatingPatternNames
+            }
+          }
+        }]
+      })
     });
-    if (!response.ok) {
-      if (response.status === 429) throw new Error('API 429 — Rate limit. 1-2분 후 다시.');
-      if (response.status === 413) throw new Error('데이터 너무 큼. testerMode OFF 후 다시.');
-      throw new Error('API ' + response.status);
+    if (!submitResp.ok) {
+      const errText = await submitResp.text().catch(() => '');
+      if (submitResp.status === 402) throw new Error('잔액 부족 — 충전 후 다시.');
+      if (submitResp.status === 429) throw new Error('Rate limit — 1-2분 후 다시.');
+      throw new Error('batch submit ' + submitResp.status + (errText ? ' — ' + errText.slice(0, 200) : ''));
     }
-    const result = await response.json();
-    const text = result.content[0].text;
-    // V4-fix v3 (사용자 보고): code block fence 제거 + truncated 응답 복구
-    let cleaned = text.replace(/^```\w*\s*/m, '').replace(/\s*```\s*$/m, '').trim();
+    const submitData = await submitResp.json();
+    if (!submitData || !submitData.id) {
+      throw new Error('batch_id 없음: ' + JSON.stringify(submitData).slice(0, 200));
+    }
+    state.pendingForceAnalyzeBatch = {
+      batch_id: submitData.id,
+      submitted_at: Date.now(),
+      isAuto
+    };
+    saveState();
+    setSyncStatus('online');
+    if (!isAuto) {
+      showToast('🔍 분석 제출됨 — 결과 준비되면 토스트로 알려줄게 (보통 5-30분).');
+    } else {
+      console.log('[force analyze auto] batch submitted:', submitData.id);
+    }
+    // V4 feat (사용자 명시 2026-05-26 ultrathink): submit 직후 같은 session 폴링 트리거 — 사용자가 새로고침 X 5-30분 후 자동 결과.
+    //   init-fn.js 의 setTimeout chain 과 동일 패턴. 중복 방지: window._forceAnalyzeBatchPollingFor 가드.
+    const _newBid = submitData.id;
+    if (window._forceAnalyzeBatchPollingFor !== _newBid) {
+      window._forceAnalyzeBatchPollingFor = _newBid;
+      [300000, 900000, 1800000].forEach(ms => {
+        setTimeout(() => {
+          if (state.pendingForceAnalyzeBatch && state.pendingForceAnalyzeBatch.batch_id === _newBid) {
+            _resumeForceAnalyzeBatch().catch(e => console.warn('[force-analyze batch session polling]', e));
+          }
+        }, ms);
+      });
+    }
+  } catch (err) {
+    console.error(err);
+    if (!isAuto) alert('분석 실패: ' + err.message);
+    else console.warn('[force analyze auto] submit 실패:', err);
+    setSyncStatus('error');
+  }
+}
+
+// V4 feat (사용자 명시 2026-05-26 ultrathink): forceAnalyze batch polling — _resumePendingBatch 와 동일 패턴.
+//   init 시 호출 + 24h hard cap + 4xx 즉시 timeout (404/410 = retention 끝) + 5xx fail count 누적 3회.
+async function _resumeForceAnalyzeBatch() {
+  const pb = state.pendingForceAnalyzeBatch;
+  if (!pb || !pb.batch_id) return;
+
+  // 24h hard cap — retention 끝났을 시 영구 stuck 회피.
+  if (pb.submitted_at && Date.now() - pb.submitted_at > 24 * 3600 * 1000) {
+    console.warn('[force-analyze batch] 24h hard cap — timeout');
+    _timeoutForceAnalyzeBatch();
+    return;
+  }
+
+  try {
+    const statusResp = await _authedFetch('/api/chat-batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') },
+      body: JSON.stringify({ action: 'status', batch_id: pb.batch_id })
+    });
+    if (!statusResp.ok) {
+      console.warn('[force-analyze batch status] fail:', statusResp.status);
+      if (statusResp.status === 404 || statusResp.status === 410) {
+        console.warn('[force-analyze batch] retention 끝, 즉시 timeout');
+        _timeoutForceAnalyzeBatch();
+        return;
+      }
+      state.pendingForceAnalyzeBatch.statusFailCount = (state.pendingForceAnalyzeBatch.statusFailCount || 0) + 1;
+      if (state.pendingForceAnalyzeBatch.statusFailCount >= 3) {
+        console.warn('[force-analyze batch] status fail 3회 이상 — timeout');
+        _timeoutForceAnalyzeBatch();
+        return;
+      }
+      saveState();
+      return;
+    }
+    const status = await statusResp.json();
+    if (state.pendingForceAnalyzeBatch.statusFailCount) delete state.pendingForceAnalyzeBatch.statusFailCount;
+    if (status.processing_status !== 'ended') {
+      console.log(`[force-analyze batch] still processing — ${JSON.stringify(status.request_counts || {})}`);
+      const submittedMs = state.pendingForceAnalyzeBatch.submitted_at || 0;
+      if (submittedMs > 0 && Date.now() - submittedMs > 6 * 3600 * 1000) {
+        console.warn('[force-analyze batch] 6h+ not ended — timeout');
+        _timeoutForceAnalyzeBatch();
+      }
+      return;
+    }
+
+    const resultsResp = await _authedFetch('/api/chat-batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') },
+      body: JSON.stringify({ action: 'results', batch_id: pb.batch_id })
+    });
+    if (!resultsResp.ok) {
+      console.warn('[force-analyze batch results] fail:', resultsResp.status);
+      state.pendingForceAnalyzeBatch.resultsFailCount = (state.pendingForceAnalyzeBatch.resultsFailCount || 0) + 1;
+      if (state.pendingForceAnalyzeBatch.resultsFailCount >= 3) {
+        console.warn('[force-analyze batch] results fail 3회 이상 — timeout');
+        _timeoutForceAnalyzeBatch();
+        return;
+      }
+      saveState();
+      return;
+    }
+    const data = await resultsResp.json();
+    if (!data.ok || !Array.isArray(data.results)) {
+      console.warn('[force-analyze batch results] invalid:', data);
+      state.pendingForceAnalyzeBatch.dataInvalidCount = (state.pendingForceAnalyzeBatch.dataInvalidCount || 0) + 1;
+      if (state.pendingForceAnalyzeBatch.dataInvalidCount >= 3) {
+        console.warn('[force-analyze batch] results invalid 3회 이상 — timeout');
+        _timeoutForceAnalyzeBatch();
+        return;
+      }
+      saveState();
+      return;
+    }
+
+    const isAutoSaved = !!pb.isAuto;
+    const r = (data.results || []).find(x => x && x.custom_id === 'force_analyze') || data.results[0];
+    if (!r || r?.result?.type !== 'succeeded') {
+      console.warn('[force-analyze batch] result not succeeded:', r?.result?.type);
+      _timeoutForceAnalyzeBatch();
+      return;
+    }
+    const msg = r.result.message;
+    const text = (msg?.content?.[0]?.text) || '';
+    state.pendingForceAnalyzeBatch = null;
+    saveState();
+    await _processForceAnalyzeResult(text, isAutoSaved);
+  } catch (e) {
+    console.warn('[force-analyze batch] throw:', e);
+  }
+}
+
+function _timeoutForceAnalyzeBatch() {
+  const wasAuto = !!(state.pendingForceAnalyzeBatch && state.pendingForceAnalyzeBatch.isAuto);
+  state.pendingForceAnalyzeBatch = null;
+  saveState();
+  setSyncStatus('error');
+  if (!wasAuto && typeof showToast === 'function') {
+    showToast('분석 batch 실패 — 다시 시도해줘.');
+  }
+}
+
+// merge 로직 — 옛 inline forceAnalyze 의 parse + traits/values/patterns/cf 갱신 + dedup nudge + semantic_dedup hook.
+async function _processForceAnalyzeResult(text, isAuto) {
+  try {
+    let cleaned = String(text || '').replace(/^```\w*\s*/m, '').replace(/\s*```\s*$/m, '').trim();
     const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error('JSON 파싱 실패');
     let analysis;
     try {
       analysis = JSON.parse(jsonMatch[0]);
     } catch (parseErr) {
-      // V4-fix v3 (사용자 보고 - 두 번째): 더 robust 복구 — array 중간 truncate도 처리
       const partial = jsonMatch[0];
-      // 1. 마지막 완전 element 위치 (depth=0, bracket=0인 마지막 } 또는 ])
       let braceDepth = 0, bracketDepth = 0, lastFullClose = -1;
       let inStr = false, escNext = false;
       for (let i = 0; i < partial.length; i++) {
@@ -122,22 +276,17 @@ async function forceAnalyze(opts) {
         else if (c === '[') bracketDepth++;
         else if (c === ']') bracketDepth--;
       }
-      // 시도 1: 마지막 } 위치까지
       if (lastFullClose > 0) {
         try { analysis = JSON.parse(partial.slice(0, lastFullClose + 1)); }
         catch (e2) {
-          // 시도 2: trailing comma 제거 + array/object 강제 닫기
           let attempt = partial.slice(0, lastFullClose + 1);
-          attempt = attempt.replace(/,(\s*[}\]])/g, '$1');  // trailing comma
+          attempt = attempt.replace(/,(\s*[}\]])/g, '$1');
           try { analysis = JSON.parse(attempt); }
           catch (e3) {
-            // 시도 3: open array/brace 강제 닫기 — incomplete JSON 강제 마무리
             let forced = partial.slice();
             forced = forced.replace(/,(\s*[}\]])/g, '$1');
-            // 마지막 incomplete element 잘라내기 (마지막 ',' 또는 '{' 또는 '[' 이후 자르기)
             const lastComma = Math.max(forced.lastIndexOf(','), forced.lastIndexOf('{'), forced.lastIndexOf('['));
             if (lastComma > 0) forced = forced.slice(0, lastComma);
-            // 닫는 괄호 보충
             let openBrace = 0, openBracket = 0; let inS = false; let escN = false;
             for (let i = 0; i < forced.length; i++) {
               const c = forced[i];
@@ -163,30 +312,20 @@ async function forceAnalyze(opts) {
       }
     }
 
-    // 사용자 명시 2026-05-09 (Phase 2 source 3): 분석 직전 prev id 캡처 — 새 항목 detect 용.
     const _rcPrevIds = {
       traits: new Set((state.traits || []).map(x => x.id)),
       values: new Set((state.values || []).map(x => x.id)),
       patterns: new Set((state.patterns || []).map(x => x.id)),
     };
 
-    // V3.13.x: 덮어씌움 X. 추가 + 중복은 합치기 (evidence_count↑, confidence/description 더 좋은 거 채택)
     const mergeModelItem = (existing, incoming) => {
       existing.evidence_count = (existing.evidence_count || 1) + 1;
       if ((incoming.confidence || 0) > (existing.confidence || 0)) existing.confidence = incoming.confidence;
       if (incoming.description && (!existing.description || incoming.description.length > existing.description.length)) {
         existing.description = incoming.description;
       }
-      // user_verified는 그대로 유지 (사용자가 검증한 건 안 건드림)
     };
-    // 사용자 명시 2026-05-08 ultrathink: 0.6 → 0.4 완화. 너무 빡빡해 새 발견 적었음.
-    //   "다음날 나에 대해 새로운 소식 보는 재미" 의도 — 약한 신호도 가설로 등록 후 evidence_count 로 강화.
-    // 사용자 명시 2026-05-26 ultrathink: 0.4 → 0.65. 옛 정책 "약한 신호도 가설로 등록" 은
-    //   dedup 안 잡히는 채로 별개 카드가 됨 = 인플레 원인. 새 정책 — 약한 신호는 fuzzy fallback 으로
-    //   기존 카드 evidence ↑ 만 시도. 매칭 없으면 drop.
     const NEW_THRESHOLD = 0.65;
-    // 사용자 명시 2026-05-26 ultrathink: similarText 못 잡는 fuzzy 의미 중복 → Levenshtein 폴백.
-    //   _modelSimilarity (18a-model-dedup.js) 재사용. 0.6 = 약한 매칭 — 새 카드 만들지 않을 정도.
     const FUZZY_MERGE_THRESHOLD = 0.6;
     const _findFuzzyMatch = (arr, name) => {
       if (!arr || !name || typeof _modelSimilarity !== 'function') return null;
@@ -196,8 +335,6 @@ async function forceAnalyze(opts) {
       }
       return null;
     };
-    // V4 feat (사용자 명시 2026-05-26 ultrathink): cross-cluster lookup — 핵심 작동 패턴 클러스터 (traits ∪ patterns) 통합 dedup.
-    //   AI 가 같은 의미를 trait 으로 출력 vs pattern 으로 출력 시 양쪽 array 모두 검사. 매칭 시 existing 항목 evidence ↑ (둘 다 새로 만들지 X).
     if (analysis.traits) {
       analysis.traits.forEach(t => {
         let exist = state.traits.find(e => similarText(e.name, t.name))
@@ -239,14 +376,9 @@ async function forceAnalyze(opts) {
       });
     }
     if (analysis.case_formulation) {
-      // V3.13.x: case_formulation도 덮어씌움 X. 추가 + similarText로 중복 합치기
       const cf = state.caseFormulation;
       cf.version = (cf.version || 0) + 1;
       cf.lastUpdated = new Date().toISOString();
-      // V4 fix (사용자 보고 2026-05-26 ultrathink): existing 에 시드/V3 형태 object ({text, confidence, ...}) 잔존 가능 → unwrap 후 비교.
-      //   원인: 26-test-tools/02-seed-v4-data.js:853 의 testerMode seed 가 cf.problems/mechanisms/strengths 를 object array 로 push.
-      //   force-analyze 의 incoming 은 string 가정 → 기존 object e 와 새 string item 비교 시 similarText 가드 trip → warn 폭주.
-      //   render (cfBullet) / system-prompt (_cfTrunc) 는 이미 unwrap 지원하므로 여기만 맞추면 hybrid 안전.
       const _cfUnwrap = (e) => (typeof e === 'string') ? e : (e && (e.text || e.name)) || '';
       const mergeStrings = (existing, incoming, crossArr) => {
         const out = [...(existing || [])];
@@ -254,19 +386,15 @@ async function forceAnalyze(opts) {
         (incoming || []).forEach(item => {
           if (!item || typeof item !== 'string') return;
           if (out.some(e => similarText(_cfUnwrap(e), item))) return;
-          // V4 feat (사용자 명시 2026-05-26 ultrathink): cross-cluster — 같은 클러스터 다른 array 에 이미 있으면 skip.
           if (cross.some(e => similarText(_cfUnwrap(e), item))) return;
           out.push(item);
         });
         return out;
       };
       cf.problems = mergeStrings(cf.problems, analysis.case_formulation.problems);
-      // V4 feat (사용자 명시 2026-05-26 ultrathink): 자기조절 도구 클러스터 (strengths ∪ mechanisms) 통합 dedup.
-      //   strengths 먼저 처리 (사용자 표현 "강점 = 작동하는 도구" — 상위 개념). mechanisms 처리 시 갱신된 strengths 와 cross-check.
       cf.strengths = mergeStrings(cf.strengths, analysis.case_formulation.strengths, cf.mechanisms);
       cf.mechanisms = mergeStrings(cf.mechanisms, analysis.case_formulation.mechanisms, cf.strengths);
     }
-    // 사용자 명시 2026-05-09 (Phase 2 source 3): 새 항목 stash → 회전 카드 '새로 본 너' source.
     try {
       if (!state.rotatingCardState) state.rotatingCardState = {};
       if (!Array.isArray(state.rotatingCardState.newAnalysisItems)) state.rotatingCardState.newAnalysisItems = [];
@@ -286,7 +414,6 @@ async function forceAnalyze(opts) {
         if (!p.id || _rcPrevIds.patterns.has(p.id) || _rcExistingIds.has(p.id)) return;
         _rcStash.push({ kind: 'pattern', id: p.id, name: p.name || '', description: _rcDescTrim(p.description || ''), detectedAt: _rcNow });
       });
-      // 14일 지난 stash 자동 만료
       const _rcCutoff = Date.now() - 14 * 86400000;
       state.rotatingCardState.newAnalysisItems = _rcStash.filter(it =>
         it.detectedAt && new Date(it.detectedAt).getTime() > _rcCutoff
@@ -295,8 +422,8 @@ async function forceAnalyze(opts) {
 
     state.lastForceAnalyzeAt = new Date().toISOString();
     saveState();
-    renderModel(); renderModelPreview();
-    // 사용자 명시 2026-05-26 ultrathink: 카드 총량 100+ 시 dedup nudge — 월 1회만.
+    if (typeof renderModel === 'function') renderModel();
+    if (typeof renderModelPreview === 'function') renderModelPreview();
     try {
       const _totalCards = (state.traits || []).length
                         + (state.values || []).length
@@ -305,17 +432,15 @@ async function forceAnalyze(opts) {
       if (_totalCards >= 100 && state._dedupNudgeShownMonth !== _monthKey) {
         state._dedupNudgeShownMonth = _monthKey;
         saveState();
-        // showToast 가 silent toast 시간 후 dismiss. 사용자 인지 — 나 탭 🧹 버튼.
         if (typeof showToast === 'function') {
           showToast(`너에 대한 카드 ${_totalCards}장 쌓였어. 정리해볼래? 나 탭 🧹`);
         }
       }
     } catch (e) { console.warn('[dedup nudge]', e); }
     setSyncStatus('online');
-    showToast(isAuto ? '🔍 일주일 모델 분석 자동 완료 ✦' : '분석 완료 ✦');
-    // V4 feat (사용자 명시 2026-05-26 ultrathink): 일요일 자동 forceAnalyze 끝나면 빗자루 의미 dedup 도 자동 호출.
-    //   별도 7일 cooldown — forceAnalyze 가 매주 자동이라 자연 cadence. 결과는 다음 빗자루 모달 열 때 자동 노출.
-    //   manual 호출은 빗자루 모달 "🔮 더 깊이 찾기" 버튼 (24h cooldown).
+    if (typeof showToast === 'function') {
+      showToast(isAuto ? '🔍 일주일 모델 분석 자동 완료 ✦' : '🔍 분석 완료 ✦ (나 탭 확인)');
+    }
     if (isAuto && typeof runSemanticDedup === 'function') {
       try {
         const _sd = await runSemanticDedup({ auto: true });
@@ -327,9 +452,10 @@ async function forceAnalyze(opts) {
       } catch (e) { console.warn('[semantic_dedup auto]', e); }
     }
   } catch (err) {
-    console.error(err);
-    if (!isAuto) alert('분석 실패: ' + err.message);
-    else console.warn('[force analyze auto] 실패:', err);
+    console.error('[force-analyze batch result] processing 실패:', err);
+    if (!isAuto && typeof showToast === 'function') {
+      showToast('분석 결과 처리 실패: ' + (err.message || '?'));
+    }
     setSyncStatus('error');
   }
 }
