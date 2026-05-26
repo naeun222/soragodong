@@ -1,1 +1,1 @@
-v4.0.244-pending-cleanup-marker-migration
+v4.0.245-cf-object-shape

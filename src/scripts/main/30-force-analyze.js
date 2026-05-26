@@ -386,11 +386,21 @@ async function _processForceAnalyzeResult(text, isAuto) {
       const mergeStrings = (existing, incoming, crossArr) => {
         const out = [...(existing || [])];
         const cross = Array.isArray(crossArr) ? crossArr : [];
+        const _now = new Date().toISOString();
         (incoming || []).forEach(item => {
           if (!item || typeof item !== 'string') return;
-          if (out.some(e => similarText(_cfUnwrap(e), item))) return;
-          if (cross.some(e => similarText(_cfUnwrap(e), item))) return;
-          out.push(item);
+          const trimmed = item.trim();
+          if (!trimmed) return;
+          if (out.some(e => similarText(_cfUnwrap(e), trimmed))) return;
+          if (cross.some(e => similarText(_cfUnwrap(e), trimmed))) return;
+          // 사용자 명시 2026-05-26 ultrathink: cf 5차원 객체 통일 — P2/시드와 같은 형태.
+          out.push({
+            text: trimmed,
+            confidence: 0.5,
+            evidence_count: 1,
+            user_verified: false,
+            created_at: _now
+          });
         });
         return out;
       };

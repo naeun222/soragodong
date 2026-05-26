@@ -244,6 +244,11 @@ async function init() {
     }
   } catch (e) { console.warn('[VB022 unlock re-eval]:', e); }
 
+  // V4 (사용자 명시 2026-05-26 ultrathink): cf 5차원 객체 형식 통일 — 옛 string 항목 1회 마이그.
+  //   P1 (extractAndApplyInsightToModel) / P3 (force-analyze mergeStrings) 옛 코드가 string push 해서
+  //   사용자 cf array 안에 string + 객체 mixed 잔존. 코드 fix 후 init 1회 변환.
+  try { _migrateCaseFormulationToObjectShape(); } catch (e) { console.warn('[cf shape migration]:', e); }
+
   // 사용자 보고 2026-05-10: 월간 리뷰 'AI 핵심 통찰 요약 받기' = '리뷰 못 찾음' 버그.
   //   root cause: 옛 review 가 id 필드 없이 push 됨 (id 박는 fix 사용자 보고 2026-05-08 이후) → onclick 의 review.id || '' = '' → 매칭 X.
   //   fix: id 누락 review 자동 backfill (init 1회).
@@ -532,5 +537,47 @@ async function init() {
       } catch {}
     }
   } catch (e) { console.warn('[hookTrigger parse]', e); }
+}
+
+// V4 (사용자 명시 2026-05-26 ultrathink): cf 5차원 객체 형식 통일 — 옛 string 항목 1회 마이그.
+//   P1 (extractAndApplyInsightToModel) / P3 (force-analyze mergeStrings) 옛 코드가 string push 해서
+//   사용자 cf array 안에 string + 객체 mixed 잔존. 코드 fix 후 init 1회 변환.
+function _migrateCaseFormulationToObjectShape() {
+  const cf = state && state.caseFormulation;
+  if (!cf || typeof cf !== 'object') return;
+  const _now = new Date().toISOString();
+  let _changed = false;
+  ['problems', 'mechanisms', 'strengths', 'goals', 'growth'].forEach(b => {
+    if (!Array.isArray(cf[b])) return;
+    cf[b] = cf[b].map(x => {
+      if (typeof x === 'string') {
+        _changed = true;
+        return {
+          text: x,
+          confidence: 0.5,
+          evidence_count: 1,
+          user_verified: false,
+          created_at: _now
+        };
+      }
+      return x;
+    });
+  });
+  if (cf.unverified && typeof cf.unverified === 'object') {
+    ['problems', 'mechanisms', 'strengths', 'goals', 'growth'].forEach(b => {
+      if (!Array.isArray(cf.unverified[b])) return;
+      cf.unverified[b] = cf.unverified[b].map(x => {
+        if (typeof x === 'string') {
+          _changed = true;
+          return { text: x, addedAt: _now };
+        }
+        return x;
+      });
+    });
+  }
+  if (_changed) {
+    console.log('[cf shape migration] string → 객체 변환 완료');
+    try { saveState(); } catch {}
+  }
 }
 

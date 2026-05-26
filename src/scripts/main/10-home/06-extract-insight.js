@@ -2,15 +2,16 @@
     if (!_canAI()) return;
     if (!insightText || typeof insightText !== 'string') return;
     const cleanInsight = insightText.trim();
-    if (cleanInsight.length < 20) return;  // 너무 짧으면 추출 가치 X
+    if (cleanInsight.length < 20) return;
 
-    // 사용자 명시 2026-05-11 ultrathink: prompt template backend 이전 — buildChapterInsight 가 합성.
+    // 사용자 명시 2026-05-26 ultrathink: cf 5차원 객체 통일 — _processExtractChapterAnalysis 재사용.
+    //   옛: traits/values/patterns/cf 자체 처리부 (중복) + string push.
+    //   새: opts (source / threshold / fuzzyMerge) 로 정책 전달 + 객체 push 자동.
     const resp = await callAnthropic({
       _endpoint: 'extract_chapter',
       _userContentType: 'chapter_insight',
       _vars: { source, userMsg: userMsg || '', cleanInsight },
-      // 사용자 요청 2026-04-30 (재조정): 깨달음 버튼 ~10/일 자주 호출 → "자주 안 하는 거 = Opus" 원칙 따라 sonnet 복원.
-      // 정확도는 confidence 0.5 threshold + user_verified ✓ 컨펌 흐름으로 보호.
+      // 사용자 요청 2026-04-30 (재조정): 깨달음 버튼 ~10/일 자주 호출 → sonnet.
       model: 'claude-sonnet-4-6',
       max_tokens: 700,
       messages: [{ role: 'user', content: '' }]
@@ -24,152 +25,14 @@
     try { analysis = JSON.parse(jm[0]); } catch { return; }
     if (!analysis || typeof analysis !== 'object') return;
 
-    // 사용자 요청 2026-04-29: "임시" 대화도 깊이 있는 내용 → 메인 chat과 동일 0.5 threshold.
-    // unverified 마킹은 유지 → 사용자 ✓ 컨펌 흐름.
-    // 사용자 명시 2026-05-26 ultrathink: 0.5 → 0.65. 옛 코멘트 "약한 신호 unverified pool" 의도는
-    //   fuzzy 폴백으로 대체 — 약한 신호 → 기존 카드 evidence ↑ 만. 새 카드 X.
-    const THRESHOLD = 0.65;
-    let touched = false;
-
-    // 사용자 명시 2026-05-26 ultrathink: similarText 못 잡는 fuzzy 의미 중복 → Levenshtein 폴백.
-    //   30-force-analyze 와 일관. _modelSimilarity ≥ 0.6 = 매칭으로 간주.
-    const _FUZZY_MERGE = 0.6;
-    const _findFuzzyTrait = (name) => {
-      if (!name || typeof _modelSimilarity !== 'function') return null;
-      for (const e of (state.traits || [])) {
-        if (!e || !e.name) continue;
-        if (_modelSimilarity(e.name, name) >= _FUZZY_MERGE) return e;
-      }
-      return null;
-    };
-    const _findFuzzyValue = (name) => {
-      if (!name || typeof _modelSimilarity !== 'function') return null;
-      for (const e of (state.values || [])) {
-        if (!e || !e.name) continue;
-        if (_modelSimilarity(e.name, name) >= _FUZZY_MERGE) return e;
-      }
-      return null;
-    };
-    const _findFuzzyPattern = (name) => {
-      if (!name || typeof _modelSimilarity !== 'function') return null;
-      for (const e of (state.patterns || [])) {
-        if (!e || !e.name) continue;
-        if (_modelSimilarity(e.name, name) >= _FUZZY_MERGE) return e;
-      }
-      return null;
-    };
-
-    if (Array.isArray(analysis.new_traits)) {
-      analysis.new_traits.forEach(t => {
-        if (!t || !t.name || typeof t.name !== 'string') return;
-        const conf = typeof t.confidence === 'number' ? t.confidence : 0;
-        const exists = (state.traits || []).find(e => similarText(e.name, t.name))
-                    || _findFuzzyTrait(t.name);
-        if (!exists) {
-          if (conf < THRESHOLD) return;
-          state.traits = state.traits || [];
-          state.traits.push({
-            id: 'trait_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-            name: t.name.trim(), description: (t.description || '').trim(),
-            confidence: conf, user_verified: false, evidence_count: 1,
-            extractedFrom: source,
-            created_at: new Date().toISOString()
-          });
-          touched = true;
-        } else {
-          exists.evidence_count = (exists.evidence_count || 1) + 1;
-          exists.confidence = Math.min(1.0, (exists.confidence || 0.5) + 0.1);
-          touched = true;
-        }
-      });
-    }
-
-    if (Array.isArray(analysis.new_values)) {
-      analysis.new_values.forEach(v => {
-        if (!v || !v.name || typeof v.name !== 'string') return;
-        const conf = typeof v.confidence === 'number' ? v.confidence : 0;
-        const exists = (state.values || []).find(e => similarText(e.name, v.name))
-                    || _findFuzzyValue(v.name);
-        if (!exists) {
-          if (conf < THRESHOLD) return;
-          state.values = state.values || [];
-          state.values.push({
-            id: 'val_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-            name: v.name.trim(), description: (v.description || '').trim(),
-            confidence: conf, user_verified: false, evidence_count: 1,
-            sdt_need: v.sdt_need || null,
-            extractedFrom: source,
-            created_at: new Date().toISOString()
-          });
-          touched = true;
-        } else {
-          exists.evidence_count = (exists.evidence_count || 1) + 1;
-          exists.confidence = Math.min(1.0, (exists.confidence || 0.5) + 0.1);
-          touched = true;
-        }
-      });
-    }
-
-    if (Array.isArray(analysis.new_patterns)) {
-      analysis.new_patterns.forEach(p => {
-        if (!p || !p.name || typeof p.name !== 'string') return;
-        const conf = typeof p.confidence === 'number' ? p.confidence : 0;
-        const exists = (state.patterns || []).find(e => similarText(e.name, p.name))
-                    || _findFuzzyPattern(p.name);
-        if (!exists) {
-          if (conf < THRESHOLD) return;
-          state.patterns = state.patterns || [];
-          state.patterns.push({
-            id: 'pat_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-            name: p.name.trim(), description: (p.description || '').trim(),
-            trigger: (p.trigger || '').trim(), sequence: (p.sequence || '').trim(),
-            confidence: conf, user_verified: false, evidence_count: 1,
-            extractedFrom: source,
-            created_at: new Date().toISOString()
-          });
-          touched = true;
-        } else {
-          exists.evidence_count = (exists.evidence_count || 1) + 1;
-          exists.confidence = Math.min(1.0, (exists.confidence || 0.5) + 0.1);
-          touched = true;
-        }
-      });
-    }
-
-    // case formulation → 메인 풀에 push + unverified 마킹 (사용자 ✓로 컨펌)
-    // 사용자 명시 2026-05-10 (큐 11): 시뮬 챕터 = cf 5차원 갱신 절대 X (가상 시나리오 침투 회피).
-    const u = !_isSim && analysis.case_formulation_update;
-    if (u && typeof u === 'object') {
-      const cf = state.caseFormulation = state.caseFormulation || { version: 0, lastUpdated: null, problems: [], mechanisms: [], strengths: [], goals: [], growth: [], unverified: {} };
-      if (!cf.unverified) cf.unverified = {};
-      const fields = [
-        ['new_problem', 'problems'],
-        ['new_mechanism', 'mechanisms'],
-        ['new_strength', 'strengths'],
-        ['new_goal', 'goals'],
-        ['new_growth', 'growth']
-      ];
-      fields.forEach(([key, bucket]) => {
-        const txt = u[key];
-        if (!txt || typeof txt !== 'string') return;
-        const trimmed = txt.trim();
-        if (!trimmed) return;
-        if (!Array.isArray(cf[bucket])) cf[bucket] = [];
-        if (cf[bucket].some(x => similarText(x, trimmed))) return;
-        cf[bucket].push(trimmed);
-        if (!Array.isArray(cf.unverified[bucket])) cf.unverified[bucket] = [];
-        cf.unverified[bucket].push(trimmed);
-        touched = true;
-      });
-      if (touched) {
-        cf.version = (cf.version || 0) + 1;
-        cf.lastUpdated = new Date().toISOString();
-      }
-    }
-
+    const touched = _processExtractChapterAnalysis(analysis, {
+      source: source || 'chapter',
+      threshold: 0.65,
+      fuzzyMerge: true,
+      isSimulation: false
+    });
     if (touched) {
       saveState();
-      // 모델 화면 열려 있으면 새로고침 (선택)
       if (typeof renderModel === 'function') {
         try { renderModel(); } catch {}
       }
@@ -276,15 +139,45 @@ function _processExtractChapterAnalysis(analysis, opts) {
     };
   } catch {}
   let touched = false;
-  // 사용자 보고 2026-05-10: 0.6 → 0.5 완화. 약한 신호도 unverified pool. 시뮬은 0.7 보수.
-  const THRESHOLD = _isSim ? 0.7 : 0.5;
-  const _extractedFrom = _isSim ? 'simulation' : 'chapter';
+  // 사용자 명시 2026-05-26 ultrathink: opts.threshold override 가능 (P1 = 0.65 / P2 default = 0.5 / 시뮬 = 0.7).
+  const THRESHOLD = (typeof opts.threshold === 'number') ? opts.threshold
+                  : _isSim ? 0.7 : 0.5;
+  // 사용자 명시 2026-05-26 ultrathink: opts.source override 가능 (P1 = 'reflection'/'magic_help'/'mutation').
+  const _extractedFrom = opts.source || (_isSim ? 'simulation' : 'chapter');
+  // 사용자 명시 2026-05-26 ultrathink: opts.fuzzyMerge true 일 때만 Levenshtein 폴백 활성 (P1 만).
+  const _useFuzzy = !!opts.fuzzyMerge;
+  const _FUZZY_MERGE = 0.6;
+  const _findFuzzyTrait = !_useFuzzy ? () => null : (name) => {
+    if (!name || typeof _modelSimilarity !== 'function') return null;
+    for (const e of (state.traits || [])) {
+      if (!e || !e.name) continue;
+      if (_modelSimilarity(e.name, name) >= _FUZZY_MERGE) return e;
+    }
+    return null;
+  };
+  const _findFuzzyValue = !_useFuzzy ? () => null : (name) => {
+    if (!name || typeof _modelSimilarity !== 'function') return null;
+    for (const e of (state.values || [])) {
+      if (!e || !e.name) continue;
+      if (_modelSimilarity(e.name, name) >= _FUZZY_MERGE) return e;
+    }
+    return null;
+  };
+  const _findFuzzyPattern = !_useFuzzy ? () => null : (name) => {
+    if (!name || typeof _modelSimilarity !== 'function') return null;
+    for (const e of (state.patterns || [])) {
+      if (!e || !e.name) continue;
+      if (_modelSimilarity(e.name, name) >= _FUZZY_MERGE) return e;
+    }
+    return null;
+  };
 
     if (Array.isArray(analysis.new_traits)) {
       analysis.new_traits.forEach(t => {
         if (!t || typeof t.name !== 'string' || !t.name.trim()) return;
         const conf = typeof t.confidence === 'number' ? t.confidence : 0.5;
-        const exists = (state.traits || []).find(e => similarText(e.name, t.name));
+        const exists = (state.traits || []).find(e => similarText(e.name, t.name))
+                    || _findFuzzyTrait(t.name);
         if (!exists) {
           if (conf < THRESHOLD) return;
           state.traits = state.traits || [];
@@ -310,7 +203,8 @@ function _processExtractChapterAnalysis(analysis, opts) {
       analysis.new_values.forEach(v => {
         if (!v || typeof v.name !== 'string' || !v.name.trim()) return;
         const conf = typeof v.confidence === 'number' ? v.confidence : 0.5;
-        const exists = (state.values || []).find(e => similarText(e.name, v.name));
+        const exists = (state.values || []).find(e => similarText(e.name, v.name))
+                    || _findFuzzyValue(v.name);
         if (!exists) {
           if (conf < THRESHOLD) return;
           state.values = state.values || [];
@@ -337,7 +231,8 @@ function _processExtractChapterAnalysis(analysis, opts) {
       analysis.new_patterns.forEach(p => {
         if (!p || typeof p.name !== 'string' || !p.name.trim()) return;
         const conf = typeof p.confidence === 'number' ? p.confidence : 0.5;
-        const exists = (state.patterns || []).find(e => similarText(e.name, p.name));
+        const exists = (state.patterns || []).find(e => similarText(e.name, p.name))
+                    || _findFuzzyPattern(p.name);
         if (!exists) {
           if (conf < THRESHOLD) return;
           state.patterns = state.patterns || [];
