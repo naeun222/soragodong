@@ -403,8 +403,13 @@ function _modelDedupMerge() {
   //   같은 section 페어 = a 우선 (verified 면 verified 쪽). cross-cluster = trait > pattern / strengths > mechanisms.
   //   AI 가 만든 merged.name / description / trigger / sequence 로 갱신. 메타 (evidence/confidence/verified/extractedFrom) 는 두 카드 결합.
   if (cur.source === 'semantic' && cur.merged && cur.merged.name) {
-    _modelDedupMergeSemantic(cur);
-    _modelDedupState.merged++;
+    const ok = _modelDedupMergeSemantic(cur);
+    if (ok) {
+      _modelDedupState.merged++;
+    } else {
+      _modelDedupState.skipped++;
+      if (typeof showToast === 'function') showToast('⚠️ 이 페어 합치기 실패 — 다음으로');
+    }
     _modelDedupState.idx++;
     while (_modelDedupState.idx < _modelDedupState.candidates.length) {
       const next = _modelDedupState.candidates[_modelDedupState.idx];
@@ -426,10 +431,17 @@ function _modelDedupMerge() {
   };
   if (deepArrGetter[category]) {
     const arr = deepArrGetter[category]();
+    let _deepOk = false;
     if (Array.isArray(arr)) {
       const idxA = arr.indexOf(a);
       const idxB = arr.indexOf(b);
-      if (idxA >= 0 && idxB >= 0) {
+      if (idxA < 0 || idxB < 0) {
+        console.warn('[dedup merge deep] reference 없음 — silent fail 차단:', {
+          category, idxA, idxB, arrLen: arr.length,
+          aName: (typeof a === 'string') ? a : (a && (a.name || a.text || a.title)),
+          bName: (typeof b === 'string') ? b : (b && (b.name || b.text || b.title))
+        });
+      } else {
         const _longer = (x, y) => (String(x || '').length >= String(y || '').length) ? x : y;
         if (category === 'deep_turningPoints') {
           arr[idxA] = {
@@ -454,10 +466,22 @@ function _modelDedupMerge() {
         if (typeof _bumpUserDeepProfile === 'function') {
           try { _bumpUserDeepProfile(); } catch {}
         }
+        _deepOk = true;
       }
+    } else {
+      console.warn('[dedup merge deep] array 없음 — silent fail 차단:', {
+        category,
+        aName: (typeof a === 'string') ? a : (a && (a.name || a.text || a.title)),
+        bName: (typeof b === 'string') ? b : (b && (b.name || b.text || b.title))
+      });
     }
     if (typeof saveState === 'function') saveState();
-    _modelDedupState.merged++;
+    if (_deepOk) {
+      _modelDedupState.merged++;
+    } else {
+      _modelDedupState.skipped++;
+      if (typeof showToast === 'function') showToast('⚠️ 이 페어 합치기 실패 — 다음으로');
+    }
     _modelDedupState.idx++;
     while (_modelDedupState.idx < _modelDedupState.candidates.length) {
       const next = _modelDedupState.candidates[_modelDedupState.idx];
@@ -483,6 +507,25 @@ function _modelDedupMerge() {
     const drop = keep === a ? b : a;
     const keepIsTrait = keep === a ? aIsTrait : bIsTrait;
     const dropArr = drop === a ? aArr : bArr;
+    // V4 fix (사용자 보고 2026-05-26 ultrathink): keep 갱신 전에 dropIdx 먼저 검증 — 부분 success 차단.
+    const dropIdx = Array.isArray(dropArr) ? dropArr.indexOf(drop) : -1;
+    if (dropIdx < 0) {
+      console.warn('[dedup merge cluster_operating] drop reference 없음 — silent fail 차단:', {
+        category: 'cluster_operating',
+        keepName: keep && keep.name, dropName: drop && drop.name,
+        keepIsTrait, dropArrLen: dropArr && dropArr.length
+      });
+      _modelDedupState.skipped++;
+      if (typeof showToast === 'function') showToast('⚠️ 이 페어 합치기 실패 — 다음으로');
+      _modelDedupState.idx++;
+      while (_modelDedupState.idx < _modelDedupState.candidates.length) {
+        const next = _modelDedupState.candidates[_modelDedupState.idx];
+        if (next && next.a !== b && next.b !== b && next.a !== a && next.b !== a) break;
+        _modelDedupState.idx++;
+      }
+      _renderModelDedupStep();
+      return;
+    }
     keep.evidence_count = (keep.evidence_count || 1) + (drop.evidence_count || 1);
     keep.confidence = Math.max(keep.confidence || 0, drop.confidence || 0);
     if (drop.user_verified === true) keep.user_verified = true;
@@ -494,8 +537,7 @@ function _modelDedupMerge() {
     if (drop.extractedFrom === 'chapter') keep.extractedFrom = 'chapter';
     keep.merged_at = new Date().toISOString();
     keep.merged_from_cluster = 'operating';
-    const dropIdx = dropArr.indexOf(drop);
-    if (dropIdx >= 0) dropArr.splice(dropIdx, 1);
+    dropArr.splice(dropIdx, 1);
     if (typeof saveState === 'function') saveState();
     _modelDedupState.merged++;
     _modelDedupState.idx++;
@@ -521,6 +563,30 @@ function _modelDedupMerge() {
     if (aInS && !bInS) { keep = a; drop = b; keepArr = sArr; dropArr = mArr; }
     else if (!aInS && bInS) { keep = b; drop = a; keepArr = sArr; dropArr = mArr; }
     else { keep = a; drop = b; keepArr = aInS ? sArr : mArr; dropArr = aInS ? sArr : mArr; }
+    // V4 fix (사용자 보고 2026-05-26 ultrathink): keep/drop indexOf 둘 다 먼저 검증 — 부분 success 차단.
+    const keepIdx = Array.isArray(keepArr) ? keepArr.indexOf(keep) : -1;
+    const dropIdx = Array.isArray(dropArr) ? dropArr.indexOf(drop) : -1;
+    if (keepIdx < 0 || dropIdx < 0) {
+      console.warn('[dedup merge cluster_self_regulation] reference 없음 — silent fail 차단:', {
+        category: 'cluster_self_regulation',
+        keepName: (typeof keep === 'string') ? keep : (keep && (keep.text || keep.name)),
+        dropName: (typeof drop === 'string') ? drop : (drop && (drop.text || drop.name)),
+        keepIdx, dropIdx,
+        keepArrLen: keepArr && keepArr.length,
+        dropArrLen: dropArr && dropArr.length,
+        aInS, bInS
+      });
+      _modelDedupState.skipped++;
+      if (typeof showToast === 'function') showToast('⚠️ 이 페어 합치기 실패 — 다음으로');
+      _modelDedupState.idx++;
+      while (_modelDedupState.idx < _modelDedupState.candidates.length) {
+        const next = _modelDedupState.candidates[_modelDedupState.idx];
+        if (next && next.a !== b && next.b !== b && next.a !== a && next.b !== a) break;
+        _modelDedupState.idx++;
+      }
+      _renderModelDedupStep();
+      return;
+    }
     const _toObj = (x) => typeof x === 'string' ? { text: x } : { ...x };
     const keepObj = _toObj(keep);
     const dropObj = _toObj(drop);
@@ -530,10 +596,8 @@ function _modelDedupMerge() {
     if ((dropObj.text || '').length > (keepObj.text || '').length) keepObj.text = dropObj.text;
     keepObj.merged_at = new Date().toISOString();
     keepObj.merged_from_cluster = 'self_regulation';
-    const keepIdx = keepArr.indexOf(keep);
-    if (keepIdx >= 0) keepArr[keepIdx] = keepObj;
-    const dropIdx = dropArr.indexOf(drop);
-    if (dropIdx >= 0) dropArr.splice(dropIdx, 1);
+    keepArr[keepIdx] = keepObj;
+    dropArr.splice(dropIdx, 1);
     if (typeof saveState === 'function') saveState();
     _modelDedupState.merged++;
     _modelDedupState.idx++;
@@ -565,13 +629,21 @@ function _modelDedupMerge() {
     : (a[nameField] || a.name);
 
   // a 갱신, b 제거
+  // V4 fix (사용자 보고 2026-05-26 ultrathink): indexOf -1 fail guard + 진단 log + merged++ vs skipped++ 분기.
+  let _mergedOk = false;
   if (category.startsWith('cf_')) {
     const dim = category.slice(3);
     const arr = state.caseFormulation && state.caseFormulation[dim];
     if (Array.isArray(arr)) {
       const idxA = arr.indexOf(a);
       const idxB = arr.indexOf(b);
-      if (idxA >= 0 && idxB >= 0) {
+      if (idxA < 0 || idxB < 0) {
+        console.warn('[dedup merge cf_*] reference 없음 — silent fail 차단:', {
+          category, idxA, idxB, arrLen: arr.length,
+          aName: (typeof a === 'string') ? a : (a && (a.text || a.name)),
+          bName: (typeof b === 'string') ? b : (b && (b.text || b.name))
+        });
+      } else {
         arr[idxA] = {
           ...a,
           text: _nameKept,
@@ -581,14 +653,27 @@ function _modelDedupMerge() {
           merged_at: new Date().toISOString(),
         };
         arr.splice(idxB, 1);
+        _mergedOk = true;
       }
+    } else {
+      console.warn('[dedup merge cf_*] array 없음 — silent fail 차단:', {
+        category, dim,
+        aName: (typeof a === 'string') ? a : (a && (a.text || a.name)),
+        bName: (typeof b === 'string') ? b : (b && (b.text || b.name))
+      });
     }
   } else {
     const arr = state[category];
     if (Array.isArray(arr)) {
       const idxA = arr.indexOf(a);
       const idxB = arr.indexOf(b);
-      if (idxA >= 0 && idxB >= 0) {
+      if (idxA < 0 || idxB < 0) {
+        console.warn('[dedup merge default] reference 없음 — silent fail 차단:', {
+          category, idxA, idxB, arrLen: arr.length,
+          aName: (typeof a === 'string') ? a : (a && (a.name || a.text || a.title)),
+          bName: (typeof b === 'string') ? b : (b && (b.name || b.text || b.title))
+        });
+      } else {
         arr[idxA] = {
           ...a,
           name: _nameKept,
@@ -600,11 +685,23 @@ function _modelDedupMerge() {
           merged_at: new Date().toISOString(),
         };
         arr.splice(idxB, 1);
+        _mergedOk = true;
       }
+    } else {
+      console.warn('[dedup merge default] array 없음 — silent fail 차단:', {
+        category,
+        aName: (typeof a === 'string') ? a : (a && (a.name || a.text || a.title)),
+        bName: (typeof b === 'string') ? b : (b && (b.name || b.text || b.title))
+      });
     }
   }
   if (typeof saveState === 'function') saveState();
-  _modelDedupState.merged++;
+  if (_mergedOk) {
+    _modelDedupState.merged++;
+  } else {
+    _modelDedupState.skipped++;
+    if (typeof showToast === 'function') showToast('⚠️ 이 페어 합치기 실패 — 다음으로');
+  }
   // 다음 후보로 — 이미 합친 a/b 가 다른 페어에 있으면 skip
   _modelDedupState.idx++;
   while (_modelDedupState.idx < _modelDedupState.candidates.length) {
@@ -643,11 +740,30 @@ function _modelDedupMergeSemantic(cur) {
 
   const keepArr = (typeof _semanticDedupSectionArray === 'function') ? _semanticDedupSectionArray(keepSection) : null;
   const dropArr = (typeof _semanticDedupSectionArray === 'function') ? _semanticDedupSectionArray(dropSection) : null;
-  if (!Array.isArray(keepArr) || !Array.isArray(dropArr)) return;
+  if (!Array.isArray(keepArr) || !Array.isArray(dropArr)) {
+    console.warn('[dedup merge semantic] section array 없음 — silent fail 차단:', {
+      category: cur.category,
+      keepSection, dropSection,
+      keepArrIsArr: Array.isArray(keepArr),
+      dropArrIsArr: Array.isArray(dropArr)
+    });
+    return false;
+  }
 
   const keepIdx = keepArr.indexOf(keepCard);
   const dropIdx = dropArr.indexOf(dropCard);
-  if (keepIdx < 0 || dropIdx < 0) return;
+  if (keepIdx < 0 || dropIdx < 0) {
+    console.warn('[dedup merge semantic] reference 없음 — silent fail 차단:', {
+      category: cur.category,
+      keepSection, dropSection,
+      keepName: (typeof keepCard === 'string') ? keepCard : (keepCard && (keepCard.name || keepCard.text)),
+      dropName: (typeof dropCard === 'string') ? dropCard : (dropCard && (dropCard.name || dropCard.text)),
+      keepIdx, dropIdx,
+      keepArrLen: keepArr && keepArr.length,
+      dropArrLen: dropArr && dropArr.length
+    });
+    return false;
+  }
 
   // string item (cf 카테고리 string array) 도 안전 처리 — 객체 변환 후 갱신.
   const _toObj = (x) => (typeof x === 'string') ? { text: x } : Object.assign({}, x);
@@ -676,4 +792,5 @@ function _modelDedupMergeSemantic(cur) {
   keepArr[keepIdx] = keepObj;
   dropArr.splice(dropIdx, 1);
   if (typeof saveState === 'function') saveState();
+  return true;
 }
