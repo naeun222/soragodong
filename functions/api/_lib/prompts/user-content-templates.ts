@@ -168,9 +168,10 @@ function buildChapterTopics(v: any): string {
     return items.length ? items.join(', ') : '(없음)';
   };
   return `[이미 등록된 항목 — 이번 챕터 발견 시 의미상 같으면 새 항목 만들지 X, 기존 이름 그대로 사용]
-- traits: ${_list(v?.existingTraitNames)}
+- 핵심 작동 패턴 클러스터 (traits + patterns 합본): ${_list(v?.existingOperatingPatternNames)}
+- traits (이 중 trait array 에 속한 것): ${_list(v?.existingTraitNames)}
+- patterns (이 중 pattern array 에 속한 것): ${_list(v?.existingPatternNames)}
 - values: ${_list(v?.existingValueNames)}
-- patterns: ${_list(v?.existingPatternNames)}
 
 [대화 원문]
 ${chatLog}`;
@@ -446,9 +447,10 @@ function buildForceAnalyze(v: any): string {
 ${dataDumpJson}
 
 [이미 등록된 항목 — 의미상 같으면 새 항목 만들지 X, 기존 이름 그대로 사용]
-- traits: ${_list(v?.existingTraitNames)}
+- 핵심 작동 패턴 클러스터 (traits + patterns 합본): ${_list(v?.existingOperatingPatternNames)}
+- traits (이 중 trait array 에 속한 것): ${_list(v?.existingTraitNames)}
+- patterns (이 중 pattern array 에 속한 것): ${_list(v?.existingPatternNames)}
 - values: ${_list(v?.existingValueNames)}
-- patterns: ${_list(v?.existingPatternNames)}
 
 위 데이터로 Case Formulation 작성. JSON만 출력.`;
 }

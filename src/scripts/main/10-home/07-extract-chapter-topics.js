@@ -45,7 +45,13 @@ async function extractChapterCaseAnalysis(messages, opts) {
         existingPatternNames: (state.patterns || [])
           .filter(p => !p._deleted)
           .sort((a, b) => (b.confidence || 0) - (a.confidence || 0))
-          .map(p => p.name).filter(Boolean).slice(0, 80)
+          .map(p => p.name).filter(Boolean).slice(0, 80),
+        // V4 feat (사용자 명시 2026-05-26 ultrathink): 핵심 작동 패턴 클러스터 (traits ∪ patterns) 합본.
+        existingOperatingPatternNames: [
+          ...(state.traits || []).filter(t => !t._deleted),
+          ...(state.patterns || []).filter(p => !p._deleted)
+        ].sort((a, b) => (b.confidence || 0) - (a.confidence || 0))
+          .map(x => x.name).filter(Boolean).slice(0, 100)
       },
       model: _model,
       max_tokens: _maxTok,

@@ -65,7 +65,13 @@ async function forceAnalyze(opts) {
       existingPatternNames: (state.patterns || [])
         .filter(p => !p._deleted)
         .sort((a, b) => (b.confidence || 0) - (a.confidence || 0))
-        .map(p => p.name).filter(Boolean).slice(0, 80)
+        .map(p => p.name).filter(Boolean).slice(0, 80),
+      // V4 feat (사용자 명시 2026-05-26 ultrathink): 핵심 작동 패턴 클러스터 (traits ∪ patterns) 합본 — AI 가 cross-cluster 인식.
+      existingOperatingPatternNames: [
+        ...(state.traits || []).filter(t => !t._deleted),
+        ...(state.patterns || []).filter(p => !p._deleted)
+      ].sort((a, b) => (b.confidence || 0) - (a.confidence || 0))
+        .map(x => x.name).filter(Boolean).slice(0, 100)
     };
     // 사용자 명시 2026-05-11 ultrathink: prompt template backend 이전 — buildForceAnalyze 가 합성.
     const _dataDumpJson = JSON.stringify(dataDump, null, 2);
@@ -77,7 +83,9 @@ async function forceAnalyze(opts) {
         dataDumpJson: _dataDumpJson,
         existingTraitNames: dataDump.existingTraitNames,
         existingValueNames: dataDump.existingValueNames,
-        existingPatternNames: dataDump.existingPatternNames
+        existingPatternNames: dataDump.existingPatternNames,
+        // V4 feat (사용자 명시 2026-05-26 ultrathink): 핵심 작동 패턴 클러스터 합본.
+        existingOperatingPatternNames: dataDump.existingOperatingPatternNames
       },
       model: 'claude-opus-4-7',
       max_tokens: 2500,
@@ -188,10 +196,14 @@ async function forceAnalyze(opts) {
       }
       return null;
     };
+    // V4 feat (사용자 명시 2026-05-26 ultrathink): cross-cluster lookup — 핵심 작동 패턴 클러스터 (traits ∪ patterns) 통합 dedup.
+    //   AI 가 같은 의미를 trait 으로 출력 vs pattern 으로 출력 시 양쪽 array 모두 검사. 매칭 시 existing 항목 evidence ↑ (둘 다 새로 만들지 X).
     if (analysis.traits) {
       analysis.traits.forEach(t => {
         let exist = state.traits.find(e => similarText(e.name, t.name))
-                 || _findFuzzyMatch(state.traits, t.name);
+                 || _findFuzzyMatch(state.traits, t.name)
+                 || state.patterns.find(e => similarText(e.name, t.name))
+                 || _findFuzzyMatch(state.patterns, t.name);
         if (exist) mergeModelItem(exist, t);
         else {
           const conf = typeof t.confidence === 'number' ? t.confidence : 0.5;
@@ -215,7 +227,9 @@ async function forceAnalyze(opts) {
     if (analysis.patterns) {
       analysis.patterns.forEach(p => {
         let exist = state.patterns.find(e => similarText(e.name, p.name))
-                 || _findFuzzyMatch(state.patterns, p.name);
+                 || _findFuzzyMatch(state.patterns, p.name)
+                 || state.traits.find(e => similarText(e.name, p.name))
+                 || _findFuzzyMatch(state.traits, p.name);
         if (exist) mergeModelItem(exist, p);
         else {
           const conf = typeof p.confidence === 'number' ? p.confidence : 0.5;
@@ -234,17 +248,23 @@ async function forceAnalyze(opts) {
       //   force-analyze 의 incoming 은 string 가정 → 기존 object e 와 새 string item 비교 시 similarText 가드 trip → warn 폭주.
       //   render (cfBullet) / system-prompt (_cfTrunc) 는 이미 unwrap 지원하므로 여기만 맞추면 hybrid 안전.
       const _cfUnwrap = (e) => (typeof e === 'string') ? e : (e && (e.text || e.name)) || '';
-      const mergeStrings = (existing, incoming) => {
+      const mergeStrings = (existing, incoming, crossArr) => {
         const out = [...(existing || [])];
+        const cross = Array.isArray(crossArr) ? crossArr : [];
         (incoming || []).forEach(item => {
           if (!item || typeof item !== 'string') return;
-          if (!out.some(e => similarText(_cfUnwrap(e), item))) out.push(item);
+          if (out.some(e => similarText(_cfUnwrap(e), item))) return;
+          // V4 feat (사용자 명시 2026-05-26 ultrathink): cross-cluster — 같은 클러스터 다른 array 에 이미 있으면 skip.
+          if (cross.some(e => similarText(_cfUnwrap(e), item))) return;
+          out.push(item);
         });
         return out;
       };
       cf.problems = mergeStrings(cf.problems, analysis.case_formulation.problems);
-      cf.mechanisms = mergeStrings(cf.mechanisms, analysis.case_formulation.mechanisms);
-      cf.strengths = mergeStrings(cf.strengths, analysis.case_formulation.strengths);
+      // V4 feat (사용자 명시 2026-05-26 ultrathink): 자기조절 도구 클러스터 (strengths ∪ mechanisms) 통합 dedup.
+      //   strengths 먼저 처리 (사용자 표현 "강점 = 작동하는 도구" — 상위 개념). mechanisms 처리 시 갱신된 strengths 와 cross-check.
+      cf.strengths = mergeStrings(cf.strengths, analysis.case_formulation.strengths, cf.mechanisms);
+      cf.mechanisms = mergeStrings(cf.mechanisms, analysis.case_formulation.mechanisms, cf.strengths);
     }
     // 사용자 명시 2026-05-09 (Phase 2 source 3): 새 항목 stash → 회전 카드 '새로 본 너' source.
     try {

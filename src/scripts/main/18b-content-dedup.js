@@ -45,8 +45,10 @@ function _collectContentDedupCandidates() {
     { arr: state.patterns || [], category: 'patterns' }
   ];
   const candidates = [];
+  // V4 (사용자 명시 2026-05-26 ultrathink): tokenize 결과 cross-cluster sweep 재사용 — within → cross 순.
+  const tokenizedBySection = {};
   for (const { arr, category } of sections) {
-    if (!Array.isArray(arr) || arr.length < 2) continue;
+    if (!Array.isArray(arr) || arr.length < 2) { tokenizedBySection[category] = []; continue; }
     // pre-tokenize — O(n²) 비교 비용 ↓
     const tokenized = arr.map(item => {
       if (!item || item._deleted) return null;
@@ -64,6 +66,7 @@ function _collectContentDedupCandidates() {
       if (bag.size < 3) return null;
       return { item, bag };
     });
+    tokenizedBySection[category] = tokenized;
     for (let i = 0; i < tokenized.length; i++) {
       if (!tokenized[i]) continue;
       for (let j = i + 1; j < tokenized.length; j++) {
@@ -78,6 +81,20 @@ function _collectContentDedupCandidates() {
             source: 'jaccard'
           });
         }
+      }
+    }
+  }
+  // V4 feat (사용자 명시 2026-05-26 ultrathink): cross-cluster Jaccard — traits ∪ patterns 의 description/trigger/sequence 의미 중복 잡음.
+  //   name 다르지만 의미 같은 trait + pattern 페어 — 18a Levenshtein 은 name 만 보므로 미스. 18b 가 catch.
+  const tT = tokenizedBySection['traits'] || [];
+  const tP = tokenizedBySection['patterns'] || [];
+  for (const a of tT) {
+    if (!a) continue;
+    for (const b of tP) {
+      if (!b) continue;
+      const sim = _jaccardSim(a.bag, b.bag);
+      if (sim >= SIM_THRESHOLD) {
+        candidates.push({ category: 'cluster_operating', a: a.item, b: b.item, similarity: sim, source: 'jaccard' });
       }
     }
   }

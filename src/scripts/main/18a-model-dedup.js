@@ -75,6 +75,35 @@ function _collectModelDedupCandidates() {
       _findPairs(state.caseFormulation[dim], 'cf_' + dim, 'text');
     });
   }
+  // V4 feat (사용자 명시 2026-05-26 ultrathink): cross-cluster 페어 — 4 클러스터 통합 의도.
+  //   "네 특성" + "보이는 패턴" = 핵심 작동 패턴 클러스터 (traits ∪ patterns).
+  //   "네 강점" + "어떻게 작동하는지" = 자기조절 도구 클러스터 (cf.strengths ∪ cf.mechanisms).
+  //   기존 within-array 페어는 그대로 두고 cross-array 페어만 추가 — 같은 페어가 양쪽에서 잡힐 일은 없음 (서로 다른 array).
+  const _findCrossPairs = (arrA, arrB, category, nameFieldA, nameFieldB) => {
+    if (!Array.isArray(arrA) || !Array.isArray(arrB) || arrA.length === 0 || arrB.length === 0) return;
+    for (const a of arrA) {
+      if (a == null) continue;
+      const aIsStr = typeof a === 'string';
+      if (!aIsStr && a._deleted) continue;
+      const aName = aIsStr ? a : (a[nameFieldA] || a.text || a.name);
+      if (!aName) continue;
+      for (const b of arrB) {
+        if (b == null) continue;
+        const bIsStr = typeof b === 'string';
+        if (!bIsStr && b._deleted) continue;
+        const bName = bIsStr ? b : (b[nameFieldB] || b.text || b.name);
+        if (!bName) continue;
+        const sim = _modelSimilarity(aName, bName);
+        if (sim >= SIM_THRESHOLD && sim < 1.0) {
+          candidates.push({ category, a, b, similarity: sim });
+        }
+      }
+    }
+  };
+  _findCrossPairs(state.traits, state.patterns, 'cluster_operating', 'name', 'name');
+  if (state.caseFormulation) {
+    _findCrossPairs(state.caseFormulation.strengths, state.caseFormulation.mechanisms, 'cluster_self_regulation', 'text', 'text');
+  }
   // 사용자 명시 2026-05-16 ultrathink: 더 깊은 나 (userDeepProfile) 6 영역 dedup.
   //   - 객체 array: turningPoints (title 매칭) / relationships (name 매칭)
   //   - string array: coreBeliefs.aboutSelf/aboutWorld/aboutFuture / identityKeywords
@@ -193,6 +222,10 @@ function _renderModelDedupStep() {
     bName = b.name || '?';
     aDesc = [a.relation, a.tone, a.notes].filter(Boolean).join(' / ');
     bDesc = [b.relation, b.tone, b.notes].filter(Boolean).join(' / ');
+  } else if (category === 'cluster_self_regulation') {
+    // V4 (사용자 명시 2026-05-26 ultrathink): cf.strengths ↔ cf.mechanisms cross. string/object hybrid 안전.
+    aName = (typeof a === 'string') ? a : (a.text || a.name || '?');
+    bName = (typeof b === 'string') ? b : (b.text || b.name || '?');
   } else {
     const nameField = category.startsWith('cf_') ? 'text' : 'name';
     aName = a[nameField] || a.name;
@@ -216,6 +249,8 @@ function _renderModelDedupStep() {
     deep_aboutWorld: '🌍 세상에 대한 신념',
     deep_aboutFuture: '🌅 미래에 대한 신념',
     deep_identityKeywords: '🏷️ 정체성 keyword',
+    cluster_operating: '🌀 핵심 작동 패턴 (특성 ↔ 보이는 패턴)',
+    cluster_self_regulation: '🔧 자기조절 도구 (강점 ↔ 어떻게 작동)',
   })[category] || category;
 
   // deep_* 항목은 verified/confidence/evidence/extractedFrom metadata 가 없음 → badge skip.
@@ -316,6 +351,84 @@ function _modelDedupMerge() {
         }
       }
     }
+    if (typeof saveState === 'function') saveState();
+    _modelDedupState.merged++;
+    _modelDedupState.idx++;
+    while (_modelDedupState.idx < _modelDedupState.candidates.length) {
+      const next = _modelDedupState.candidates[_modelDedupState.idx];
+      if (next && next.a !== b && next.b !== b && next.a !== a && next.b !== a) break;
+      _modelDedupState.idx++;
+    }
+    _renderModelDedupStep();
+    return;
+  }
+
+  // V4 feat (사용자 명시 2026-05-26 ultrathink): cluster_operating — 특성 ↔ 보이는 패턴 cross 합치기.
+  //   흡수 룰: user_verified=true 우선 > evidence_count 큰 쪽 > trait 우선 (안정 성향이 행동 시퀀스보다 상위).
+  //   keep 이 trait 이고 drop 이 pattern 이면 description 끝에 trigger/sequence 흡수 (정보 손실 방지).
+  if (category === 'cluster_operating') {
+    const _opScore = (x, isTrait) => (x.user_verified === true ? 1000 : 0) + (x.evidence_count || 1) * 10 + (isTrait ? 5 : 0);
+    const aIsTrait = (state.traits || []).indexOf(a) >= 0;
+    const bIsTrait = (state.traits || []).indexOf(b) >= 0;
+    const aArr = aIsTrait ? state.traits : state.patterns;
+    const bArr = bIsTrait ? state.traits : state.patterns;
+    const aScore = _opScore(a, aIsTrait);
+    const bScore = _opScore(b, bIsTrait);
+    const keep = aScore >= bScore ? a : b;
+    const drop = keep === a ? b : a;
+    const keepIsTrait = keep === a ? aIsTrait : bIsTrait;
+    const dropArr = drop === a ? aArr : bArr;
+    keep.evidence_count = (keep.evidence_count || 1) + (drop.evidence_count || 1);
+    keep.confidence = Math.max(keep.confidence || 0, drop.confidence || 0);
+    if (drop.user_verified === true) keep.user_verified = true;
+    if ((drop.description || '').length > (keep.description || '').length) keep.description = drop.description;
+    if (keepIsTrait && (drop.trigger || drop.sequence)) {
+      const triggerInfo = [drop.trigger && `트리거: ${drop.trigger}`, drop.sequence && `흐름: ${drop.sequence}`].filter(Boolean).join(' / ');
+      if (triggerInfo) keep.description = (keep.description ? keep.description + ' — ' : '') + triggerInfo;
+    }
+    if (drop.extractedFrom === 'chapter') keep.extractedFrom = 'chapter';
+    keep.merged_at = new Date().toISOString();
+    keep.merged_from_cluster = 'operating';
+    const dropIdx = dropArr.indexOf(drop);
+    if (dropIdx >= 0) dropArr.splice(dropIdx, 1);
+    if (typeof saveState === 'function') saveState();
+    _modelDedupState.merged++;
+    _modelDedupState.idx++;
+    while (_modelDedupState.idx < _modelDedupState.candidates.length) {
+      const next = _modelDedupState.candidates[_modelDedupState.idx];
+      if (next && next.a !== b && next.b !== b && next.a !== a && next.b !== a) break;
+      _modelDedupState.idx++;
+    }
+    _renderModelDedupStep();
+    return;
+  }
+
+  // V4 feat (사용자 명시 2026-05-26 ultrathink): cluster_self_regulation — 강점 ↔ 어떻게 작동 cross 합치기.
+  //   흡수 방향: strengths 우선 (사용자 표현 "강점 = 작동하는 도구"). 둘 다 같은 array 면 within 처럼 처리.
+  //   string / object 둘 다 안전 (시드 object array vs production string array hybrid).
+  if (category === 'cluster_self_regulation') {
+    const cf = state.caseFormulation || {};
+    const sArr = cf.strengths || [];
+    const mArr = cf.mechanisms || [];
+    const aInS = sArr.indexOf(a) >= 0;
+    const bInS = sArr.indexOf(b) >= 0;
+    let keep, drop, keepArr, dropArr;
+    if (aInS && !bInS) { keep = a; drop = b; keepArr = sArr; dropArr = mArr; }
+    else if (!aInS && bInS) { keep = b; drop = a; keepArr = sArr; dropArr = mArr; }
+    else { keep = a; drop = b; keepArr = aInS ? sArr : mArr; dropArr = aInS ? sArr : mArr; }
+    const _toObj = (x) => typeof x === 'string' ? { text: x } : { ...x };
+    const keepObj = _toObj(keep);
+    const dropObj = _toObj(drop);
+    keepObj.evidence_count = (keepObj.evidence_count || 1) + (dropObj.evidence_count || 1);
+    keepObj.confidence = Math.max(keepObj.confidence || 0, dropObj.confidence || 0);
+    if (dropObj.user_verified === true) keepObj.user_verified = true;
+    if ((dropObj.text || '').length > (keepObj.text || '').length) keepObj.text = dropObj.text;
+    keepObj.merged_at = new Date().toISOString();
+    keepObj.merged_from_cluster = 'self_regulation';
+    const keepIdx = keepArr.indexOf(keep);
+    if (keepIdx >= 0) keepArr[keepIdx] = keepObj;
+    const dropIdx = dropArr.indexOf(drop);
+    if (dropIdx >= 0) dropArr.splice(dropIdx, 1);
     if (typeof saveState === 'function') saveState();
     _modelDedupState.merged++;
     _modelDedupState.idx++;
