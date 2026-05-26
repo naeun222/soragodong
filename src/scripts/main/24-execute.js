@@ -144,10 +144,12 @@ function renderExecute() {
     todayListAll.forEach(task => {
       const isDone = task.status === 'done';
       const schedLabel = task.scheduledStart ? `<span class="todo-sched-label">⏰ ${task.scheduledStart}${task.scheduledEnd ? `–${task.scheduledEnd}` : ''}</span>` : '';
+      // 사용자 명시 2026-05-27 ultrathink (3단계): task.dueDate 있으면 마감 라벨 표시.
+      const dueLabel = task.dueDate ? `<span style="font-size:10px; color:#fbbf24; margin-left:6px; padding:1px 5px; background:#fbbf241f; border-radius:3px; white-space:nowrap;">📅 ${escapeHtml(task.dueDate)}${task.dueTime ? ' ' + escapeHtml(task.dueTime) : ''}</span>` : '';
       html += `
         <div class="todo-item${isDone ? ' completed' : ''}" data-task-id="${task.id}">
           <button class="todo-check${isDone ? ' checked' : ''}" onclick="toggleQuestComplete('${task.id}')" aria-label="${isDone ? '되살리기' : '완료'}" title="${isDone ? '되살리기' : '완료'}">${isDone ? '✓' : ''}</button>
-          <span class="todo-title">${escapeHtml(task.title)}${schedLabel}</span>
+          <span class="todo-title">${escapeHtml(task.title)}${schedLabel}${dueLabel}</span>
           ${isDone ? '' : `<button class="todo-action" onclick="scheduleTaskToTime('${task.id}')" title="일정 적용하기">⏰</button>`}
           ${isDone ? '' : `<button class="todo-action" onclick="editTaskCard('${task.id}')" title="수정">✎</button>`}
           ${isDone ? '' : `<button class="todo-action" onclick="demoteFromToday('${task.id}')" title="서랍장으로">↩</button>`}
@@ -192,10 +194,12 @@ function renderExecute() {
       const renderDrawerRow = (task) => {
         const isAIMission = task.source === 'ai_mission';
         const tagEmoji = isAIMission ? '🐚' : task.weight === 'main' ? '⚡' : task.weight === 'light' ? '🍃' : '📌';
+        // 사용자 명시 2026-05-27 ultrathink (3단계): drawer row 에도 dueDate 라벨.
+        const dueLabel = task.dueDate ? `<span style="font-size:10px; color:#fbbf24; margin-left:4px; padding:1px 4px; background:#fbbf241f; border-radius:3px; white-space:nowrap;">📅 ${escapeHtml(task.dueDate)}${task.dueTime ? ' ' + escapeHtml(task.dueTime) : ''}</span>` : '';
         return `
           <div class="drawer-row" data-task-id="${task.id}">
             <span class="drawer-row-tag">${tagEmoji}</span>
-            <span class="drawer-row-title" onclick="editTaskCard('${task.id}')" title="탭해서 수정">${escapeHtml(task.title)}</span>
+            <span class="drawer-row-title" onclick="editTaskCard('${task.id}')" title="탭해서 수정">${escapeHtml(task.title)}${dueLabel}</span>
             <button class="drawer-row-action up" onclick="promoteToToday('${task.id}')" title="오늘로">↑</button>
             <button class="drawer-row-action del" onclick="deleteTask('${task.id}')" title="삭제">✕</button>
           </div>

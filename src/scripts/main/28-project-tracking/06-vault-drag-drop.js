@@ -184,7 +184,13 @@ async function mergeDuplicateTasks() {
 }
 
 // V3.13.x: 카드 제목/설명 수정
+// 사용자 명시 2026-05-27 ultrathink (캘린더 일정/할 일 3단계): openTaskEditModal 호출 — title/description/dueDate/dueTime/notifyMinutesBefore 통합 폼.
 async function editTaskCard(taskId) {
+  if (typeof openTaskEditModal === 'function') {
+    openTaskEditModal(taskId);
+    return;
+  }
+  // fallback — 옛 단순 제목 modal
   const task = (state.tasks || []).find(t => t.id === taskId);
   if (!task) return;
   const newTitle = await showInputModal({
