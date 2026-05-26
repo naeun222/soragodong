@@ -42209,7 +42209,8 @@ function _chatEmptyAreaHtml() {
       ? `<div class="msg-avatar" role="button" tabindex="0" aria-label="대화 모드 변경" onclick="onChatModeHeaderClick()">${composedCharacterHtml({ mode: chatMode, useGlasses: false, expression: _welcomeExpr })}</div>`
       : '';
     // V4 사용자 명시 2026-05-23 (재재) — welcome 텍스트 helper 사용. sendChat 시점에 같은 텍스트가 chatMessages 에 박힘 (AI 첫 발화 인식).
-    const welcomeText = (typeof _chatWelcomeText === 'function') ? _chatWelcomeText(chatMode || 'daily') : '오늘 뭐 했어?';
+    // V4 fix (사용자 명시 2026-05-26 ultrathink) — 모드 미선택 (null) 시 daily 강제 X. helper 가 '편하게 말해 보소' 반환.
+    const welcomeText = (typeof _chatWelcomeText === 'function') ? _chatWelcomeText(chatMode) : '편하게 말해 보소';
     const welcomeBubble = `<div class="msg assistant ces-welcome">${avatarHtml}<div class="msg-bubble">${welcomeText}</div></div>`;
     // V4 사용자 명시 2026-05-23 — welcome 바로 밑 한 줄. 모드 시트 진입점 안내 (avatar tap).
     const avatarHintHtml = `<div class="ces-avatar-hint-static">고동 프로필을 눌러보세요</div>`;
@@ -42279,9 +42280,12 @@ async function sendChat() {
   //   AI 가 자기 첫 발화 인식 + 사용자 발화가 *답하는 형식* 으로 자연 흐름.
   //   (옛 _chatEmptyCheckinDismissedDayK 자리 폐기 — 대화탭 체크인 카드 자체 폐기 후 dead.)
   if ((state.chatMessages || []).length === 0 && typeof _chatWelcomeText === 'function') {
+    // V4 fix (사용자 명시 2026-05-26 ultrathink) — 모드 미선택 시 daily 강제 X (null 그대로 → default '편하게 말해 보소').
+    // 표정도 soft-smile 명시 (render 시 mode default fallback 차단).
     state.chatMessages.push({
       role: 'assistant',
-      content: _chatWelcomeText(state.chatMode || 'daily'),
+      content: _chatWelcomeText(state.chatMode || null),
+      expression: 'soft-smile',
       timestamp: new Date().toISOString(),
       _isWelcome: true
     });
@@ -44761,13 +44765,15 @@ function _refreshAllMsgAvatars() {
 // V4 사용자 명시 2026-05-23 (재재) — welcome 텍스트 helper. 두 자리 사용:
 //   1) _chatEmptyAreaHtml 의 placeholder welcome bubble (DOM only, chatMessages 비어있을 때).
 //   2) sendChat 의 첫 메시지 push 직전 welcome 실제 메시지 (state.chatMessages 안 박음 — AI 가 자기 첫 발화로 인식).
+// V4 fix (사용자 명시 2026-05-26 ultrathink) — null (모드 미선택) default 첫 메시지 = '편하게 말해 보소'.
 const _CHAT_WELCOME_TEXTS = {
   daily:   '오늘 뭐 했어?',
   inquiry: '고민이 뭐야?',
   vent:    '편하게 말해줘. 다 괜찮아.'
 };
+const _CHAT_WELCOME_DEFAULT = '편하게 말해 보소';
 function _chatWelcomeText(mode) {
-  return _CHAT_WELCOME_TEXTS[mode] || _CHAT_WELCOME_TEXTS.daily;
+  return _CHAT_WELCOME_TEXTS[mode] || _CHAT_WELCOME_DEFAULT;
 }
 
 // V4 cleanup 2026-05-23 (재) — onChatEmptyChip 폐기 (chip 3개 자체 제거).

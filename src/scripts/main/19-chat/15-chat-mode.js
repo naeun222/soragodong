@@ -241,13 +241,15 @@ function _refreshAllMsgAvatars() {
 // V4 사용자 명시 2026-05-23 (재재) — welcome 텍스트 helper. 두 자리 사용:
 //   1) _chatEmptyAreaHtml 의 placeholder welcome bubble (DOM only, chatMessages 비어있을 때).
 //   2) sendChat 의 첫 메시지 push 직전 welcome 실제 메시지 (state.chatMessages 안 박음 — AI 가 자기 첫 발화로 인식).
+// V4 fix (사용자 명시 2026-05-26 ultrathink) — null (모드 미선택) default 첫 메시지 = '편하게 말해 보소'.
 const _CHAT_WELCOME_TEXTS = {
   daily:   '오늘 뭐 했어?',
   inquiry: '고민이 뭐야?',
   vent:    '편하게 말해줘. 다 괜찮아.'
 };
+const _CHAT_WELCOME_DEFAULT = '편하게 말해 보소';
 function _chatWelcomeText(mode) {
-  return _CHAT_WELCOME_TEXTS[mode] || _CHAT_WELCOME_TEXTS.daily;
+  return _CHAT_WELCOME_TEXTS[mode] || _CHAT_WELCOME_DEFAULT;
 }
 
 // V4 cleanup 2026-05-23 (재) — onChatEmptyChip 폐기 (chip 3개 자체 제거).

@@ -8,9 +8,12 @@ async function sendChat() {
   //   AI 가 자기 첫 발화 인식 + 사용자 발화가 *답하는 형식* 으로 자연 흐름.
   //   (옛 _chatEmptyCheckinDismissedDayK 자리 폐기 — 대화탭 체크인 카드 자체 폐기 후 dead.)
   if ((state.chatMessages || []).length === 0 && typeof _chatWelcomeText === 'function') {
+    // V4 fix (사용자 명시 2026-05-26 ultrathink) — 모드 미선택 시 daily 강제 X (null 그대로 → default '편하게 말해 보소').
+    // 표정도 soft-smile 명시 (render 시 mode default fallback 차단).
     state.chatMessages.push({
       role: 'assistant',
-      content: _chatWelcomeText(state.chatMode || 'daily'),
+      content: _chatWelcomeText(state.chatMode || null),
+      expression: 'soft-smile',
       timestamp: new Date().toISOString(),
       _isWelcome: true
     });

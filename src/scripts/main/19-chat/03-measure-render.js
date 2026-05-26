@@ -251,7 +251,8 @@ function _chatEmptyAreaHtml() {
       ? `<div class="msg-avatar" role="button" tabindex="0" aria-label="대화 모드 변경" onclick="onChatModeHeaderClick()">${composedCharacterHtml({ mode: chatMode, useGlasses: false, expression: _welcomeExpr })}</div>`
       : '';
     // V4 사용자 명시 2026-05-23 (재재) — welcome 텍스트 helper 사용. sendChat 시점에 같은 텍스트가 chatMessages 에 박힘 (AI 첫 발화 인식).
-    const welcomeText = (typeof _chatWelcomeText === 'function') ? _chatWelcomeText(chatMode || 'daily') : '오늘 뭐 했어?';
+    // V4 fix (사용자 명시 2026-05-26 ultrathink) — 모드 미선택 (null) 시 daily 강제 X. helper 가 '편하게 말해 보소' 반환.
+    const welcomeText = (typeof _chatWelcomeText === 'function') ? _chatWelcomeText(chatMode) : '편하게 말해 보소';
     const welcomeBubble = `<div class="msg assistant ces-welcome">${avatarHtml}<div class="msg-bubble">${welcomeText}</div></div>`;
     // V4 사용자 명시 2026-05-23 — welcome 바로 밑 한 줄. 모드 시트 진입점 안내 (avatar tap).
     const avatarHintHtml = `<div class="ces-avatar-hint-static">고동 프로필을 눌러보세요</div>`;
