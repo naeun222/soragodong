@@ -1,7 +1,7 @@
 // V4 (사용자 재정정 2026-05-27 ultrathink — 캘린더 일정/할 일 2단계 재정정):
-// 일정 lens (도서관 🚀 일정 chip) 의 grid 뷰 캘린더. 월간 7×N 그리드.
-// 사용자 재정정 2026-05-27 ultrathink (시각 조정): 구글 캘린더 월간 뷰 스타일 — 셀 세로 길게 + 일정 title 인라인 표시.
-//   각 셀: 날짜 right-top + 일정 (파랑 bar) / task.dueDate (노랑 bar) 최대 3개 + 초과 시 +N.
+// 일정 lens (도서관 🚀 일정 chip) 의 grid 뷰 캘린더.
+// 사용자 재정정 2026-05-27 ultrathink (시각 조정): 구글 캘린더 월간 뷰 스타일 — 셀 세로 길게 + 일정 title 인라인.
+// 사용자 명시 2026-05-27 ultrathink (UI 통일): 외곽 + 헤더 = 일기·대화 캘린더와 같은 .cal-grid-wrap / .cal-nav / .cal-nav-btn / .cal-month-label / .cal-weekdays 클래스. 화살표 ← →. 월 라벨 toLocaleDateString.
 // timeline 뷰는 기존 renderExecute() — 별도.
 
 let _schedCalCursorYM = null;  // 'YYYY-MM' (사용자 로컬 시간대)
@@ -32,8 +32,10 @@ function renderScheduleCalendarGrid() {
 
   const ym = _schedCalEnsureCursor();
   const [year, month] = ym.split('-').map(Number);
+  const target = new Date(year, month - 1, 1);
+  const monthLabel = target.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' });
   const lastDay = new Date(year, month, 0).getDate();
-  const firstWeekday = new Date(year, month - 1, 1).getDay();
+  const firstWeekday = target.getDay();
   const monthKey = `${year}-${String(month).padStart(2, '0')}`;
 
   // schedules — 해당 월에 시작하는 entry. 시간순 정렬.
@@ -63,17 +65,18 @@ function renderScheduleCalendarGrid() {
   const _today = new Date();
   const todayK = `${_today.getFullYear()}-${String(_today.getMonth() + 1).padStart(2, '0')}-${String(_today.getDate()).padStart(2, '0')}`;
 
-  // 헤더 + 요일
+  // 외곽 + 헤더 + 요일 = 일기·대화 캘린더와 같은 클래스 (visual 통일).
   let html = `
-    <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 4px 12px;">
-      <button onclick="_schedCalMonthShift(-1)" style="background:transparent; border:none; color:var(--text); font-size:22px; cursor:pointer; padding:4px 12px; font-family:inherit; line-height:1;" aria-label="이전 달">‹</button>
-      <span style="font-size:15px; font-weight:600; color:var(--text);">${year}년 ${month}월</span>
-      <button onclick="_schedCalMonthShift(1)" style="background:transparent; border:none; color:var(--text); font-size:22px; cursor:pointer; padding:4px 12px; font-family:inherit; line-height:1;" aria-label="다음 달">›</button>
-    </div>
-    <div style="display:grid; grid-template-columns: repeat(7, 1fr); gap:3px; padding:0 2px 6px; font-size:11px; color:var(--text-soft); text-align:center; font-weight:500;">
-      <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
-    </div>
-    <div style="display:grid; grid-template-columns: repeat(7, 1fr); gap:3px; padding:0 2px;">
+    <div class="cal-grid-wrap">
+      <div class="cal-nav">
+        <button class="cal-nav-btn" onclick="_schedCalMonthShift(-1)" aria-label="지난 달">←</button>
+        <div class="cal-month-label">${monthLabel}</div>
+        <button class="cal-nav-btn" onclick="_schedCalMonthShift(1)" aria-label="다음 달">→</button>
+      </div>
+      <div class="cal-weekdays">
+        <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+      </div>
+      <div style="display:grid; grid-template-columns: repeat(7, 1fr); gap:3px; padding:0 2px;">
   `;
 
   // 빈 셀 (전월 잔여)
@@ -87,7 +90,7 @@ function renderScheduleCalendarGrid() {
     const ds = schedulesByDate[dateKey] || [];
     const dt = tasksByDate[dateKey] || [];
 
-    // schedule 먼저 (시간순), task 그 다음. 종일 일정은 [종일] prefix.
+    // schedule 먼저 (시간순), task 그 다음. 종일 일정은 · prefix.
     const allItems = [
       ...ds.map(s => ({
         kind: 'schedule',
@@ -103,7 +106,6 @@ function renderScheduleCalendarGrid() {
     const display = allItems.slice(0, _SCHED_CAL_MAX_ITEMS);
     const remaining = allItems.length - display.length;
 
-    // 날짜 라벨 — 오늘이면 둥근 강조 박스
     const dayLabelHtml = isToday
       ? `<span style="font-size:11px; font-weight:600; color:#fff; background:var(--accent2); padding:2px 6px; border-radius:10px; line-height:1.2;">${day}</span>`
       : `<span style="font-size:11px; font-weight:400; color:var(--text); padding:2px 4px; line-height:1.2;">${day}</span>`;
@@ -119,16 +121,18 @@ function renderScheduleCalendarGrid() {
     `;
   }
 
-  html += '</div>';
-
-  // 안내 + 범례
   html += `
-    <div style="margin:18px 4px 0; padding:14px; background:var(--surface); border:1px solid var(--border); border-radius:12px; font-size:12px; color:var(--text-soft); line-height:1.6;">
+      </div>
+    </div>
+  `;
+
+  // 범례 (안내 문구 제거 — 2-3 ship 후)
+  html += `
+    <div style="margin:18px 4px 0; padding:12px 14px; background:var(--surface); border:1px solid var(--border); border-radius:12px; font-size:12px; color:var(--text-soft); line-height:1.6;">
       <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:center;">
         <span style="display:inline-flex; align-items:center; gap:6px;"><span style="display:inline-block; width:10px; height:10px; background:${_SCHED_CAL_SCHEDULE_COLOR}1f; border-left:2px solid ${_SCHED_CAL_SCHEDULE_COLOR}; border-radius:2px;"></span>일정</span>
         <span style="display:inline-flex; align-items:center; gap:6px;"><span style="display:inline-block; width:10px; height:10px; background:${_SCHED_CAL_TASK_COLOR}1f; border-left:2px solid ${_SCHED_CAL_TASK_COLOR}; border-radius:2px;"></span>할 일 마감</span>
       </div>
-      <div style="margin-top:10px;">날짜 클릭 시 그날의 일정/마감 모달 (다음 단계 구현). 일정 추가/수정/삭제 + 알림은 후속.</div>
     </div>
   `;
 
@@ -136,7 +140,11 @@ function renderScheduleCalendarGrid() {
 }
 
 function _schedCalDayClick(dateKey) {
-  if (typeof showToast === 'function') showToast(`📅 ${dateKey} — 일정 모달은 다음 단계에서`);
+  if (typeof openScheduleDayModal === 'function') {
+    openScheduleDayModal(dateKey);
+  } else if (typeof showToast === 'function') {
+    showToast(`📅 ${dateKey}`);
+  }
 }
 
 try {
