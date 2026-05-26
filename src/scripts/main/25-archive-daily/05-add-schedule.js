@@ -1,4 +1,11 @@
 async function addV4ScheduleItem() {
+  // 사용자 명시 2026-05-27 ultrathink (캘린더 일정/할 일 sync — 양방향 CRUD): timeline 의 '+ 일정 추가' 도 캘린더 모달 사용 → state.schedules 에 통합 저장. 캘린더/timeline 자연 sync.
+  if (typeof openScheduleEditModal === 'function') {
+    const today = (typeof _scheduleDateKey === 'function') ? _scheduleDateKey() : todayKey();
+    openScheduleEditModal(null, { date: today });
+    return;
+  }
+  // fallback — openScheduleEditModal 미정의 환경 (옛 흐름 — state.todaySchedule 직접 push).
   const title = await showInputModal({
     title: '📅 일정 추가',
     message: '뭐 할 거야?',
@@ -20,7 +27,6 @@ async function addV4ScheduleItem() {
     title: title.trim(),
     start: time.start,
     end: time.end,
-    // 사용자 명시 2026-05-06 (정정): 자정 cutoff helper.
     date: (typeof _scheduleDateKey === 'function') ? _scheduleDateKey() : todayKey(),
     source: 'manual',
     taskId: null,

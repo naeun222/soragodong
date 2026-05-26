@@ -1,6 +1,24 @@
 async function openV4ScheduleItem(id) {
+  // 사용자 명시 2026-05-27 ultrathink (캘린더 일정/할 일 sync — 양방향 CRUD): timeline 일정 클릭 시 캘린더와 같은 모달 진입.
+  //   1) state.schedules entry → openScheduleEditModal (캘린더 모달).
+  //   2) 옛 todaySchedule entry → taskId 면 scheduleTaskToTime (task 시간 적용 picker), 아니면 옛 옵션 modal (delete/edit).
+  if (typeof openScheduleEditModal === 'function') {
+    const sched = (state.schedules || []).find(s => s.id === id);
+    if (sched) {
+      openScheduleEditModal(sched.id);
+      return;
+    }
+  }
+
   const it = (state.todaySchedule || []).find(x => x.id === id);
   if (!it) return;
+
+  // taskId 있으면 → task 시간 적용 picker (변경/제거 선택)
+  if (it.taskId && typeof scheduleTaskToTime === 'function') {
+    return scheduleTaskToTime(it.taskId);
+  }
+
+  // 옛 흐름 — ICS / 옛 manual entry (state.schedules 아닌 todaySchedule entry).
   const action = await showOptionsModal({
     title: `📅 ${it.title}`,
     message: `${it.start}–${it.end}`,
@@ -12,7 +30,6 @@ async function openV4ScheduleItem(id) {
   });
   if (action === 'delete') {
     state.todaySchedule = state.todaySchedule.filter(x => x.id !== id);
-    // 연결된 task가 있으면 task.scheduledStart도 비움
     if (it.taskId) {
       const t = (state.tasks || []).find(x => x.id === it.taskId);
       if (t) { t.scheduledStart = null; t.scheduledEnd = null; }
