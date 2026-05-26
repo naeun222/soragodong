@@ -347,6 +347,9 @@ async function openSubscribeModal() {
     _showTwaPaymentNoticeModal();
     return;
   }
+  // V4 (사용자 보고 2026-05-26 ultrathink): naeun222.github.io 등 비정식 도메인에서 결제 진입 차단.
+  // PortOne redirect 가 잘못된 origin 으로 복귀하면 verify 못 함 → 청구는 됐는데 DB 갱신 X 함정 방지.
+  if (_blockPaymentIfBadOrigin()) return;
   if (typeof refreshBillingStatus === 'function') {
     try { await refreshBillingStatus(false); } catch {}
   }
@@ -641,6 +644,7 @@ async function proceedSubscribe(tierKey) {
     _showTwaPaymentNoticeModal();
     return;
   }
+  if (_blockPaymentIfBadOrigin()) return;
   const tier = TIER_PLANS_CLIENT[tierKey];
   if (!tier) { alert('잘못된 플랜'); return; }
   // V4 (사용자 명시 2026-05-13 ultrathink): 업그레이드 confirm — 옛 구독 즉시 종료 + 새 cycle.
@@ -732,7 +736,7 @@ async function proceedSubscribe(tierKey) {
       issueId,
       issueName: `소라고동 ${tier.label} 정기 (월 ${tier.krw.toLocaleString()}원 자동 갱신)`,
       windowType: { pc: 'IFRAME', mobile: 'REDIRECTION' },
-      redirectUrl: window.location.origin + (window.location.pathname || '/') + '#recurring-subscribe-return',
+      redirectUrl: _paymentReturnBase() + '#recurring-subscribe-return',
       // V4 (사용자 보고 2026-05-13 ultrathink): KG이니시스 V2 모바일 빌링키 = offerPeriod 필수 ('빌링키 발급 창 호출 실패' 에러).
       //   주의: PortOne 표준 ISO 8601 duration ('P1M') X — KG이니시스 custom 형식 '<숫자><d|m|y>' (예: '1m'=매월). PC IFRAME 엔 optional, 모바일 REDIRECTION 시 누락하면 발급 자체 차단.
       offerPeriod: { interval: '1m' },
@@ -875,6 +879,7 @@ async function proceedFreeTrial() {
 // V4 (사용자 명시 2026-05-11 ultrathink): trial 흐름 = Plus tier (key='light'). 옛 얼리버드 promo 정체성 폐기 — 함수 리네임.
 //   ⚠ backend /api/billing/portone-register-trial 도 plan='light' 로 처리 (또는 plan 파라미터 추가) — 백엔드 sync 필요.
 async function proceedPlusTrial() {
+  if (_blockPaymentIfBadOrigin()) return;
   const tier = TIER_PLANS_CLIENT.light;  // Plus (9,900) — 첫 달 무료 trial
   if (!session || !session.access_token) {
     alert('로그인 필요 — 설정 → 로그아웃 후 재로그인.');
@@ -948,7 +953,7 @@ async function proceedPlusTrial() {
       issueId,
       issueName: '소라고동 Plus 정기 카드 등록 (첫 달 무료)',
       windowType: { pc: 'IFRAME', mobile: 'REDIRECTION' },
-      redirectUrl: window.location.origin + (window.location.pathname || '/') + '#plus-trial-return',
+      redirectUrl: _paymentReturnBase() + '#plus-trial-return',
       // V4 (사용자 보고 2026-05-13 ultrathink): KG이니시스 V2 모바일 빌링키 = offerPeriod 필수 — proceedSubscribe 와 동일. 형식 '1m' (KG이니시스 custom, ISO 8601 X).
       offerPeriod: { interval: '1m' },
       customer: {
@@ -1035,6 +1040,7 @@ async function proceedOneTimePurchase(tierKey) {
     _showTwaPaymentNoticeModal();
     return;
   }
+  if (_blockPaymentIfBadOrigin()) return;
   const tier = TIER_PLANS_CLIENT[tierKey];
   if (!tier) { alert('잘못된 플랜'); return; }
   if (!session || !session.access_token) {
@@ -1107,7 +1113,7 @@ async function proceedOneTimePurchase(tierKey) {
       payMethod: _pgInfo.payMethod,
       ...(_pgInfo.easyPay ? { easyPay: _pgInfo.easyPay } : {}),
       windowType: { pc: 'IFRAME', mobile: 'REDIRECTION' },
-      redirectUrl: window.location.origin + (window.location.pathname || '/') + '#subscribe-return',
+      redirectUrl: _paymentReturnBase() + '#subscribe-return',
       customer: {
         customerId: authUserId || undefined,
         email: session?.user?.email || undefined,

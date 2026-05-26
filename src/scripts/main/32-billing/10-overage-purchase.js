@@ -2,6 +2,7 @@
 // 사용자 명시 2026-05-06: V1 (IMP/iamport.js) → V2 (PortOne SDK) 마이그레이션.
 
 async function _portOneV2RequestPayment({ paymentId, orderName, amount, customData }) {
+  if (_blockPaymentIfBadOrigin()) return null;
   const channelKey = (typeof PORTONE_CHANNEL_KEY !== 'undefined') ? PORTONE_CHANNEL_KEY : '';
   const storeId = (typeof PORTONE_STORE_ID !== 'undefined') ? PORTONE_STORE_ID : '';
   if (!channelKey || !storeId) {
@@ -44,7 +45,7 @@ async function _portOneV2RequestPayment({ paymentId, orderName, amount, customDa
       orderName, totalAmount: amount, currency: 'KRW', payMethod: 'CARD',
       // 사용자 보고 2026-05-06: 모바일 KG이니시스 = "PC 로 결제" 거부 메시지 → REDIRECTION 강제 + redirectUrl.
       windowType: { pc: 'IFRAME', mobile: 'REDIRECTION' },
-      redirectUrl: window.location.origin + (window.location.pathname || '/'),
+      redirectUrl: _paymentReturnBase(),
       customer: { customerId: authUserId || undefined, email: session?.user?.email || undefined, phoneNumber, fullName },
       // 사용자 명시 2026-05-09 ultrathink: 현금영수증 자진발급 (부가세법 §32-2 의무).
       cashReceipt: phoneNumber && /^01\d{8,9}$/.test(phoneNumber.replace(/[-\s]/g, ''))

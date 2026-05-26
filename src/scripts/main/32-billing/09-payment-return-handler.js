@@ -1,3 +1,51 @@
+// ─── 결제 origin / redirect helper ───
+// 사용자 보고 2026-05-26 ultrathink: naeun222.github.io (GitHub Pages 잔재) 에서 결제 시작 →
+// PortOne redirect 도 github.io 로 복귀 → /api/* 없는 정적 호스팅 = verify-pay 404 HTML →
+// data={} → "결제 검증 실패: 알 수 없는 오류". PortOne 측엔 4,900원 정상 청구.
+// 방어: 결제 진입 자체 차단 + redirectUrl 은 canonical 도메인으로 강제.
+function _isPaymentOriginAllowed() {
+  try {
+    const host = (window.location.hostname || '').toLowerCase();
+    if (host.endsWith('.github.io')) return false;
+    return true;
+  } catch { return true; }
+}
+function _blockPaymentIfBadOrigin() {
+  if (_isPaymentOriginAllowed()) return false;
+  try {
+    alert(
+      '결제는 정식 도메인에서만 가능해.\n\n' +
+      'https://soragodong.com 으로 이동 후 다시 시도해줘.\n\n' +
+      '(현재 도메인: ' + window.location.hostname + ')'
+    );
+  } catch {}
+  return true;
+}
+function _paymentReturnBase() {
+  try {
+    const host = (window.location.hostname || '').toLowerCase();
+    // localhost / 127.0.0.1 / *.pages.dev preview = 그대로 둠 (개발/스테이징).
+    if (host === 'localhost' || host === '127.0.0.1' || host.endsWith('.pages.dev')) {
+      return window.location.origin + (window.location.pathname || '/');
+    }
+    // 정식 도메인 외 (github.io 등) = 무조건 canonical 로 복귀.
+    return 'https://soragodong.com/';
+  } catch {
+    return 'https://soragodong.com/';
+  }
+}
+
+// paymentId 단축 tierKey ↔ 정식 TIER_PLANS key 역매핑.
+// 사용자 보고 2026-05-26 ultrathink: KG이니시스 oid 40자 제한 때문에 결제 시 tierKey 'early_lifetime' → 'early' 로 단축
+// (08-subscribe-modal.js:1088). 모바일 redirect 흐름에서 paymentId 만 갖고 verify 호출 시 parts[1]='early'
+// 그대로 보내면 backend validateTier 가 invalid tier 로 거부 → 결제 사라짐. 역매핑 fix.
+function _expandTierShort(short) {
+  if (!short) return '';
+  if (short === 'early') return 'early_lifetime';
+  if (short === 'prem') return 'premium';
+  return short;
+}
+
 // ─── 결제 redirect return handler (PortOne V2 모바일 흐름) ───
 // 사용자 보고 2026-05-06: 모바일 KG이니시스 = 결제창 redirect → 우리 도메인 복귀 + URL query (paymentId / code / message).
 // init() 끝부분에서 fire-and-forget 호출. paymentId 없으면 즉시 return.
@@ -131,7 +179,7 @@ async function _handlePaymentReturn() {
   let endpoint, body, successMsg;
   if (paymentId.startsWith('payment-')) {
     endpoint = '/api/billing/portone-verify-pay';
-    body = { paymentId, plan: parts[1] || '' };
+    body = { paymentId, plan: _expandTierShort(parts[1] || '') };
     successMsg = '📅 구독 완료';
   } else if (paymentId.startsWith('pack-')) {
     endpoint = '/api/billing/overage-pack';
