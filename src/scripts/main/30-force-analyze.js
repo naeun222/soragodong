@@ -72,7 +72,13 @@ async function forceAnalyze(opts) {
     const response = await callAnthropic({
       _endpoint: 'analyze_4stage',
       _userContentType: 'force_analyze',
-      _vars: { dataDumpJson: _dataDumpJson },
+      // 사용자 명시 2026-05-26 ultrathink: backend [이미 등록된 항목] 블록 합성용 list — dataDump 안 중복이지만 explicit 강조.
+      _vars: {
+        dataDumpJson: _dataDumpJson,
+        existingTraitNames: dataDump.existingTraitNames,
+        existingValueNames: dataDump.existingValueNames,
+        existingPatternNames: dataDump.existingPatternNames
+      },
       model: 'claude-opus-4-7',
       max_tokens: 2500,
       messages: [{ role: 'user', content: '' }]

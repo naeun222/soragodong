@@ -160,8 +160,20 @@ function buildChapterTopics(v: any): string {
   // 사용자 보고 2026-05-12 ultrathink: instruction 을 CHAPTER_TOPICS_SYSTEM 또는 CHAPTER_SIM_EXTRACT_SYSTEM 으로 이전.
   //   isSim true 면 _userContentType='sim_extract' (분기는 호출처에서 설정), false 면 'chapter_topics'.
   //   user content 는 chatLog 만.
+  // 사용자 명시 2026-05-26 ultrathink: dedup 인플레 잡기 — 기존 항목 명시 인용해 AI 가 같은 의미 재명명 X.
   const chatLog = _s(v?.chatLog, 8000);
-  return `[대화 원문]\n${chatLog}`;
+  const _list = (arr: any): string => {
+    if (!Array.isArray(arr) || arr.length === 0) return '(없음)';
+    const items = arr.slice(0, 80).map((x: any) => _s(x, 60)).filter(Boolean);
+    return items.length ? items.join(', ') : '(없음)';
+  };
+  return `[이미 등록된 항목 — 이번 챕터 발견 시 의미상 같으면 새 항목 만들지 X, 기존 이름 그대로 사용]
+- traits: ${_list(v?.existingTraitNames)}
+- values: ${_list(v?.existingValueNames)}
+- patterns: ${_list(v?.existingPatternNames)}
+
+[대화 원문]
+${chatLog}`;
 }
 
 function buildSimExtract(v: any): string {
@@ -423,8 +435,22 @@ ${list}
 function buildForceAnalyze(v: any): string {
   // 사용자 보고 2026-05-12 ultrathink: instruction (헤더 + JSON schema + 원칙 + 필터) 을 endpoint-systems.ts 의 ANALYZE_4STAGE_SYSTEM 으로 이전.
   //   user content 는 dataDumpJson 만 남김 → 변동 부분만 / 고정은 cache hit.
+  // 사용자 명시 2026-05-26 ultrathink: dedup 인플레 잡기 — 기존 항목 명시 인용 (dataDump 안 중복이지만 explicit 강조).
   const dataDumpJson = _s(v?.dataDumpJson, 30000);
-  return `[사용자 데이터]\n${dataDumpJson}\n\n위 데이터로 Case Formulation 작성. JSON만 출력.`;
+  const _list = (arr: any): string => {
+    if (!Array.isArray(arr) || arr.length === 0) return '(없음)';
+    const items = arr.slice(0, 80).map((x: any) => _s(x, 60)).filter(Boolean);
+    return items.length ? items.join(', ') : '(없음)';
+  };
+  return `[사용자 데이터]
+${dataDumpJson}
+
+[이미 등록된 항목 — 의미상 같으면 새 항목 만들지 X, 기존 이름 그대로 사용]
+- traits: ${_list(v?.existingTraitNames)}
+- values: ${_list(v?.existingValueNames)}
+- patterns: ${_list(v?.existingPatternNames)}
+
+위 데이터로 Case Formulation 작성. JSON만 출력.`;
 }
 
 // 사용자 명시 2026-05-16 ultrathink: 자동 인사이트 발견 — 14일 행동 데이터 + 기존 인사이트 (dedup 용).
