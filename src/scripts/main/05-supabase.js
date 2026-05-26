@@ -367,41 +367,10 @@ async function loadFromCloud() {
     }
 
     // === V7 (V4) collection 보강 ===
-    if (!state.reflectionQuestions) state.reflectionQuestions = [];
-    if (!state.todaySchedule) state.todaySchedule = [];
-    if (!state.diagnoses) state.diagnoses = [];
-    if (!state.quarterlyReviews) state.quarterlyReviews = [];
-    // 사용자 요청 2026-04-29 (Q2): userDeepProfile 보강 — 점진 입력 schema
-    if (!state.userDeepProfile) state.userDeepProfile = JSON.parse(JSON.stringify(DEFAULT_STATE.userDeepProfile));
-    if (!state.userDeepProfile.development) state.userDeepProfile.development = { childhood: '', schoolYears: '', adhdDiscovery: '', turningPoints: [] };
-    if (!Array.isArray(state.userDeepProfile.development.turningPoints)) state.userDeepProfile.development.turningPoints = [];
-    if (!Array.isArray(state.userDeepProfile.relationships)) state.userDeepProfile.relationships = [];
-    if (!state.userDeepProfile.selfNarrative) state.userDeepProfile.selfNarrative = { selfStory: '', coreBeliefs: { aboutSelf: [], aboutWorld: [], aboutFuture: [] }, howWantToBeSeen: '', identityKeywords: [] };
-    if (!state.userDeepProfile.selfNarrative.coreBeliefs) state.userDeepProfile.selfNarrative.coreBeliefs = { aboutSelf: [], aboutWorld: [], aboutFuture: [] };
-    ['aboutSelf', 'aboutWorld', 'aboutFuture'].forEach(k => {
-      if (!Array.isArray(state.userDeepProfile.selfNarrative.coreBeliefs[k])) state.userDeepProfile.selfNarrative.coreBeliefs[k] = [];
-    });
-    if (!Array.isArray(state.userDeepProfile.selfNarrative.identityKeywords)) state.userDeepProfile.selfNarrative.identityKeywords = [];
-    // caseFormulation 8 차원
-    if (!state.caseFormulation) state.caseFormulation = JSON.parse(JSON.stringify(DEFAULT_STATE.caseFormulation));
-    if (!Array.isArray(state.caseFormulation.goals)) state.caseFormulation.goals = [];
-    if (!Array.isArray(state.caseFormulation.growth)) state.caseFormulation.growth = [];
-    if (!state.caseFormulation.unverified) state.caseFormulation.unverified = {};
-    ['problems','mechanisms','strengths','goals','growth'].forEach(k => {
-      if (!Array.isArray(state.caseFormulation.unverified[k])) state.caseFormulation.unverified[k] = [];
-    });
-    // preferences V4 필드
-    if (!state.preferences) state.preferences = JSON.parse(JSON.stringify(DEFAULT_STATE.preferences));
-    if (state.preferences.tutorialVersion === undefined) state.preferences.tutorialVersion = null;
-    if (state.preferences.tutorialCompleted === undefined) state.preferences.tutorialCompleted = false;
-    if (!Array.isArray(state.preferences.miniTutorialsSeen)) state.preferences.miniTutorialsSeen = [];
-    if (state.preferences.progressiveUnlockLevel === undefined) state.preferences.progressiveUnlockLevel = null;
-    // 사용자 요청 2026-04-30: 일일 chat cap default 100. 이미 있으면 그대로 (사용자 설정 보존).
-    if (state.preferences.dailyChatCap === undefined) state.preferences.dailyChatCap = 100;
-    if (!state.dailyChatCount || typeof state.dailyChatCount !== 'object') state.dailyChatCount = { date: null, count: 0 };
-    // 사용자 요청 2026-04-30 (변호사 검수): consentLog 보강 + pending_consent localStorage → state 옮기기.
-    if (!Array.isArray(state.preferences.consentLog)) state.preferences.consentLog = [];
-    if (state.preferences.autoRenew === undefined) state.preferences.autoRenew = false;
+    // V4 fix (사용자 명시 2026-05-26 ultrathink — drift 회피): helper `_ensureV7Schema` 로 일원화.
+    //   manual-restore + loadFromCloud 가 동일 보강 적용. 02-state.js 정의.
+    //   pending_consent 처리는 별개 흐름 — 아래 그대로.
+    if (typeof _ensureV7Schema === 'function') _ensureV7Schema();
     try {
       const pendingRaw = localStorage.getItem('soragodong_pending_consent');
       if (pendingRaw) {

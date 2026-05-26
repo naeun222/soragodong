@@ -15486,6 +15486,43 @@ window.addEventListener('beforeunload', () => {
   } catch {}
 });
 
+// V4 fix (사용자 명시 2026-05-26 ultrathink — V7 schema 보강 helper): restore path 일관성.
+//   loadFromCloud (05-supabase.js:369-404) 의 인라인 보강 블록을 helper 로 추출 — manual-restore 와 cloud restore 양쪽이 동일 보강 적용.
+//   idempotent — 이미 채워진 필드 보존, 누락 필드만 채움. migrateToV7 와 부분 겹침이나 안전 (idempotent).
+function _ensureV7Schema() {
+  if (typeof state !== 'object' || !state) return;
+  if (!state.reflectionQuestions) state.reflectionQuestions = [];
+  if (!state.todaySchedule) state.todaySchedule = [];
+  if (!state.diagnoses) state.diagnoses = [];
+  if (!state.quarterlyReviews) state.quarterlyReviews = [];
+  if (!state.userDeepProfile) state.userDeepProfile = JSON.parse(JSON.stringify(DEFAULT_STATE.userDeepProfile));
+  if (!state.userDeepProfile.development) state.userDeepProfile.development = { childhood: '', schoolYears: '', adhdDiscovery: '', turningPoints: [] };
+  if (!Array.isArray(state.userDeepProfile.development.turningPoints)) state.userDeepProfile.development.turningPoints = [];
+  if (!Array.isArray(state.userDeepProfile.relationships)) state.userDeepProfile.relationships = [];
+  if (!state.userDeepProfile.selfNarrative) state.userDeepProfile.selfNarrative = { selfStory: '', coreBeliefs: { aboutSelf: [], aboutWorld: [], aboutFuture: [] }, howWantToBeSeen: '', identityKeywords: [] };
+  if (!state.userDeepProfile.selfNarrative.coreBeliefs) state.userDeepProfile.selfNarrative.coreBeliefs = { aboutSelf: [], aboutWorld: [], aboutFuture: [] };
+  ['aboutSelf', 'aboutWorld', 'aboutFuture'].forEach(k => {
+    if (!Array.isArray(state.userDeepProfile.selfNarrative.coreBeliefs[k])) state.userDeepProfile.selfNarrative.coreBeliefs[k] = [];
+  });
+  if (!Array.isArray(state.userDeepProfile.selfNarrative.identityKeywords)) state.userDeepProfile.selfNarrative.identityKeywords = [];
+  if (!state.caseFormulation) state.caseFormulation = JSON.parse(JSON.stringify(DEFAULT_STATE.caseFormulation));
+  if (!Array.isArray(state.caseFormulation.goals)) state.caseFormulation.goals = [];
+  if (!Array.isArray(state.caseFormulation.growth)) state.caseFormulation.growth = [];
+  if (!state.caseFormulation.unverified) state.caseFormulation.unverified = {};
+  ['problems', 'mechanisms', 'strengths', 'goals', 'growth'].forEach(k => {
+    if (!Array.isArray(state.caseFormulation.unverified[k])) state.caseFormulation.unverified[k] = [];
+  });
+  if (!state.preferences) state.preferences = JSON.parse(JSON.stringify(DEFAULT_STATE.preferences));
+  if (state.preferences.tutorialVersion === undefined) state.preferences.tutorialVersion = null;
+  if (state.preferences.tutorialCompleted === undefined) state.preferences.tutorialCompleted = false;
+  if (!Array.isArray(state.preferences.miniTutorialsSeen)) state.preferences.miniTutorialsSeen = [];
+  if (state.preferences.progressiveUnlockLevel === undefined) state.preferences.progressiveUnlockLevel = null;
+  if (state.preferences.dailyChatCap === undefined) state.preferences.dailyChatCap = 100;
+  if (!state.dailyChatCount || typeof state.dailyChatCount !== 'object') state.dailyChatCount = { date: null, count: 0 };
+  if (!Array.isArray(state.preferences.consentLog)) state.preferences.consentLog = [];
+  if (state.preferences.autoRenew === undefined) state.preferences.autoRenew = false;
+}
+
 // 사용자 명시 2026-05-05 ultrathink-3: 에러 자동 개발자 보고 + 1h dedupe.
 // 호출: reportError({ signature, detail, stack, ...meta })
 // signature = dedupe key. localStorage 에 시간 stamp 저장 — 같은 signature 1h 안 다시 안 보냄.
@@ -15726,8 +15763,20 @@ async function checkSession() {
           });
           if (refreshResp.ok) {
             const newSession = await refreshResp.json();
-            session = { ...session, access_token: newSession.access_token, refresh_token: newSession.refresh_token, user: newSession.user };
-            authUserId = newSession.user.id;
+            // V4 fix (사용자 명시 2026-05-26 ultrathink — refresh 응답 shape 검증): user 누락 시 NPE → 강제 로그아웃 회피.
+            //   02-state.js `_refreshSessionForApi` 와 동일 가드. user 는 기존 session.user 로 fallback.
+            if (!newSession || !newSession.access_token) {
+              console.warn('[refresh fallback] invalid response shape — skip');
+              return false;
+            }
+            const _user = newSession.user || session.user || null;
+            session = {
+              ...session,
+              access_token: newSession.access_token,
+              refresh_token: newSession.refresh_token || session.refresh_token,
+              user: _user
+            };
+            if (_user && _user.id) authUserId = _user.id;
             localStorage.setItem('soragodong_session', JSON.stringify(session));
             return true;
           }
@@ -16891,7 +16940,9 @@ async function signInAnonymouslyForGuest() {
       return { ok: false, reason: 'network', status: resp.status, detail: errText.slice(0, 200) };
     }
     const data = await resp.json();
-    if (!data?.access_token || !data?.user?.id) {
+    // V4 fix (사용자 명시 2026-05-26 ultrathink — refresh_token 검증): refresh_token 누락 시 access_token 만 박혀도 1시간 후 silent 로그아웃.
+    //   _refreshSessionForApi 는 refresh_token 없으면 false return — 게스트는 자동 갱신 권리 X.
+    if (!data?.access_token || !data?.user?.id || !data?.refresh_token) {
       return { ok: false, reason: 'invalid_response' };
     }
     session = {
@@ -20734,41 +20785,10 @@ async function loadFromCloud() {
     }
 
     // === V7 (V4) collection 보강 ===
-    if (!state.reflectionQuestions) state.reflectionQuestions = [];
-    if (!state.todaySchedule) state.todaySchedule = [];
-    if (!state.diagnoses) state.diagnoses = [];
-    if (!state.quarterlyReviews) state.quarterlyReviews = [];
-    // 사용자 요청 2026-04-29 (Q2): userDeepProfile 보강 — 점진 입력 schema
-    if (!state.userDeepProfile) state.userDeepProfile = JSON.parse(JSON.stringify(DEFAULT_STATE.userDeepProfile));
-    if (!state.userDeepProfile.development) state.userDeepProfile.development = { childhood: '', schoolYears: '', adhdDiscovery: '', turningPoints: [] };
-    if (!Array.isArray(state.userDeepProfile.development.turningPoints)) state.userDeepProfile.development.turningPoints = [];
-    if (!Array.isArray(state.userDeepProfile.relationships)) state.userDeepProfile.relationships = [];
-    if (!state.userDeepProfile.selfNarrative) state.userDeepProfile.selfNarrative = { selfStory: '', coreBeliefs: { aboutSelf: [], aboutWorld: [], aboutFuture: [] }, howWantToBeSeen: '', identityKeywords: [] };
-    if (!state.userDeepProfile.selfNarrative.coreBeliefs) state.userDeepProfile.selfNarrative.coreBeliefs = { aboutSelf: [], aboutWorld: [], aboutFuture: [] };
-    ['aboutSelf', 'aboutWorld', 'aboutFuture'].forEach(k => {
-      if (!Array.isArray(state.userDeepProfile.selfNarrative.coreBeliefs[k])) state.userDeepProfile.selfNarrative.coreBeliefs[k] = [];
-    });
-    if (!Array.isArray(state.userDeepProfile.selfNarrative.identityKeywords)) state.userDeepProfile.selfNarrative.identityKeywords = [];
-    // caseFormulation 8 차원
-    if (!state.caseFormulation) state.caseFormulation = JSON.parse(JSON.stringify(DEFAULT_STATE.caseFormulation));
-    if (!Array.isArray(state.caseFormulation.goals)) state.caseFormulation.goals = [];
-    if (!Array.isArray(state.caseFormulation.growth)) state.caseFormulation.growth = [];
-    if (!state.caseFormulation.unverified) state.caseFormulation.unverified = {};
-    ['problems','mechanisms','strengths','goals','growth'].forEach(k => {
-      if (!Array.isArray(state.caseFormulation.unverified[k])) state.caseFormulation.unverified[k] = [];
-    });
-    // preferences V4 필드
-    if (!state.preferences) state.preferences = JSON.parse(JSON.stringify(DEFAULT_STATE.preferences));
-    if (state.preferences.tutorialVersion === undefined) state.preferences.tutorialVersion = null;
-    if (state.preferences.tutorialCompleted === undefined) state.preferences.tutorialCompleted = false;
-    if (!Array.isArray(state.preferences.miniTutorialsSeen)) state.preferences.miniTutorialsSeen = [];
-    if (state.preferences.progressiveUnlockLevel === undefined) state.preferences.progressiveUnlockLevel = null;
-    // 사용자 요청 2026-04-30: 일일 chat cap default 100. 이미 있으면 그대로 (사용자 설정 보존).
-    if (state.preferences.dailyChatCap === undefined) state.preferences.dailyChatCap = 100;
-    if (!state.dailyChatCount || typeof state.dailyChatCount !== 'object') state.dailyChatCount = { date: null, count: 0 };
-    // 사용자 요청 2026-04-30 (변호사 검수): consentLog 보강 + pending_consent localStorage → state 옮기기.
-    if (!Array.isArray(state.preferences.consentLog)) state.preferences.consentLog = [];
-    if (state.preferences.autoRenew === undefined) state.preferences.autoRenew = false;
+    // V4 fix (사용자 명시 2026-05-26 ultrathink — drift 회피): helper `_ensureV7Schema` 로 일원화.
+    //   manual-restore + loadFromCloud 가 동일 보강 적용. 02-state.js 정의.
+    //   pending_consent 처리는 별개 흐름 — 아래 그대로.
+    if (typeof _ensureV7Schema === 'function') _ensureV7Schema();
     try {
       const pendingRaw = localStorage.getItem('soragodong_pending_consent');
       if (pendingRaw) {
@@ -68709,6 +68729,8 @@ async function restoreFromCloudBackup() {
     const _curArchive = state.chatArchive;
     const _curPearls = state.pearls;
     state = { ...DEFAULT_STATE, ...snap.data };
+    // V4 fix (사용자 명시 2026-05-26 ultrathink — restore 후 V7 strict 필드 보강): manual-restore + loadFromCloud 양쪽 동일 helper 사용.
+    if (typeof _ensureV7Schema === 'function') _ensureV7Schema();
     state.chatArchive = _mergeArchivesPreservingMessages(_curArchive, state.chatArchive);
     state.pearls = _mergePearlsPreservingMedia(_curPearls, state.pearls);
     // V4 (사용자 명시 2026-05-20 ultrathink): Step 7 — schema v5 snapshot 의 chatMessages sub-array → 별도 테이블 재구축.
@@ -68866,6 +68888,8 @@ async function showAutoBackupList() {
     const _curArchive = state.chatArchive;
     const _curPearls = state.pearls;
     state = { ...DEFAULT_STATE, ...snap.data };
+    // V4 fix (사용자 명시 2026-05-26 ultrathink — restore 후 V7 strict 필드 보강): manual-restore + loadFromCloud 양쪽 동일 helper 사용.
+    if (typeof _ensureV7Schema === 'function') _ensureV7Schema();
     state.chatArchive = _mergeArchivesPreservingMessages(_curArchive, state.chatArchive);
     state.pearls = _mergePearlsPreservingMedia(_curPearls, state.pearls);
     // V4 (사용자 명시 2026-05-20 ultrathink): Step 7 — schema v5 chatMessages sub-array → 별도 테이블 재구축 (autoBackup 엔 보통 X, manual 만 박음).
@@ -68919,6 +68943,11 @@ async function recoverFromBackup() {
           const backupData = JSON.parse(JSON.stringify(rows[0].data));
           delete backupData._backup_meta;
           state = { ...DEFAULT_STATE, ...backupData };
+          // V4 fix (사용자 명시 2026-05-26 ultrathink — 옛 schema 복원 보강): V7 strict 필드 누락 시 AI input 빈 객체 접근 throw.
+          //   V6 backup 은 caseFormulation/reflectionQuestions/userDeepProfile 등 신규 필드 X. migrateToV7 호출로 보강.
+          if ((state.version || 0) < 7 && typeof migrateToV7 === 'function') {
+            try { migrateToV7(); } catch (e) { console.warn('[recover] migrateToV7 fail:', e); }
+          }
           await saveToCloudNow();
           showToast('✦ 복구됨 — 새로고침 중...');
           setTimeout(() => location.reload(), 800);
@@ -68936,6 +68965,10 @@ async function recoverFromBackup() {
           });
           if (yes) {
             state = { ...DEFAULT_STATE, ...JSON.parse(local) };
+            // V4 fix (사용자 명시 2026-05-26 ultrathink — localStorage 옛 schema 복원 보강): 동일 V7 필드 보강.
+            if ((state.version || 0) < 7 && typeof migrateToV7 === 'function') {
+              try { migrateToV7(); } catch (e) { console.warn('[recover-local] migrateToV7 fail:', e); }
+            }
             await saveToCloudNow();
             showToast('✦ 복구됨 — 새로고침 중...');
             setTimeout(() => location.reload(), 800);
@@ -69112,7 +69145,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.253-review-schema-idempotency';
+const APP_VERSION = 'v4.0.254-auth-restore-robustness';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 

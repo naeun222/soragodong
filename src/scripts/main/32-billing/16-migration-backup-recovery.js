@@ -19,6 +19,11 @@ async function recoverFromBackup() {
           const backupData = JSON.parse(JSON.stringify(rows[0].data));
           delete backupData._backup_meta;
           state = { ...DEFAULT_STATE, ...backupData };
+          // V4 fix (사용자 명시 2026-05-26 ultrathink — 옛 schema 복원 보강): V7 strict 필드 누락 시 AI input 빈 객체 접근 throw.
+          //   V6 backup 은 caseFormulation/reflectionQuestions/userDeepProfile 등 신규 필드 X. migrateToV7 호출로 보강.
+          if ((state.version || 0) < 7 && typeof migrateToV7 === 'function') {
+            try { migrateToV7(); } catch (e) { console.warn('[recover] migrateToV7 fail:', e); }
+          }
           await saveToCloudNow();
           showToast('✦ 복구됨 — 새로고침 중...');
           setTimeout(() => location.reload(), 800);
@@ -36,6 +41,10 @@ async function recoverFromBackup() {
           });
           if (yes) {
             state = { ...DEFAULT_STATE, ...JSON.parse(local) };
+            // V4 fix (사용자 명시 2026-05-26 ultrathink — localStorage 옛 schema 복원 보강): 동일 V7 필드 보강.
+            if ((state.version || 0) < 7 && typeof migrateToV7 === 'function') {
+              try { migrateToV7(); } catch (e) { console.warn('[recover-local] migrateToV7 fail:', e); }
+            }
             await saveToCloudNow();
             showToast('✦ 복구됨 — 새로고침 중...');
             setTimeout(() => location.reload(), 800);

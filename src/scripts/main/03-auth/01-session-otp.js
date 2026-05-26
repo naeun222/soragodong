@@ -111,8 +111,20 @@ async function checkSession() {
           });
           if (refreshResp.ok) {
             const newSession = await refreshResp.json();
-            session = { ...session, access_token: newSession.access_token, refresh_token: newSession.refresh_token, user: newSession.user };
-            authUserId = newSession.user.id;
+            // V4 fix (사용자 명시 2026-05-26 ultrathink — refresh 응답 shape 검증): user 누락 시 NPE → 강제 로그아웃 회피.
+            //   02-state.js `_refreshSessionForApi` 와 동일 가드. user 는 기존 session.user 로 fallback.
+            if (!newSession || !newSession.access_token) {
+              console.warn('[refresh fallback] invalid response shape — skip');
+              return false;
+            }
+            const _user = newSession.user || session.user || null;
+            session = {
+              ...session,
+              access_token: newSession.access_token,
+              refresh_token: newSession.refresh_token || session.refresh_token,
+              user: _user
+            };
+            if (_user && _user.id) authUserId = _user.id;
             localStorage.setItem('soragodong_session', JSON.stringify(session));
             return true;
           }

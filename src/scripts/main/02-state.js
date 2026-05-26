@@ -732,3 +732,40 @@ window.addEventListener('beforeunload', () => {
   } catch {}
 });
 
+// V4 fix (사용자 명시 2026-05-26 ultrathink — V7 schema 보강 helper): restore path 일관성.
+//   loadFromCloud (05-supabase.js:369-404) 의 인라인 보강 블록을 helper 로 추출 — manual-restore 와 cloud restore 양쪽이 동일 보강 적용.
+//   idempotent — 이미 채워진 필드 보존, 누락 필드만 채움. migrateToV7 와 부분 겹침이나 안전 (idempotent).
+function _ensureV7Schema() {
+  if (typeof state !== 'object' || !state) return;
+  if (!state.reflectionQuestions) state.reflectionQuestions = [];
+  if (!state.todaySchedule) state.todaySchedule = [];
+  if (!state.diagnoses) state.diagnoses = [];
+  if (!state.quarterlyReviews) state.quarterlyReviews = [];
+  if (!state.userDeepProfile) state.userDeepProfile = JSON.parse(JSON.stringify(DEFAULT_STATE.userDeepProfile));
+  if (!state.userDeepProfile.development) state.userDeepProfile.development = { childhood: '', schoolYears: '', adhdDiscovery: '', turningPoints: [] };
+  if (!Array.isArray(state.userDeepProfile.development.turningPoints)) state.userDeepProfile.development.turningPoints = [];
+  if (!Array.isArray(state.userDeepProfile.relationships)) state.userDeepProfile.relationships = [];
+  if (!state.userDeepProfile.selfNarrative) state.userDeepProfile.selfNarrative = { selfStory: '', coreBeliefs: { aboutSelf: [], aboutWorld: [], aboutFuture: [] }, howWantToBeSeen: '', identityKeywords: [] };
+  if (!state.userDeepProfile.selfNarrative.coreBeliefs) state.userDeepProfile.selfNarrative.coreBeliefs = { aboutSelf: [], aboutWorld: [], aboutFuture: [] };
+  ['aboutSelf', 'aboutWorld', 'aboutFuture'].forEach(k => {
+    if (!Array.isArray(state.userDeepProfile.selfNarrative.coreBeliefs[k])) state.userDeepProfile.selfNarrative.coreBeliefs[k] = [];
+  });
+  if (!Array.isArray(state.userDeepProfile.selfNarrative.identityKeywords)) state.userDeepProfile.selfNarrative.identityKeywords = [];
+  if (!state.caseFormulation) state.caseFormulation = JSON.parse(JSON.stringify(DEFAULT_STATE.caseFormulation));
+  if (!Array.isArray(state.caseFormulation.goals)) state.caseFormulation.goals = [];
+  if (!Array.isArray(state.caseFormulation.growth)) state.caseFormulation.growth = [];
+  if (!state.caseFormulation.unverified) state.caseFormulation.unverified = {};
+  ['problems', 'mechanisms', 'strengths', 'goals', 'growth'].forEach(k => {
+    if (!Array.isArray(state.caseFormulation.unverified[k])) state.caseFormulation.unverified[k] = [];
+  });
+  if (!state.preferences) state.preferences = JSON.parse(JSON.stringify(DEFAULT_STATE.preferences));
+  if (state.preferences.tutorialVersion === undefined) state.preferences.tutorialVersion = null;
+  if (state.preferences.tutorialCompleted === undefined) state.preferences.tutorialCompleted = false;
+  if (!Array.isArray(state.preferences.miniTutorialsSeen)) state.preferences.miniTutorialsSeen = [];
+  if (state.preferences.progressiveUnlockLevel === undefined) state.preferences.progressiveUnlockLevel = null;
+  if (state.preferences.dailyChatCap === undefined) state.preferences.dailyChatCap = 100;
+  if (!state.dailyChatCount || typeof state.dailyChatCount !== 'object') state.dailyChatCount = { date: null, count: 0 };
+  if (!Array.isArray(state.preferences.consentLog)) state.preferences.consentLog = [];
+  if (state.preferences.autoRenew === undefined) state.preferences.autoRenew = false;
+}
+

@@ -193,6 +193,8 @@ async function restoreFromCloudBackup() {
     const _curArchive = state.chatArchive;
     const _curPearls = state.pearls;
     state = { ...DEFAULT_STATE, ...snap.data };
+    // V4 fix (사용자 명시 2026-05-26 ultrathink — restore 후 V7 strict 필드 보강): manual-restore + loadFromCloud 양쪽 동일 helper 사용.
+    if (typeof _ensureV7Schema === 'function') _ensureV7Schema();
     state.chatArchive = _mergeArchivesPreservingMessages(_curArchive, state.chatArchive);
     state.pearls = _mergePearlsPreservingMedia(_curPearls, state.pearls);
     // V4 (사용자 명시 2026-05-20 ultrathink): Step 7 — schema v5 snapshot 의 chatMessages sub-array → 별도 테이블 재구축.
@@ -350,6 +352,8 @@ async function showAutoBackupList() {
     const _curArchive = state.chatArchive;
     const _curPearls = state.pearls;
     state = { ...DEFAULT_STATE, ...snap.data };
+    // V4 fix (사용자 명시 2026-05-26 ultrathink — restore 후 V7 strict 필드 보강): manual-restore + loadFromCloud 양쪽 동일 helper 사용.
+    if (typeof _ensureV7Schema === 'function') _ensureV7Schema();
     state.chatArchive = _mergeArchivesPreservingMessages(_curArchive, state.chatArchive);
     state.pearls = _mergePearlsPreservingMedia(_curPearls, state.pearls);
     // V4 (사용자 명시 2026-05-20 ultrathink): Step 7 — schema v5 chatMessages sub-array → 별도 테이블 재구축 (autoBackup 엔 보통 X, manual 만 박음).

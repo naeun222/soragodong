@@ -29,7 +29,9 @@ async function signInAnonymouslyForGuest() {
       return { ok: false, reason: 'network', status: resp.status, detail: errText.slice(0, 200) };
     }
     const data = await resp.json();
-    if (!data?.access_token || !data?.user?.id) {
+    // V4 fix (사용자 명시 2026-05-26 ultrathink — refresh_token 검증): refresh_token 누락 시 access_token 만 박혀도 1시간 후 silent 로그아웃.
+    //   _refreshSessionForApi 는 refresh_token 없으면 false return — 게스트는 자동 갱신 권리 X.
+    if (!data?.access_token || !data?.user?.id || !data?.refresh_token) {
       return { ok: false, reason: 'invalid_response' };
     }
     session = {
