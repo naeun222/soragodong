@@ -112,7 +112,7 @@ function _v9ShowWarmStartModal() {
     root.innerHTML = `
       <div class="v9-warm-overlay v9-warm-overlay-intro">
         <div class="v9-warm-card v9-warm-card-intro">
-          <img class="v9-warm-godong" src="/godong-soft-smile.svg" alt="" />
+          <img class="v9-warm-godong" src="/expressions/godong-soft-smile.svg" alt="" />
           <div class="v9-warm-question">안녕하세요,<br>소라고동은 이렇게 쓸 수 있어요:</div>
           <div class="v9-warm-buttons">
             <button class="v9-warm-btn ghost" id="v9WarmNone" type="button">건너뛰기</button>
