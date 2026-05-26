@@ -9,10 +9,11 @@ async function extractChapterCaseAnalysis(messages, opts) {
     if (state.preferences && state.preferences.testerMode) return false;
     if (!Array.isArray(messages) || messages.length < 3) return false;
 
-    // V4 (사용자 명시 2026-05-25 ultrathink): default model Sonnet 4-6 → Opus 4-7.
-    //   모든 사용자 (게스트 제외, intake/cleanup batch 둘 다) Opus.
-    //   batch path (submitChapterCleanupBatch) 도 명시적으로 Opus 박음 — 이 default 와 일관.
-    const _model = (opts && opts.model) || 'claude-opus-4-7';
+    // V4 (사용자 명시 2026-05-26 ultrathink): default model Opus 4-7 → Sonnet 4-6 롤백.
+    //   챕터 마무리마다 발화 (자주) = Sonnet 으로 저렴하게.
+    //   주 1회 통합 분석 (forceAnalyze 일요일 자동) 만 Opus 로 깊게.
+    //   cleanup batch path (submitChapterCleanupBatch:1046) 도 같이 Sonnet 으로 다운 — 일관.
+    const _model = (opts && opts.model) || 'claude-sonnet-4-6';
     const _isSim = !!opts.isSimulation;
     // 사용자 명시 2026-05-11 ultrathink: prompt template backend 이전 — buildChapterTopics 가 합성. 클라는 chatLog 만 _vars 로.
     const _chatLog = messages.map(m => {

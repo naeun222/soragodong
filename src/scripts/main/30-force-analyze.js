@@ -392,6 +392,25 @@ function _shouldRunSchedule(lastAt, cutoff) {
   return new Date(lastAt) < cutoff;
 }
 
+// V4 (사용자 명시 2026-05-26 ultrathink): 가장 최근 일요일 KST 04:00 cutoff.
+//   forceAnalyze 주 1회 자동 trigger 용 — maybeRunChapterCleanup step D 에서 사용.
+//   지금이 이번 주 일요일 04:00 이전이면 저번 주 일요일 04:00 반환.
+function _lastSunday4amCutoff() {
+  const now = new Date();
+  // KST 시간을 UTC 객체에 박는 trick: now + 9h
+  const kstAsUtc = new Date(now.getTime() + 9 * 3600000);
+  const day = kstAsUtc.getUTCDay();  // 0=Sun (KST 기준)
+  const sundayKstAsUtc = new Date(kstAsUtc);
+  sundayKstAsUtc.setUTCDate(kstAsUtc.getUTCDate() - day);
+  sundayKstAsUtc.setUTCHours(4, 0, 0, 0);
+  // KST → 진짜 UTC: -9h
+  const sundayUtc = new Date(sundayKstAsUtc.getTime() - 9 * 3600000);
+  if (sundayUtc.getTime() > now.getTime()) {
+    return new Date(sundayUtc.getTime() - 7 * 86400000);
+  }
+  return sundayUtc;
+}
+
 // 매일 챕터 추출 — 어제 누적된 챕터들 1번 통합 추출.
 // 사용자 명시 2026-05-02 ultrathink: 4AM extract = Anthropic Batch API 50% 할인 (사용자 자고 있어 latency 안 중요).
 // 흐름: pending archive 모음 → batch submit + state.pendingBatch 넣음 + UI 인디케이터.
@@ -1043,7 +1062,10 @@ async function submitChapterCleanupBatch(unprocessed) {
     requests.push({
       custom_id: `case_${batch.id}`,
       params: {
-        model: 'claude-opus-4-7',
+        // V4 (사용자 명시 2026-05-26 ultrathink): Opus 4-7 → Sonnet 4-6 다운.
+        //   매일 4AM cleanup batch = 자주 발화 → Sonnet 으로 저렴.
+        //   주 1회 forceAnalyze (Opus) 가 통합 깊은 분석 담당.
+        model: 'claude-sonnet-4-6',
         max_tokens: _maxTok,
         messages: [{ role: 'user', content: '' }],
         _endpoint: 'extract_chapter',
@@ -1300,6 +1322,19 @@ async function _timeoutChapterCleanupBatch() {
   console.warn('[cleanup batch] 12h timeout 또는 status/results fail 3회 — inline fallback');
   const archives = (state.chatArchive || []).filter(a => a && (pb.archive_ids || []).includes(a.id));
   // V4 (사용자 명시 2026-05-25 ultrathink): _pendingDiarySummary 마커 자체 X — diary 는 다음 cleanup batch (24h 후) 자연 picks up.
+  // V4 fix (사용자 명시 2026-05-26 ultrathink): orphan stuck 해소 — _batchSubmittedAt strip + retry count.
+  //   진단: 5/22 ~ 5/26 사이 5개 archive 가 _batchSubmittedAt 박혀 12h cooldown 영구 차단 (maybeRunChapterCleanup:1817 filter).
+  //   fix: timeout 시 archive 의 _batchSubmittedAt strip → 다음 trigger 즉시 재시도.
+  //   3회 retry 후에도 fail 시 _pendingCleanup delete + _cleanupFailedAt stamp = 영구 stuck 차단.
+  archives.forEach(a => {
+    if (a._batchSubmittedAt) delete a._batchSubmittedAt;
+    a._cleanupRetryCount = (a._cleanupRetryCount || 0) + 1;
+    if (a._cleanupRetryCount >= 3) {
+      delete a._pendingCleanup;
+      a._cleanupFailedAt = new Date().toISOString();
+      console.warn('[cleanup batch] archive 3회 fail — 영구 stuck 차단:', a.id);
+    }
+  });
   state.pendingChapterCleanupBatch = null;
   saveState();
   if (archives.length > 0 && typeof _runDailyExtractInline === 'function') {
@@ -1827,6 +1862,15 @@ async function maybeRunChapterCleanup() {
     if (typeof maybeTriggerReviewChain === 'function') {
       try { await maybeTriggerReviewChain(); } catch (e) { console.warn('[reviewChain entry]', e); }
     }
+  }
+
+  // ─── step D: forceAnalyze 일요일 자동 trigger ────────────────────────
+  // V4 (사용자 명시 2026-05-26 ultrathink): 주 1회 통합 분석 (Opus, trait/value/pattern + 회전 카드 '새로 본 너').
+  //   일요일 04:00 KST cutoff. lastForceAnalyzeAt 이 cutoff 이전이면 trigger.
+  //   fire-and-forget — Opus max_tokens 2500 시간 길어서 await X. silent toast (auto:true).
+  if (!isGuest && typeof forceAnalyze === 'function'
+      && _shouldRunSchedule(state.lastForceAnalyzeAt, _lastSunday4amCutoff())) {
+    forceAnalyze({ auto: true }).catch(e => console.warn('[forceAnalyze auto sunday]', e));
   }
 }
 
