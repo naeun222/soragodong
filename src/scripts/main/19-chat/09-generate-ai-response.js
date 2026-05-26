@@ -288,6 +288,12 @@ async function generateAIResponse(modelOverride, opts) {
     let fullText = '';
     state.chatMessages[state.chatMessages.length - 1] = { role: 'assistant', content: '', timestamp: new Date().toISOString() };
 
+    // V4 사용자 명시 2026-05-26 ultrathink — 응답 첫 줄 [expr: XXX] prefix 파싱 → m.expression set + display strip.
+    //   XXX 풀 = CHAT_MODE_EXPRESSIONS (15-chat-mode.js, 12 표정). 미매칭 시 message.expression 미설정 → render 시 mode default fallback.
+    //   첫 줄 미도착 + 60자 이하 = display 갱신 skip (typing dots 유지, 사용자에게 raw `[expr` 노출 X).
+    const _EXPR_PREFIX_RE = /^\s*\[expr:\s*([a-z-]+)\]\s*\n?/i;
+    let _expressionExtracted = false;
+
     // V4.0: 스트리밍 부분 업데이트 — 첫 청크만 renderChat (빈 bubble DOM 생성), 이후엔 마지막 bubble innerHTML만 갱신.
     // 이전: 매 청크마다 전체 메시지 N개 escape+format 재생성 → 200+ 메시지에서 lag.
     let _streamFirstChunk = true;
@@ -337,7 +343,21 @@ async function generateAIResponse(modelOverride, opts) {
         }
         if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
           fullText += parsed.delta.text;
+          // V4 사용자 명시 2026-05-26 ultrathink — expression prefix 한 번만 파싱 (첫 줄 도착 시점 또는 60자 timeout).
+          if (!_expressionExtracted) {
+            const _newlineIdx = fullText.indexOf('\n');
+            if (_newlineIdx === -1 && fullText.length <= 60) {
+              return;  // 첫 줄 미도착 + 짧음 — display 갱신 skip, 다음 chunk 대기.
+            }
+            const _firstLine = (_newlineIdx !== -1) ? fullText.slice(0, _newlineIdx) : fullText.slice(0, 60);
+            const _em = _firstLine.match(/^\s*\[expr:\s*([a-z-]+)\]\s*$/i);
+            if (_em && typeof CHAT_MODE_EXPRESSIONS !== 'undefined' && CHAT_MODE_EXPRESSIONS.has(_em[1])) {
+              state.chatMessages[state.chatMessages.length - 1].expression = _em[1];
+            }
+            _expressionExtracted = true;
+          }
           let display = fullText;
+          display = display.replace(_EXPR_PREFIX_RE, '');
           display = display.replace(/```json[\s\S]*?```/g, '');
           display = display.replace(/```json[\s\S]*$/g, '');
           display = display.replace(/```[\s\S]*$/g, ''); // 미완성 fence
@@ -410,6 +430,7 @@ async function generateAIResponse(modelOverride, opts) {
     }
 
     const finalDisplay = fullText
+      .replace(_EXPR_PREFIX_RE, '')
       .replace(/```json[\s\S]*?```/g, '')
       .replace(/```[\s\S]*$/g, '')
       .replace(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_pearls|decision_suggested)[\s\S]*\}/g, '')

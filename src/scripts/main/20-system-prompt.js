@@ -25,6 +25,17 @@ function buildSystemPromptParts() {
   //   클라이언트는 사용자 모델 데이터 (profile/values/traits/patterns/CF/userDeepProfile) 만 stable 에 채움.
   //   결과적으로 Anthropic 이 받는 system prefix = SYSTEM_PERSONA + 사용자 모델 → cache prefix-match 그대로.
   let stable = [];
+  // V4 사용자 명시 2026-05-26 ultrathink — 대화탭 표정 출력 규칙.
+  //   응답 첫 줄에 [expr: XXX] prefix → 클라가 strip + 아바타 표정 갱신. 12 표정 풀 = CHAT_MODE_EXPRESSIONS (19-chat/15-chat-mode.js).
+  //   stable 영역에 넣어 cache hit (변동 X). 모델 vent + laugh 무시 가드는 클라 sanitize 도 추가 (15-chat-mode.js _sanitizeChatExpression).
+  stable.push('[대화탭 표정 출력 규칙 — 매 응답 첫 줄 의무]');
+  stable.push('  · 응답 *맨 첫 줄* 에 [expr: XXX] 형식으로 표정 ID 1개 + 줄바꿈. 본문은 그 다음 줄부터.');
+  stable.push('  · XXX 풀 (정확히 12 개 중 하나):');
+  stable.push('    serious, soft-smile, bright-smile, laugh, surprised, curious, thinking, tilt, empathic, warm, nod, focused');
+  stable.push('  · 대화 흐름·사용자 감정에 맞춰 매번 자연스럽게 선택. 같은 표정 연속 반복 X.');
+  stable.push('  · 모드 제약: chatMode=vent (마음 털어놓기) 일 때 laugh 금지 → warm / empathic / soft-smile 권장.');
+  stable.push('  · 본문 안에는 [expr:...] 안 박음. prefix 한 번, 첫 줄만.');
+  stable.push('');
   stable.push('\n━━━━━━━━━━━━━━━━━━━━━\n📂 사용자에 대한 현재 모델\n━━━━━━━━━━━━━━━━━━━━━\n');
   if (state.profile) stable.push(`[사용자 프로필]\n${state.profile}\n`);
 

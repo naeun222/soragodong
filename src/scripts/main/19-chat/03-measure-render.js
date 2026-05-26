@@ -239,14 +239,16 @@ function _chatEmptyAreaHtml() {
   try {
     if (window._onbTutorialMode) return '';
     // V4 사용자 명시 2026-05-23 ultrathink — empty entry 디자인 명세:
-    //   1. AI welcome bubble — avatar (모드별, default expression = soft-smile) + 말풍선 2줄 (편하게 말해 보소 / 모드별 부수).
+    //   1. AI welcome bubble — avatar (모드별 default 표정) + 말풍선 (모드별 텍스트).
     //   2. ⓘ 일기 안내 — null/daily 모드만. 클릭 시 hint 펼침/접힘.
     //   3. chip 3 (말풍선 형태, 좌측 정렬, 모드별 고유 색) — chatMode null 일 때만 노출. 누르면 selectChatMode 만 (자동 send X).
     //   4. 저녁 미체크인 = 추가 체크인 카드 (별개 system).
     const chatMode = (typeof state !== 'undefined' && state && state.chatMode) || null;
+    // V4 사용자 명시 2026-05-26 ultrathink — welcome 표정 = 모드별 default (daily=warm/inquiry=curious/vent=empathic/null=soft-smile).
+    const _welcomeExpr = (typeof _chatModeDefaultExpr === 'function') ? _chatModeDefaultExpr(chatMode) : 'soft-smile';
     // V4 사용자 명시 2026-05-23 (재) — 아바타 click → 시트 open (= 헤더 토글과 동일 동작, 둘 다 entry).
     const avatarHtml = (typeof composedCharacterHtml === 'function')
-      ? `<div class="msg-avatar" role="button" tabindex="0" aria-label="대화 모드 변경" onclick="onChatModeHeaderClick()">${composedCharacterHtml({ mode: chatMode, useGlasses: false })}</div>`
+      ? `<div class="msg-avatar" role="button" tabindex="0" aria-label="대화 모드 변경" onclick="onChatModeHeaderClick()">${composedCharacterHtml({ mode: chatMode, useGlasses: false, expression: _welcomeExpr })}</div>`
       : '';
     // V4 사용자 명시 2026-05-23 (재재) — welcome 텍스트 helper 사용. sendChat 시점에 같은 텍스트가 chatMessages 에 박힘 (AI 첫 발화 인식).
     const welcomeText = (typeof _chatWelcomeText === 'function') ? _chatWelcomeText(chatMode || 'daily') : '오늘 뭐 했어?';

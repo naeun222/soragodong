@@ -137,10 +137,13 @@ function _renderChatMessageHTML(m, i) {
       }
     }
 
-    // V4 사용자 명시 2026-05-23 — AI 메시지 왼쪽에 합성 캐릭터 아바타 (평온 표정 static, 모드별 모자/아우라, 안경 X).
+    // V4 사용자 명시 2026-05-23 — AI 메시지 왼쪽에 합성 캐릭터 아바타. 모드별 모자/아우라, 안경 X.
     //   error 메시지엔 아바타 X (오류 시각을 친구 표정으로 표현 부자연).
+    // V4 사용자 명시 2026-05-26 ultrathink — m.expression (AI prefix [expr:XXX] 파싱 결과) 전달. 없으면 mode default fallback.
+    const _avatarMode = (typeof state !== 'undefined' && state && state.chatMode) || null;
+    const _avatarExpr = (m && m.expression) || (typeof _chatModeDefaultExpr === 'function' ? _chatModeDefaultExpr(_avatarMode) : 'soft-smile');
     const avatarHtml = (m.role === 'assistant' && !m.error && typeof composedCharacterHtml === 'function')
-      ? `<div class="msg-avatar" role="button" tabindex="0" aria-label="대화 모드 변경" onclick="onChatModeHeaderClick()">${composedCharacterHtml({ mode: (typeof state !== 'undefined' && state && state.chatMode) || null, useGlasses: false })}</div>`
+      ? `<div class="msg-avatar" role="button" tabindex="0" aria-label="대화 모드 변경" onclick="onChatModeHeaderClick()">${composedCharacterHtml({ mode: _avatarMode, useGlasses: false, expression: _avatarExpr })}</div>`
       : '';
     return chapterDivider + `<div class="msg ${msgClass}">${avatarHtml}${bubble}${pearlSuggestChip}${proposalBtns}${decisionCard}${vaultCard}${actions}${resurfaceChip}</div>`;
 }

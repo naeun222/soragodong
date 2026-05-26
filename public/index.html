@@ -41681,10 +41681,13 @@ function _renderChatMessageHTML(m, i) {
       }
     }
 
-    // V4 사용자 명시 2026-05-23 — AI 메시지 왼쪽에 합성 캐릭터 아바타 (평온 표정 static, 모드별 모자/아우라, 안경 X).
+    // V4 사용자 명시 2026-05-23 — AI 메시지 왼쪽에 합성 캐릭터 아바타. 모드별 모자/아우라, 안경 X.
     //   error 메시지엔 아바타 X (오류 시각을 친구 표정으로 표현 부자연).
+    // V4 사용자 명시 2026-05-26 ultrathink — m.expression (AI prefix [expr:XXX] 파싱 결과) 전달. 없으면 mode default fallback.
+    const _avatarMode = (typeof state !== 'undefined' && state && state.chatMode) || null;
+    const _avatarExpr = (m && m.expression) || (typeof _chatModeDefaultExpr === 'function' ? _chatModeDefaultExpr(_avatarMode) : 'soft-smile');
     const avatarHtml = (m.role === 'assistant' && !m.error && typeof composedCharacterHtml === 'function')
-      ? `<div class="msg-avatar" role="button" tabindex="0" aria-label="대화 모드 변경" onclick="onChatModeHeaderClick()">${composedCharacterHtml({ mode: (typeof state !== 'undefined' && state && state.chatMode) || null, useGlasses: false })}</div>`
+      ? `<div class="msg-avatar" role="button" tabindex="0" aria-label="대화 모드 변경" onclick="onChatModeHeaderClick()">${composedCharacterHtml({ mode: _avatarMode, useGlasses: false, expression: _avatarExpr })}</div>`
       : '';
     return chapterDivider + `<div class="msg ${msgClass}">${avatarHtml}${bubble}${pearlSuggestChip}${proposalBtns}${decisionCard}${vaultCard}${actions}${resurfaceChip}</div>`;
 }
@@ -41963,14 +41966,16 @@ function _chatEmptyAreaHtml() {
   try {
     if (window._onbTutorialMode) return '';
     // V4 사용자 명시 2026-05-23 ultrathink — empty entry 디자인 명세:
-    //   1. AI welcome bubble — avatar (모드별, default expression = soft-smile) + 말풍선 2줄 (편하게 말해 보소 / 모드별 부수).
+    //   1. AI welcome bubble — avatar (모드별 default 표정) + 말풍선 (모드별 텍스트).
     //   2. ⓘ 일기 안내 — null/daily 모드만. 클릭 시 hint 펼침/접힘.
     //   3. chip 3 (말풍선 형태, 좌측 정렬, 모드별 고유 색) — chatMode null 일 때만 노출. 누르면 selectChatMode 만 (자동 send X).
     //   4. 저녁 미체크인 = 추가 체크인 카드 (별개 system).
     const chatMode = (typeof state !== 'undefined' && state && state.chatMode) || null;
+    // V4 사용자 명시 2026-05-26 ultrathink — welcome 표정 = 모드별 default (daily=warm/inquiry=curious/vent=empathic/null=soft-smile).
+    const _welcomeExpr = (typeof _chatModeDefaultExpr === 'function') ? _chatModeDefaultExpr(chatMode) : 'soft-smile';
     // V4 사용자 명시 2026-05-23 (재) — 아바타 click → 시트 open (= 헤더 토글과 동일 동작, 둘 다 entry).
     const avatarHtml = (typeof composedCharacterHtml === 'function')
-      ? `<div class="msg-avatar" role="button" tabindex="0" aria-label="대화 모드 변경" onclick="onChatModeHeaderClick()">${composedCharacterHtml({ mode: chatMode, useGlasses: false })}</div>`
+      ? `<div class="msg-avatar" role="button" tabindex="0" aria-label="대화 모드 변경" onclick="onChatModeHeaderClick()">${composedCharacterHtml({ mode: chatMode, useGlasses: false, expression: _welcomeExpr })}</div>`
       : '';
     // V4 사용자 명시 2026-05-23 (재재) — welcome 텍스트 helper 사용. sendChat 시점에 같은 텍스트가 chatMessages 에 박힘 (AI 첫 발화 인식).
     const welcomeText = (typeof _chatWelcomeText === 'function') ? _chatWelcomeText(chatMode || 'daily') : '오늘 뭐 했어?';
@@ -43263,6 +43268,12 @@ async function generateAIResponse(modelOverride, opts) {
     let fullText = '';
     state.chatMessages[state.chatMessages.length - 1] = { role: 'assistant', content: '', timestamp: new Date().toISOString() };
 
+    // V4 사용자 명시 2026-05-26 ultrathink — 응답 첫 줄 [expr: XXX] prefix 파싱 → m.expression set + display strip.
+    //   XXX 풀 = CHAT_MODE_EXPRESSIONS (15-chat-mode.js, 12 표정). 미매칭 시 message.expression 미설정 → render 시 mode default fallback.
+    //   첫 줄 미도착 + 60자 이하 = display 갱신 skip (typing dots 유지, 사용자에게 raw `[expr` 노출 X).
+    const _EXPR_PREFIX_RE = /^\s*\[expr:\s*([a-z-]+)\]\s*\n?/i;
+    let _expressionExtracted = false;
+
     // V4.0: 스트리밍 부분 업데이트 — 첫 청크만 renderChat (빈 bubble DOM 생성), 이후엔 마지막 bubble innerHTML만 갱신.
     // 이전: 매 청크마다 전체 메시지 N개 escape+format 재생성 → 200+ 메시지에서 lag.
     let _streamFirstChunk = true;
@@ -43312,7 +43323,21 @@ async function generateAIResponse(modelOverride, opts) {
         }
         if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
           fullText += parsed.delta.text;
+          // V4 사용자 명시 2026-05-26 ultrathink — expression prefix 한 번만 파싱 (첫 줄 도착 시점 또는 60자 timeout).
+          if (!_expressionExtracted) {
+            const _newlineIdx = fullText.indexOf('\n');
+            if (_newlineIdx === -1 && fullText.length <= 60) {
+              return;  // 첫 줄 미도착 + 짧음 — display 갱신 skip, 다음 chunk 대기.
+            }
+            const _firstLine = (_newlineIdx !== -1) ? fullText.slice(0, _newlineIdx) : fullText.slice(0, 60);
+            const _em = _firstLine.match(/^\s*\[expr:\s*([a-z-]+)\]\s*$/i);
+            if (_em && typeof CHAT_MODE_EXPRESSIONS !== 'undefined' && CHAT_MODE_EXPRESSIONS.has(_em[1])) {
+              state.chatMessages[state.chatMessages.length - 1].expression = _em[1];
+            }
+            _expressionExtracted = true;
+          }
           let display = fullText;
+          display = display.replace(_EXPR_PREFIX_RE, '');
           display = display.replace(/```json[\s\S]*?```/g, '');
           display = display.replace(/```json[\s\S]*$/g, '');
           display = display.replace(/```[\s\S]*$/g, ''); // 미완성 fence
@@ -43385,6 +43410,7 @@ async function generateAIResponse(modelOverride, opts) {
     }
 
     const finalDisplay = fullText
+      .replace(_EXPR_PREFIX_RE, '')
       .replace(/```json[\s\S]*?```/g, '')
       .replace(/```[\s\S]*$/g, '')
       .replace(/\{[\s\S]*"(?:new_traits|new_values|new_patterns|insight|case_formulation|proposal|extracted_pearls|decision_suggested)[\s\S]*\}/g, '')
@@ -44274,6 +44300,20 @@ const CHAT_MODE_EXPRESSIONS = new Set([
   'curious', 'thinking', 'tilt', 'empathic', 'warm', 'nod', 'focused'
 ]);
 
+// V4 사용자 명시 2026-05-26 ultrathink — 모드별 default 표정.
+//   welcome bubble + m.expression 없는 legacy 메시지 fallback. null = 'soft-smile' (default 일상고동).
+const _CHAT_MODE_DEFAULT_EXPR = { daily: 'warm', inquiry: 'curious', vent: 'empathic' };
+function _chatModeDefaultExpr(mode) {
+  return _CHAT_MODE_DEFAULT_EXPR[mode] || 'soft-smile';
+}
+
+// V4 사용자 명시 2026-05-26 ultrathink — 모드별 표정 제약.
+//   vent (마음 털어놓기) 에선 laugh 부적절 → warm fallback. AI 가 prompt 무시한 경우 가드.
+function _sanitizeChatExpression(mode, expression) {
+  if (mode === 'vent' && expression === 'laugh') return 'warm';
+  return expression;
+}
+
 // 표정 파일 경로 — 'serious' 만 public/character/ 에, 나머지는 public/expressions/.
 // V4 사용자 명시 2026-05-23 ultrathink — default 표정 = 'soft-smile' (옛 serious 폐기). 모드 없는 default 표정도 soft-smile.
 function _chatModeExprPath(expression) {
@@ -44291,7 +44331,9 @@ function composedCharacterHtml({ mode, useGlasses, expression } = {}) {
                     : mode === 'daily'   ? ' aura-daily'
                     : '';
   const showGlasses = !!useGlasses;
-  const exprSrc = _chatModeExprPath(expression || 'soft-smile');
+  // V4 사용자 명시 2026-05-26 ultrathink — 모드 제약 sanitize (vent + laugh → warm) + null fallback.
+  const _exprRaw = expression || _chatModeDefaultExpr(mode);
+  const exprSrc = _chatModeExprPath(_sanitizeChatExpression(mode, _exprRaw));
   let html = '';
   if (showAura) {
     html += `<img class="char-layer aura${auraVariant}" src="/expressions/godong-aura-amber.svg" alt="" aria-hidden="true">`;
@@ -44453,13 +44495,22 @@ function selectChatMode(mode) {
 }
 
 // V4 사용자 명시 2026-05-23 — 모드 변경 시 chatMessages 안 모든 AI 메시지 아바타도 morph (renderChat 전체 X, light DOM update).
+// V4 사용자 명시 2026-05-26 ultrathink — 메시지별 m.expression 보존 (mode 만 morph). welcome bubble = mode default 표정.
 function _refreshAllMsgAvatars() {
   if (typeof composedCharacterHtml !== 'function') return;
   const mode = (state && state.chatMode) || null;
-  const html = composedCharacterHtml({ mode, useGlasses: false });  // default expression = soft-smile
-  document.querySelectorAll('.msg.assistant .msg-avatar').forEach(av => {
-    av.innerHTML = html;
+  // 02-render-message.js 의 avatar 가드 (assistant && !error) 와 동일 순서로 매칭.
+  const validAssistMsgs = ((state && state.chatMessages) || []).filter(m => m && m.role === 'assistant' && !m.error);
+  document.querySelectorAll('.msg.assistant:not(.ces-welcome) .msg-avatar').forEach((av, i) => {
+    const m = validAssistMsgs[i];
+    const expression = (m && m.expression) || _chatModeDefaultExpr(mode);
+    av.innerHTML = composedCharacterHtml({ mode, useGlasses: false, expression });
   });
+  // empty entry welcome bubble (chatMessages 비었을 때만 존재) — 모드 default 표정으로 갱신.
+  const welcomeAv = document.querySelector('.msg.assistant.ces-welcome .msg-avatar');
+  if (welcomeAv) {
+    welcomeAv.innerHTML = composedCharacterHtml({ mode, useGlasses: false, expression: _chatModeDefaultExpr(mode) });
+  }
 }
 
 // V4 cleanup 2026-05-23 — empty entry chatMessages 안 통합 (renderChat 의 _chatEmptyAreaHtml).
@@ -44527,6 +44578,17 @@ function buildSystemPromptParts() {
   //   클라이언트는 사용자 모델 데이터 (profile/values/traits/patterns/CF/userDeepProfile) 만 stable 에 채움.
   //   결과적으로 Anthropic 이 받는 system prefix = SYSTEM_PERSONA + 사용자 모델 → cache prefix-match 그대로.
   let stable = [];
+  // V4 사용자 명시 2026-05-26 ultrathink — 대화탭 표정 출력 규칙.
+  //   응답 첫 줄에 [expr: XXX] prefix → 클라가 strip + 아바타 표정 갱신. 12 표정 풀 = CHAT_MODE_EXPRESSIONS (19-chat/15-chat-mode.js).
+  //   stable 영역에 넣어 cache hit (변동 X). 모델 vent + laugh 무시 가드는 클라 sanitize 도 추가 (15-chat-mode.js _sanitizeChatExpression).
+  stable.push('[대화탭 표정 출력 규칙 — 매 응답 첫 줄 의무]');
+  stable.push('  · 응답 *맨 첫 줄* 에 [expr: XXX] 형식으로 표정 ID 1개 + 줄바꿈. 본문은 그 다음 줄부터.');
+  stable.push('  · XXX 풀 (정확히 12 개 중 하나):');
+  stable.push('    serious, soft-smile, bright-smile, laugh, surprised, curious, thinking, tilt, empathic, warm, nod, focused');
+  stable.push('  · 대화 흐름·사용자 감정에 맞춰 매번 자연스럽게 선택. 같은 표정 연속 반복 X.');
+  stable.push('  · 모드 제약: chatMode=vent (마음 털어놓기) 일 때 laugh 금지 → warm / empathic / soft-smile 권장.');
+  stable.push('  · 본문 안에는 [expr:...] 안 박음. prefix 한 번, 첫 줄만.');
+  stable.push('');
   stable.push('\n━━━━━━━━━━━━━━━━━━━━━\n📂 사용자에 대한 현재 모델\n━━━━━━━━━━━━━━━━━━━━━\n');
   if (state.profile) stable.push(`[사용자 프로필]\n${state.profile}\n`);
 

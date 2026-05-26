@@ -20,6 +20,20 @@ const CHAT_MODE_EXPRESSIONS = new Set([
   'curious', 'thinking', 'tilt', 'empathic', 'warm', 'nod', 'focused'
 ]);
 
+// V4 사용자 명시 2026-05-26 ultrathink — 모드별 default 표정.
+//   welcome bubble + m.expression 없는 legacy 메시지 fallback. null = 'soft-smile' (default 일상고동).
+const _CHAT_MODE_DEFAULT_EXPR = { daily: 'warm', inquiry: 'curious', vent: 'empathic' };
+function _chatModeDefaultExpr(mode) {
+  return _CHAT_MODE_DEFAULT_EXPR[mode] || 'soft-smile';
+}
+
+// V4 사용자 명시 2026-05-26 ultrathink — 모드별 표정 제약.
+//   vent (마음 털어놓기) 에선 laugh 부적절 → warm fallback. AI 가 prompt 무시한 경우 가드.
+function _sanitizeChatExpression(mode, expression) {
+  if (mode === 'vent' && expression === 'laugh') return 'warm';
+  return expression;
+}
+
 // 표정 파일 경로 — 'serious' 만 public/character/ 에, 나머지는 public/expressions/.
 // V4 사용자 명시 2026-05-23 ultrathink — default 표정 = 'soft-smile' (옛 serious 폐기). 모드 없는 default 표정도 soft-smile.
 function _chatModeExprPath(expression) {
@@ -37,7 +51,9 @@ function composedCharacterHtml({ mode, useGlasses, expression } = {}) {
                     : mode === 'daily'   ? ' aura-daily'
                     : '';
   const showGlasses = !!useGlasses;
-  const exprSrc = _chatModeExprPath(expression || 'soft-smile');
+  // V4 사용자 명시 2026-05-26 ultrathink — 모드 제약 sanitize (vent + laugh → warm) + null fallback.
+  const _exprRaw = expression || _chatModeDefaultExpr(mode);
+  const exprSrc = _chatModeExprPath(_sanitizeChatExpression(mode, _exprRaw));
   let html = '';
   if (showAura) {
     html += `<img class="char-layer aura${auraVariant}" src="/expressions/godong-aura-amber.svg" alt="" aria-hidden="true">`;
@@ -199,13 +215,22 @@ function selectChatMode(mode) {
 }
 
 // V4 사용자 명시 2026-05-23 — 모드 변경 시 chatMessages 안 모든 AI 메시지 아바타도 morph (renderChat 전체 X, light DOM update).
+// V4 사용자 명시 2026-05-26 ultrathink — 메시지별 m.expression 보존 (mode 만 morph). welcome bubble = mode default 표정.
 function _refreshAllMsgAvatars() {
   if (typeof composedCharacterHtml !== 'function') return;
   const mode = (state && state.chatMode) || null;
-  const html = composedCharacterHtml({ mode, useGlasses: false });  // default expression = soft-smile
-  document.querySelectorAll('.msg.assistant .msg-avatar').forEach(av => {
-    av.innerHTML = html;
+  // 02-render-message.js 의 avatar 가드 (assistant && !error) 와 동일 순서로 매칭.
+  const validAssistMsgs = ((state && state.chatMessages) || []).filter(m => m && m.role === 'assistant' && !m.error);
+  document.querySelectorAll('.msg.assistant:not(.ces-welcome) .msg-avatar').forEach((av, i) => {
+    const m = validAssistMsgs[i];
+    const expression = (m && m.expression) || _chatModeDefaultExpr(mode);
+    av.innerHTML = composedCharacterHtml({ mode, useGlasses: false, expression });
   });
+  // empty entry welcome bubble (chatMessages 비었을 때만 존재) — 모드 default 표정으로 갱신.
+  const welcomeAv = document.querySelector('.msg.assistant.ces-welcome .msg-avatar');
+  if (welcomeAv) {
+    welcomeAv.innerHTML = composedCharacterHtml({ mode, useGlasses: false, expression: _chatModeDefaultExpr(mode) });
+  }
 }
 
 // V4 cleanup 2026-05-23 — empty entry chatMessages 안 통합 (renderChat 의 _chatEmptyAreaHtml).
