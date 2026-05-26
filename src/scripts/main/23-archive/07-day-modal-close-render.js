@@ -264,9 +264,9 @@ function switchLibraryCat(cat) {
   // V4: 카테고리 전환 후 잠금 시각 갱신 (마법고동 등)
   setTimeout(() => { if (typeof applyCoreLockMarkers === 'function') applyCoreLockMarkers(); }, 30);
   // 검색바는 모든 카테고리에서 노출 (사용자 보고 2026-04-29: 'block' 으로 덮으면 flex 깨져 토글이 검색창 밑으로 wrap — 'flex' 유지)
-  //   사용자 명시 2026-05-27 ultrathink: 실행 chip 은 검색 / 그리드·타임라인 토글 적용 X → 둘 다 hide.
+  //   사용자 재정정 2026-05-27 ultrathink: 일정 lens 도 다른 lens 와 같은 형식 — 검색바 + 그리드/타임라인 토글 노출. 검색 동작 (title 매칭) 은 후속 단계.
   const searchBar = document.getElementById('archiveSearchBar');
-  if (searchBar) searchBar.style.display = (cat === 'execute') ? 'none' : 'flex';
+  if (searchBar) searchBar.style.display = 'flex';
   // V4-fix #5: 클릭한 카테고리는 본 것 → ● 점 사라짐
   if (typeof _markLibCatSeen === 'function') {
     _markLibCatSeen(cat);
