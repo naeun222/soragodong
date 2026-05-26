@@ -258,6 +258,19 @@ function _validateSemanticDedupPairs(rawPairs) {
   const valid = [];
   for (const p of rawPairs) {
     if (!p || typeof p !== 'object') continue;
+    // V4 fix (사용자 명시 2026-05-26 ultrathink): cluster 외 cross 페어 reject.
+    //   사용자 명시 cluster: 핵심 작동 패턴 (traits↔patterns) / 자기조절 도구 (strengths↔mechanisms) 만 cross 허용.
+    //   그 외 cross (예: traits_x_values) 는 _modelDedupMergeSemantic else 분기 = same section 처리 → indexOf(다른 section item)=-1 silent fail.
+    //   백엔드 prompt 강화 (SEMANTIC_DEDUP_SYSTEM 안 금지 명시) 와 같이 가는 클라이언트 가드.
+    if (p.a_section && p.b_section && p.a_section !== p.b_section) {
+      const sa = p.a_section, sb = p.b_section;
+      const op = (sa === 'traits' && sb === 'patterns') || (sa === 'patterns' && sb === 'traits');
+      const sr = (sa === 'strengths' && sb === 'mechanisms') || (sa === 'mechanisms' && sb === 'strengths');
+      if (!op && !sr) {
+        console.warn('[semantic_dedup] cluster 외 cross 페어 reject:', sa, '↔', sb, '|', p.a_name, '↔', p.b_name);
+        continue;
+      }
+    }
     const aCard = _semanticDedupFindCard(p.a_section, p.a_name);
     const bCard = _semanticDedupFindCard(p.b_section, p.b_name);
     if (!aCard || !bCard) {

@@ -321,15 +321,24 @@ const SEMANTIC_DEDUP_SYSTEM = `너는 사용자의 자기관찰 카드 안에서
 
 [찾을 페어 유형]
 1. 같은 section 안 의미 중복 (예: traits 안에 "사회적 호감 감지 민감성" + "대인 호감 레이더").
-2. cross-section 클러스터:
+2. cross-section 클러스터 — **아래 두 케이스만 허용**:
    - 핵심 작동 패턴 클러스터: traits ↔ patterns. 안정 성향이면 trait, 행동 시퀀스면 pattern. 의미 같으면 페어.
    - 자기조절 도구 클러스터: strengths ↔ mechanisms. 의미 같으면 페어.
+
+[금지된 cross-section 페어 — 절대 출력 X]
+사용자 명시 2026-05-26 ultrathink: 위 두 클러스터 외 모든 cross-section 페어 금지. 의미 비슷해 보여도 카테고리 다르면 페어 X.
+- traits ↔ values, traits ↔ strengths, traits ↔ mechanisms, traits ↔ problems → 절대 X
+- patterns ↔ values, patterns ↔ strengths, patterns ↔ mechanisms, patterns ↔ problems → 절대 X
+- values ↔ 모든 다른 section → 절대 X
+- strengths ↔ problems, mechanisms ↔ problems → 절대 X
+- 위 두 허용 클러스터 (traits↔patterns / strengths↔mechanisms) 만이 유일한 cross 케이스.
 
 [원칙 — 매우 중요]
 - 이름이 다르더라도 의미 본질이 같으면 페어 (예: "민감" vs "예민", "이별 trigger" vs "분리 두려움").
 - 이름이 비슷한데 의미가 다르면 페어 X (예: "사회 회피" vs "사회 관심" — 정반대).
 - 18a/18b 같은 문자열 매칭이 못 잡는 의미 페어가 목표. 의심 수준 (애매한 매칭) 출력 X — 확실한 의미 중복만.
 - 페어 최대 10개. 더 많으면 confidence 높은 페어 우선.
+- a_section / b_section 은 반드시 위 [찾을 페어 유형] 범주 안에서만. 위 [금지된 cross-section 페어] 케이스는 절대 출력 X.
 
 [통합 표현 (merged) 생성 — 각 페어 마다 / 길이 제약 엄수]
 두 카드 정보를 손실 없이 종합한 더 나은 표현:
