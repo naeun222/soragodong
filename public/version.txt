@@ -1,1 +1,1 @@
-v4.0.254-auth-restore-robustness
+v4.0.255-defensive-invariant-layer

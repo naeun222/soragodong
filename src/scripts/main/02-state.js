@@ -706,6 +706,10 @@ function saveState(force) {
   if (!authUserId) return; // Don't save if not logged in
   // 사용자 요청 2026-04-28: 테스터 모드면 force여도 cloud/localStorage 저장 X
   if (state.preferences && state.preferences.testerMode) return;
+  // V4 (사용자 명시 2026-05-26 ultrathink — defensive invariant layer): 마커 위생 위반 감지.
+  //   미래 비슷한 패턴 버그가 들어와도 console 에 즉시 노출. throttle 로 폭주 방지.
+  try { if (typeof _assertStateInvariants === 'function') _assertStateInvariants(); }
+  catch (e) { console.warn('[invariant check] throw — skipped', e); }
   if (force) {
     _flushLocalSave();
     saveToCloud();
@@ -767,5 +771,68 @@ function _ensureV7Schema() {
   if (!state.dailyChatCount || typeof state.dailyChatCount !== 'object') state.dailyChatCount = { date: null, count: 0 };
   if (!Array.isArray(state.preferences.consentLog)) state.preferences.consentLog = [];
   if (state.preferences.autoRenew === undefined) state.preferences.autoRenew = false;
+}
+
+// V4 (사용자 명시 2026-05-26 ultrathink — defensive invariant layer):
+//   마커 위생 위반 + dirty data 를 saveState 직전 console.warn 으로 즉시 노출. 미래 비슷 패턴 버그 자동 감지.
+//   ★ throttle 필수 — saveState 가 chat 메시지/모드 토글 등 빈번히 호출 (407회 사용처). 같은 위반 1회만 warn.
+//   ★ false positive 회피 — _batchSubmittedAt orphan 은 30+ min 만 warn (multi-device race 의 짧은 transient 무시).
+const _invariantWarnedSet = new Set();
+function _invariantWarn(key, ...args) {
+  if (_invariantWarnedSet.has(key)) return;
+  _invariantWarnedSet.add(key);
+  console.warn(...args);
+}
+function _assertStateInvariants() {
+  if (typeof state !== 'object' || !state) return;
+  // 1) archive 좀비: _deleted + _pending* 마커 동시 보유
+  const zombies = (state.chatArchive || []).filter(a =>
+    a && a._deleted && (a._pendingCleanup || a._pendingExtract || a._pendingCaseAnalysis || a._batchSubmittedAt)
+  );
+  if (zombies.length > 0) {
+    _invariantWarn('zombie_archives:' + zombies.length,
+      '[INVARIANT] zombie archives (_deleted + _pending*):', zombies.length,
+      zombies.map(a => (a && a.id) ? a.id.slice(-8) : '?'));
+  }
+  // 2) archive orphan _batchSubmittedAt — pendingChapterCleanupBatch 없음 + 30 분 이상 잔존
+  //    (multi-device race 의 짧은 transient 는 init-fn.js:410 stuck recovery 가 sweep 처리 → 그 전 노이즈 X)
+  if (!state.pendingChapterCleanupBatch || !state.pendingChapterCleanupBatch.batch_id) {
+    const now = Date.now();
+    const orphanSubmits = (state.chatArchive || []).filter(a =>
+      a && a._batchSubmittedAt && !a._deleted && (now - a._batchSubmittedAt > 30 * 60 * 1000)
+    );
+    if (orphanSubmits.length > 0) {
+      _invariantWarn('orphan_batch_submit:' + orphanSubmits.length,
+        '[INVARIANT] orphan _batchSubmittedAt 30+ min without pendingBatch:', orphanSubmits.length);
+    }
+  }
+  // 3) entry 의 _aiSummaryFailed + diary 공존 — sentinel 좀비 (사용자가 diary 작성했는데 sentinel strip 누락)
+  const failedWithDiary = (state.entries || []).filter(e => e && e._aiSummaryFailed && e.diary);
+  if (failedWithDiary.length > 0) {
+    _invariantWarn('failed_with_diary:' + failedWithDiary.length,
+      '[INVARIANT] _aiSummaryFailed + entry.diary 공존:', failedWithDiary.length,
+      failedWithDiary.map(e => e.date));
+  }
+  // 4) traits/values/patterns 에 비-string name (dirty data)
+  ['traits', 'values', 'patterns'].forEach(k => {
+    const dirty = (state[k] || []).filter(x => x && typeof x.name !== 'string');
+    if (dirty.length > 0) {
+      _invariantWarn('dirty_' + k + ':' + dirty.length,
+        '[INVARIANT] ' + k + ' 에 비-string name:', dirty.length, dirty.slice(0, 3));
+    }
+  });
+  // 5) review failed key 와 review 객체 동시 존재 (deleteReview 청소 누락)
+  ['weekly', 'monthly', 'quarterly', 'annual'].forEach(type => {
+    const failedKeys = state[type + 'ReviewsFailedKeys'] || [];
+    const reviews = state[type + 'Reviews'] || [];
+    if (!Array.isArray(failedKeys) || failedKeys.length === 0) return;
+    const keyField = type === 'weekly' ? 'weekKey' : type === 'monthly' ? 'monthKey'
+      : type === 'quarterly' ? 'quarterKey' : 'year';
+    const conflictKeys = failedKeys.filter(k => reviews.some(r => r && r[keyField] === k));
+    if (conflictKeys.length > 0) {
+      _invariantWarn('conflict_' + type + ':' + conflictKeys.join(','),
+        '[INVARIANT] ' + type + ' review 있는데 failed key 잔존:', conflictKeys);
+    }
+  });
 }
 
