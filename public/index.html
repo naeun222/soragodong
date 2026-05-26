@@ -12601,20 +12601,25 @@
   }
 
   /* 사용자 명시 2026-05-27 ultrathink: 홈 인라인 sleep widget — 4-18시 동안 큰 체크인 카드 자리.
-     library-hero 와 같은 사이즈로 통일 (priority slot 안 다른 카드와 visual consistency). */
+     library-hero 와 같은 사이즈로 통일 (priority slot 안 다른 카드와 visual consistency).
+     사용자 명시 2026-05-27 ultrathink #2 — 시간 input 카드 밖 overflow fix + library-hero default 높이 맞춤.
+     overflow: input[type=time] 의 intrinsic min-width 가 grid 1fr 를 넘어 카드 밖으로 흐름.
+       → minmax(0, 1fr) + input min-width: 0 으로 차단.
+     높이 맞춤: header margin-bottom 10→6, input padding 8→6, duration min-height 제거 + margin 6→4. */
   .home-sleep-widget {
     margin: 8px 0 14px;
     padding: 14px 16px;
     background: linear-gradient(135deg, rgba(126,200,200,0.10), rgba(139,126,196,0.08));
     border: 1px solid rgba(126,200,200,0.30);
     border-radius: 16px;
+    overflow: hidden;
   }
   .rc-body-tap .home-sleep-widget { margin: 0; width: 100%; }
   /* sleep widget = 인라인 (탭 진입 X) → wrapper cursor default 강제. */
   .rc-body-tap:has(.home-sleep-widget) { cursor: default; }
   .home-sleep-widget-header {
     display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 10px;
+    margin-bottom: 6px;
   }
   .home-sleep-widget-title {
     font-size: 13px; font-weight: 600; color: var(--text);
@@ -12629,16 +12634,18 @@
   }
   .home-sleep-allnighter-toggle input { margin: 0; cursor: pointer; }
   .home-sleep-time-pair {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px;
   }
   .home-sleep-input {
-    display: flex; flex-direction: column; gap: 4px;
+    display: flex; flex-direction: column; gap: 3px;
+    min-width: 0;
   }
   .home-sleep-label {
     font-size: 11px; color: var(--text-dim); letter-spacing: 0.02em;
   }
   .home-sleep-input input[type="time"] {
-    width: 100%; padding: 8px 10px;
+    width: 100%; min-width: 0;
+    padding: 6px 10px;
     font-size: 14px; color: var(--text);
     background: var(--surface);
     border: 1px solid var(--border);
@@ -12647,16 +12654,16 @@
   }
   .home-sleep-allnighter-msg {
     font-size: 13px; color: var(--accent2);
-    padding: 12px; text-align: center;
+    padding: 10px; text-align: center;
     background: rgba(126,200,200,0.08);
     border: 1px dashed rgba(126,200,200,0.3);
     border-radius: 10px;
   }
   .home-sleep-duration {
     font-size: 11px; color: var(--text-dim);
-    margin-top: 6px; text-align: right;
-    min-height: 14px;
+    margin-top: 4px; text-align: right;
   }
+  .home-sleep-duration:empty { display: none; }
 
   /* V4 cleanup 2026-05-23 — 옛 .chat-empty-checkin-card / .cec-* 폐기 (대화탭 체크인 카드 자체 폐기). */
 
@@ -70057,7 +70064,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.266-home-sleep-widget';
+const APP_VERSION = 'v4.0.267-sleep-widget-overflow-fix';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 
