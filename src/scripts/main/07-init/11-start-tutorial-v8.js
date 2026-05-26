@@ -106,21 +106,21 @@ function _v9ShowWarmStartModal() {
     const root = document.getElementById('v8TutorialRoot');
     if (!root) { resolve({ type: 'none' }); return; }
     root.setAttribute('aria-hidden', 'false');
+    // V4 (사용자 명시 2026-05-26 ultrathink): warm Q&A 폐기 → "소라고동 이렇게 쓸 수 있어요" 인트로 카드.
+    //   textarea 분기 (answer/none) 도 없앰 → 건너뛰기/다음 둘 다 chat 탭 + ice-breaker (_v9HandleNone).
+    //   짧은 페이드인 (overlay 220ms / card rise 280ms) — 옛 380/520 보다 가볍게.
     root.innerHTML = `
-      <div class="v9-warm-overlay">
-        <div class="v9-warm-card">
-          <div class="v9-warm-question">안녕? 혹시...<br>요즘 고민 같은 거 있어?</div>
-          <div class="v9-warm-textarea-wrap">
-            <textarea class="v9-warm-input" id="v9WarmInput" placeholder="" rows="3"></textarea>
-          </div>
+      <div class="v9-warm-overlay v9-warm-overlay-intro">
+        <div class="v9-warm-card v9-warm-card-intro">
+          <img class="v9-warm-godong" src="/godong-soft-smile.svg" alt="" />
+          <div class="v9-warm-question">안녕하세요,<br>소라고동은 이렇게 쓸 수 있어요:</div>
           <div class="v9-warm-buttons">
-            <button class="v9-warm-btn ghost" id="v9WarmNone" type="button">그런 거 없어</button>
-            <button class="v9-warm-btn primary" id="v9WarmSend" type="button" disabled>보내기 →</button>
+            <button class="v9-warm-btn ghost" id="v9WarmNone" type="button">건너뛰기</button>
+            <button class="v9-warm-btn primary" id="v9WarmSend" type="button">다음</button>
           </div>
         </div>
       </div>
     `;
-    const input = document.getElementById('v9WarmInput');
     const sendBtn = document.getElementById('v9WarmSend');
     const noneBtn = document.getElementById('v9WarmNone');
     let resolved = false;
@@ -128,33 +128,14 @@ function _v9ShowWarmStartModal() {
       root.innerHTML = '';
       root.setAttribute('aria-hidden', 'true');
     };
-    if (input) {
-      setTimeout(() => { try { input.focus(); } catch {} }, 80);
-      input.addEventListener('input', () => {
-        if (sendBtn) sendBtn.disabled = !input.value.trim();
-      });
-      // Cmd/Ctrl+Enter = submit. Enter 단독 = newline.
-      input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-          e.preventDefault();
-          if (sendBtn && !sendBtn.disabled) sendBtn.click();
-        }
-      });
-    }
-    if (sendBtn) sendBtn.addEventListener('click', () => {
-      if (resolved) return;
-      const txt = ((input && input.value) || '').trim();
-      if (!txt) return;
-      resolved = true;
-      cleanup();
-      resolve({ type: 'answer', answer: txt });
-    });
-    if (noneBtn) noneBtn.addEventListener('click', () => {
+    const finish = () => {
       if (resolved) return;
       resolved = true;
       cleanup();
       resolve({ type: 'none' });
-    });
+    };
+    if (sendBtn) sendBtn.addEventListener('click', finish);
+    if (noneBtn) noneBtn.addEventListener('click', finish);
   });
 }
 
