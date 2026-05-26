@@ -714,7 +714,11 @@ async function _backfillChatMessagesToTable() {
     state._chatMessagesBackfillDone = true;
     return true;
   }
+  // V4 fix (사용자 보고 2026-05-26 ultrathink): _chatMessagesSaveInFlight 가드 추가.
+  //   _archiveCurrentChapter 의 fire-and-forget save 진행 중 archive 는 backfill 대상에서 제외 —
+  //   같은 chapter 에 두 번 INSERT 차단 (single-device race 가드, multi-device 는 0034 UNIQUE 가 잡음).
   const targets = state.chatArchive.filter(a => a && !a._hasMessages
+    && !a._chatMessagesSaveInFlight
     && Array.isArray(a.messages) && a.messages.length > 0
     && a.id);  // id 없는 옛 archive 는 skip (chapter_id 식별 불가).
   if (targets.length === 0) {
@@ -773,5 +777,76 @@ async function _backfillChatMessagesToTable() {
   }
   saveState();  // 한 번 cycle — main row 가 _cloudStateReplacer 통해 strip.
   return failedCount === 0;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// V4 fix (사용자 보고 2026-05-26 ultrathink): in-memory chatArchive[].messages 인접 dupe cleanup.
+// ───────────────────────────────────────────────────────────────
+// Root cause history:
+//   0033 (user_id, chapter_id, idx) 가 단순 INDEX (UNIQUE 아님) + _saveChapterMessages 비-멱등 →
+//   race (fire-and-forget × backfill, multi-device) 시 같은 chapter 에 두 번 INSERT → idx 마다 두 row →
+//   hydrate 가 162 row 그대로 in-memory 박음 (messages.length = 2 × messageCount).
+//   0034 + _saveChapterMessages 멱등화 + in-flight 가드 = 신규 발생 차단.
+//   본 헬퍼 = 이미 영구화된 in-memory dupe 청소 (boot 1회).
+//
+// 가드:
+//   (role + timestamp + content[0..120]) key 기반 dedup — 같은 메시지가 정확히 같은 timestamp 로 두 번 박힌
+//   것만 청소 (사용자가 의도적으로 같은 텍스트를 다른 시점에 두 번 보낸 경우는 timestamp 가 달라 보존).
+//   messages.length === messageCount 이거나 메타 X archive 면 skip (안전).
+// 호출:
+//   init 직후 1회 (state._chatArchiveDedupDone 플래그). cloud 동기는 다음 saveState cycle 에서 자연 반영.
+// ═══════════════════════════════════════════════════════════════
+function _dedupChatArchiveMessages() {
+  if (!Array.isArray(state.chatArchive) || state.chatArchive.length === 0) return 0;
+  let fixedArchives = 0;
+  let totalRemoved = 0;
+  for (const a of state.chatArchive) {
+    if (!a || !Array.isArray(a.messages) || a.messages.length === 0) continue;
+    // 메타 messageCount 일치하면 skip — 정상.
+    if (typeof a.messageCount === 'number' && a.messages.length === a.messageCount) continue;
+    // 메타 X 또는 messages.length < messageCount = skip (옛 archive / 의도적 partial).
+    if (typeof a.messageCount === 'number' && a.messages.length < a.messageCount) continue;
+
+    const orig = a.messages;
+    const out = [];
+    const seen = new Set();
+    for (const m of orig) {
+      if (!m) continue;
+      const key = (m.role || '') + '|' + (m.timestamp || '') + '|' + (m.content || '').slice(0, 120);
+      if (!seen.has(key)) {
+        seen.add(key);
+        out.push(m);
+      }
+    }
+    if (out.length < orig.length) {
+      a.messages = out;
+      a.messageCount = out.length;
+      a._dedupedAt = new Date().toISOString();
+      fixedArchives++;
+      totalRemoved += (orig.length - out.length);
+      console.log('[chatArchive dedup]', a.id, a.date,
+        'orig=', orig.length, '→ new=', out.length, '(removed', orig.length - out.length, ')');
+    }
+  }
+  if (fixedArchives > 0) {
+    console.log(`[chatArchive dedup] done — ${fixedArchives} archive 청소, 총 ${totalRemoved} 메시지 제거`);
+    try { saveState(); } catch {}
+  }
+  return fixedArchives;
+}
+
+// boot 1회 가드 — loadFromCloud + hydrate 후 호출되어야 의미 있음. init-fn 에서 명시 호출.
+async function _maybeRunChatArchiveDedup() {
+  if (state._chatArchiveDedupDone) return;
+  try {
+    const fixed = _dedupChatArchiveMessages();
+    state._chatArchiveDedupDone = true;
+    if (fixed === 0) {
+      // 한 번 박으면 매 boot 마다 함수 자체 호출 skip. cheap 이지만 명확성.
+      try { saveState(); } catch {}
+    }
+  } catch (e) {
+    console.warn('[chatArchive dedup] throw:', e);
+  }
 }
 

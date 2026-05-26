@@ -119,17 +119,26 @@ function _archiveCurrentChapter(opts) {
   //   in-memory messages 그대로 유지 (read 경로 무변경 안전망). 성공 시 _hasMessages=true 박음 →
   //     Step 4 cloud save 가 _hasMessages 박힌 archive 의 messages 키 strip + read dual-mode (lazy load).
   //   실패 시 _hasMessages 안 박음 → 다음 cloud sync 가 main row 에 messages fallback 저장.
+  // V4 fix (사용자 보고 2026-05-26 ultrathink): _chatMessagesSaveInFlight 마커 — backfill race 가드.
+  //   옛 path: fire-and-forget save 진행 중 saveState → cloud main row 에 _hasMessages=false 박힘 →
+  //   다른 device (또는 같은 device 의 다음 boot) backfill 이 같은 archive 잡아 두 번째 INSERT.
+  //   본 fix: in-flight 동안 마커 박고 backfill target filter 에서 skip — 단일 device race 차단.
+  //   multi-device race 는 _saveChapterMessages 의 pre-delete 멱등화 + DB UNIQUE (0034) 가 잡음.
   if (typeof _saveChapterMessages === 'function' && archiveItem.id) {
+    archiveItem._chatMessagesSaveInFlight = true;
     (async () => {
       try {
         const _r = await _saveChapterMessages(archiveItem.id, validMsgs);
         if (_r && _r.ok) {
           archiveItem._hasMessages = true;
-          try { saveState(); } catch {}
         } else {
           console.warn('[_archiveCurrentChapter] chat_messages save fail — keep inline:', _r && _r.reason);
         }
       } catch (e) { console.warn('[_archiveCurrentChapter] chat_messages save throw:', e); }
+      finally {
+        delete archiveItem._chatMessagesSaveInFlight;
+        try { saveState(); } catch {}
+      }
     })();
   }
 
