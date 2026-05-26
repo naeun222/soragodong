@@ -12458,11 +12458,13 @@
   .rc-body-tap:has(.home-sleep-widget) { cursor: default; }
   .home-sleep-widget-header {
     display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 6px;
+    gap: 8px;
+    margin-bottom: 8px;
   }
   .home-sleep-widget-title {
     font-size: 13px; font-weight: 600; color: var(--text);
     letter-spacing: 0.02em;
+    white-space: nowrap;
   }
   .home-sleep-allnighter-toggle {
     display: inline-flex; align-items: center; gap: 5px;
@@ -12470,26 +12472,39 @@
     cursor: pointer; user-select: none;
     padding: 4px 8px; border-radius: 8px;
     background: var(--surface);
+    flex-shrink: 0;
   }
   .home-sleep-allnighter-toggle input { margin: 0; cursor: pointer; }
+  /* 사용자 명시 2026-05-27 ultrathink #3 — 시간 input 칸 내부 정렬 / 셀 겹침 fix.
+     문제: iOS native time picker rendering 이 padding 안 의도대로 안 잡혀 label 과 input 이 visually 겹치고,
+     셀 boundary 가 약해서 옆 칸 picker chrome 이 침범.
+     fix: 셀 overflow hidden + 고정 height 34 + padding-only-horizontal + tabular-nums + label nowrap/ellipsis. */
   .home-sleep-time-pair {
-    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px;
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px;
+    align-items: start;
   }
   .home-sleep-input {
-    display: flex; flex-direction: column; gap: 3px;
+    display: flex; flex-direction: column; gap: 5px;
     min-width: 0;
+    overflow: hidden;
   }
   .home-sleep-label {
     font-size: 11px; color: var(--text-dim); letter-spacing: 0.02em;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   .home-sleep-input input[type="time"] {
+    display: block;
     width: 100%; min-width: 0;
-    padding: 6px 10px;
-    font-size: 14px; color: var(--text);
+    height: 34px;
+    padding: 0 10px;
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 10px;
     box-sizing: border-box;
+    vertical-align: middle;
   }
   .home-sleep-allnighter-msg {
     font-size: 13px; color: var(--accent2);
