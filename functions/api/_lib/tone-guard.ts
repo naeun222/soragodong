@@ -58,3 +58,24 @@ export function checkTone(body: string, opts: ToneGuardOpts = {}): ToneViolation
 
   return { hard, soft };
 }
+
+// 사용자 명시 2026-05-27 ultrathink: chapter extract 출력의 일반론 / 사건 서술 detect.
+//   hard 위반 항목은 retry 보다 *해당 카드 drop* 권장 (비용 보호).
+//   호출 wire 아직 X — 추가만. _processExtractChapterAnalysis 등 호출 측 연결은 별도 PR.
+export const CHAPTER_EXTRACT_GUARDS: Record<string, RegExp> = {
+  // Barnum / 일반론 — 누구나 매칭 가능 표현
+  barnum: /감정이?\s*풍부|관계를?\s*중요시|섬세한\s*사람|복잡한\s*내면|다양한\s*감정|예민한\s*편/,
+  // 진단명 / 단순 라벨
+  diagnosis: /내향적|외향적|회피형|불안형|완벽주의자|예민한\s*성격/,
+  // description 이 시간/장소/사건 명사로만 시작 — 패턴 해석 X
+  factOnly: /^(?:어제|오늘|주말|아침|저녁|회사|학교|친구|가족|엄마|아빠)[를을이가\s]/,
+};
+
+export function checkChapterCardQuality(card: { name?: string; description?: string }): string[] {
+  const text = `${card.name || ''} ${card.description || ''}`;
+  const fails: string[] = [];
+  for (const [k, re] of Object.entries(CHAPTER_EXTRACT_GUARDS)) {
+    if (re.test(text)) fails.push(k);
+  }
+  return fails;
+}
