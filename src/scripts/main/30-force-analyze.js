@@ -1470,6 +1470,10 @@ async function _resumeChapterCleanupBatch() {
         // 옛 마커도 정리 (옛 코드 호환)
         delete arch._pendingExtract;
         delete arch._pendingCaseAnalysis;
+        // V4 fix (사용자 명시 2026-05-26 ultrathink): _extractFromIndex clear — 이어서-마무리 반복 archive 의 옛 부분 영원히 분석 누락 차단.
+        //   _archiveCurrentChapter (06-chat-plus-menu.js:101) 가 changed 분기에서 박는 boundary. 한 cycle 처리 후 reset
+        //   안 하면 다음 이어서-마무리 cycle 의 input 범위 잘못 잡혀 옛 부분 영원히 분석에서 제외.
+        delete arch._extractFromIndex;
       }
       delete arch._caseAnalysisDone;
       delete arch._topicExtractDone;
@@ -2001,6 +2005,10 @@ async function maybeRunChapterCleanup() {
 
   // msg<3 stuck marker sweep (옛 + 새 마커 모두 cover) + 좀비 (_deleted + 마커 잔존) retro 청소
   let _sweptDeadMarker = false;
+  // V4 fix (사용자 명시 2026-05-26 ultrathink): multi-device race — 다른 device 에서 batch 처리 끝나 pendingChapterCleanupBatch=null 박은 후,
+  //   이 device 의 archive 에 _batchSubmittedAt 만 잔존 시 line 2042 filter 의 12h cooldown 이 즉시 unblock 막음.
+  //   여기서 한 번 sweep → batch 추적 없는 archive 의 _batchSubmittedAt strip 해서 다음 trigger 즉시 재시도 가능.
+  const _hasActiveBatch = !!(state.pendingChapterCleanupBatch && state.pendingChapterCleanupBatch.batch_id);
   (state.chatArchive || []).forEach(a => {
     if (!a) return;
     // V4 fix (사용자 보고 2026-05-26 ultrathink): 좀비 archive retro 청소 — _deleted 인데 cleanup 마커 잔존.
@@ -2015,6 +2023,11 @@ async function maybeRunChapterCleanup() {
         _sweptDeadMarker = true;
       }
       return;
+    }
+    // multi-device race strip — pendingChapterCleanupBatch 없으면 _batchSubmittedAt 도 stale.
+    if (!_hasActiveBatch && a._batchSubmittedAt) {
+      delete a._batchSubmittedAt;
+      _sweptDeadMarker = true;
     }
     if (a._pendingCleanup || a._pendingExtract || a._pendingCaseAnalysis) {
       const _msgs = a.messages;

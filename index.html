@@ -22303,6 +22303,15 @@ async function init() {
       saveState();
     }
   } catch {}
+  // V4 fix (사용자 명시 2026-05-26 ultrathink): _chatMessagesSaveInFlight 잔존 마커 boot-time strip.
+  //   _archiveCurrentChapter (06-chat-plus-menu.js:128) 가 박는 in-flight 마커. finally 블록에서 delete 하지만
+  //   tab close / crash / sleep 등으로 finally 안 돌면 stale marker 잔존 → 06-backup-migration.js:721 의 backfill filter
+  //   영구 거부 → chat_messages 별도 테이블 row 영구 누락 / multi-device 동기화 race.
+  try {
+    (state.chatArchive || []).forEach(a => {
+      if (a && a._chatMessagesSaveInFlight) delete a._chatMessagesSaveInFlight;
+    });
+  } catch {}
   // V4 (v8 묶음 7): Core 2 reload 후 깜빡임 점 갱신 — sessionStorage / state._beachJustUnlocked 체크
   setTimeout(() => { if (typeof _checkCore2JustFinished === 'function') _checkCore2JustFinished(); }, 200);
   // 사용자 명시 2026-05-06: Core 1 reload 후 환영 선물 모달 자동 트리거 폐기. 마커도 정리.
@@ -56876,6 +56885,9 @@ async function devCleanupEmptyArchives() {
   empties.forEach(a => {
     a._deleted = true;
     a._deletedAt = nowIso;
+    // V4 fix (사용자 명시 2026-05-26 ultrathink): _pendingCleanup 도 strip — 좀비 마커 방지.
+    //   _softDeleteArchiveCascade 와 동일 위생.
+    delete a._pendingCleanup;
     delete a._pendingExtract;
     delete a._pendingCaseAnalysis;
     delete a._batchSubmittedAt;
@@ -63252,6 +63264,10 @@ async function _resumeChapterCleanupBatch() {
         // 옛 마커도 정리 (옛 코드 호환)
         delete arch._pendingExtract;
         delete arch._pendingCaseAnalysis;
+        // V4 fix (사용자 명시 2026-05-26 ultrathink): _extractFromIndex clear — 이어서-마무리 반복 archive 의 옛 부분 영원히 분석 누락 차단.
+        //   _archiveCurrentChapter (06-chat-plus-menu.js:101) 가 changed 분기에서 박는 boundary. 한 cycle 처리 후 reset
+        //   안 하면 다음 이어서-마무리 cycle 의 input 범위 잘못 잡혀 옛 부분 영원히 분석에서 제외.
+        delete arch._extractFromIndex;
       }
       delete arch._caseAnalysisDone;
       delete arch._topicExtractDone;
@@ -63783,6 +63799,10 @@ async function maybeRunChapterCleanup() {
 
   // msg<3 stuck marker sweep (옛 + 새 마커 모두 cover) + 좀비 (_deleted + 마커 잔존) retro 청소
   let _sweptDeadMarker = false;
+  // V4 fix (사용자 명시 2026-05-26 ultrathink): multi-device race — 다른 device 에서 batch 처리 끝나 pendingChapterCleanupBatch=null 박은 후,
+  //   이 device 의 archive 에 _batchSubmittedAt 만 잔존 시 line 2042 filter 의 12h cooldown 이 즉시 unblock 막음.
+  //   여기서 한 번 sweep → batch 추적 없는 archive 의 _batchSubmittedAt strip 해서 다음 trigger 즉시 재시도 가능.
+  const _hasActiveBatch = !!(state.pendingChapterCleanupBatch && state.pendingChapterCleanupBatch.batch_id);
   (state.chatArchive || []).forEach(a => {
     if (!a) return;
     // V4 fix (사용자 보고 2026-05-26 ultrathink): 좀비 archive retro 청소 — _deleted 인데 cleanup 마커 잔존.
@@ -63797,6 +63817,11 @@ async function maybeRunChapterCleanup() {
         _sweptDeadMarker = true;
       }
       return;
+    }
+    // multi-device race strip — pendingChapterCleanupBatch 없으면 _batchSubmittedAt 도 stale.
+    if (!_hasActiveBatch && a._batchSubmittedAt) {
+      delete a._batchSubmittedAt;
+      _sweptDeadMarker = true;
     }
     if (a._pendingCleanup || a._pendingExtract || a._pendingCaseAnalysis) {
       const _msgs = a.messages;
@@ -69018,7 +69043,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.250-dedup-cross-pair-reject';
+const APP_VERSION = 'v4.0.251-zombie-marker-hygiene';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 

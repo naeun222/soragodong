@@ -90,6 +90,9 @@ async function devCleanupEmptyArchives() {
   empties.forEach(a => {
     a._deleted = true;
     a._deletedAt = nowIso;
+    // V4 fix (사용자 명시 2026-05-26 ultrathink): _pendingCleanup 도 strip — 좀비 마커 방지.
+    //   _softDeleteArchiveCascade 와 동일 위생.
+    delete a._pendingCleanup;
     delete a._pendingExtract;
     delete a._pendingCaseAnalysis;
     delete a._batchSubmittedAt;

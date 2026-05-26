@@ -65,6 +65,15 @@ async function init() {
       saveState();
     }
   } catch {}
+  // V4 fix (사용자 명시 2026-05-26 ultrathink): _chatMessagesSaveInFlight 잔존 마커 boot-time strip.
+  //   _archiveCurrentChapter (06-chat-plus-menu.js:128) 가 박는 in-flight 마커. finally 블록에서 delete 하지만
+  //   tab close / crash / sleep 등으로 finally 안 돌면 stale marker 잔존 → 06-backup-migration.js:721 의 backfill filter
+  //   영구 거부 → chat_messages 별도 테이블 row 영구 누락 / multi-device 동기화 race.
+  try {
+    (state.chatArchive || []).forEach(a => {
+      if (a && a._chatMessagesSaveInFlight) delete a._chatMessagesSaveInFlight;
+    });
+  } catch {}
   // V4 (v8 묶음 7): Core 2 reload 후 깜빡임 점 갱신 — sessionStorage / state._beachJustUnlocked 체크
   setTimeout(() => { if (typeof _checkCore2JustFinished === 'function') _checkCore2JustFinished(); }, 200);
   // 사용자 명시 2026-05-06: Core 1 reload 후 환영 선물 모달 자동 트리거 폐기. 마커도 정리.
