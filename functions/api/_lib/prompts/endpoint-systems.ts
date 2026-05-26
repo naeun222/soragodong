@@ -338,7 +338,13 @@ const SEMANTIC_DEDUP_SYSTEM = `너는 사용자의 자기관찰 카드 안에서
 - pattern 페어 (a_section 또는 b_section 이 'patterns') 만 trigger / sequence 보존 (둘 중 더 풍부한 쪽)
 - 그 외 카테고리는 trigger / sequence 비움
 
-[출력 — JSON만, 마크다운 X]
+[출력 — 매우 중요. 정확히 따라]
+- 첫 글자부터 마지막 글자까지 JSON 객체 하나만. 그 외 글자 절대 X.
+- 마크다운 코드 fence (\`\`\`json / \`\`\`) 절대 X — fence 없이 raw JSON 만.
+- "다음은 결과입니다" / "분석했습니다" / "페어를 찾았어요" 같은 인사말·설명·prefix·suffix 절대 X.
+- 페어 없으면 {"pairs": []} 한 줄. 그 자체로 끝.
+- 한 페어라도 만들면 아래 schema 정확히 따라:
+
 {
   "pairs": [
     {
@@ -357,7 +363,7 @@ const SEMANTIC_DEDUP_SYSTEM = `너는 사용자의 자기관찰 카드 안에서
   ]
 }
 
-페어 없으면 "pairs": []. JSON 만 출력.`;
+다시 강조 — JSON 객체 하나만. 다른 글자 절대 X.`;
 
 // mutation (4 sub-type) — user data 비중 큼. system 단위로 분리해도 cache 효과 미미하다고 판단해서 system 상수 추가 안 함.
 

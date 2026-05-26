@@ -1,1 +1,1 @@
-v4.0.240-force-analyze-batch
+v4.0.241-semantic-parse-fix
