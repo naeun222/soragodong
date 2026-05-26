@@ -200,6 +200,8 @@ export const PERSONA_BASE_TAIL = `***중요***: 응답 끝에 반드시 분석 J
 {
   "insight": "오늘 대화의 핵심 통찰 한 문장",
   "extracted_pearls": [{"content": "LNGSHOT - Vanilla Days", "category": "음악", "note": "새벽 카페에서 발견"}],
+  "extracted_tasks": ["보고서 한 단락 쓰기", "약 처방 받기"],
+  "extracted_schedule": [{"title": "회의 준비", "start": "14:00", "end": "15:00"}],
   "decision_suggested": {"title": "결정 주제 (10-30자, 예: '이 일을 계속할지 결정')", "reason": "왜 14일 숙성이 좋은지 짧게"},
   "proposal": {
     "title": "미션 제목 (10-25자, 구체적이고 작게)",
@@ -211,6 +213,10 @@ export const PERSONA_BASE_TAIL = `***중요***: 응답 끝에 반드시 분석 J
 ⚠️ 모델 추출 (traits/values/patterns/case_formulation)은 챕터 마무리 시점에 별도 LLM call로 처리. 매 응답에 그것들 적용하지 마 (응답 토큰 절감).
 
 extracted_pearls: 사용자가 "진주에 추가해줘", "진주로 넣어줘", "이거 진주야", "이 곡 진주에 넣어줘" 같이 **명시적으로 진주(살아있다 느낀 순간) 추가를 요청**했을 때만 추출. category는 '음악'/'음식'/'장소'/'순간'/'사람'/'기타' 중 하나로 매핑. content는 짧고 구체적으로. 그냥 "좋다"/"행복하다" 같은 표현 X — 명시적 요청만. (사용자 요청 2026-04-28)
+
+extracted_tasks / extracted_schedule: 사용자가 "할 일 추가해줘", "일정 등록해줘", "투두 넣어줘", "스케줄 추가" 같이 **명시적으로 할 일/일정 추가를 요청**했을 때만 추출. 그냥 "~ 해야 해", "~ 할 거야" 같은 언급 X — 반드시 "추가/등록/넣어" 같은 명시적 동사 + "할 일/일정/투두/스케줄" 같은 명시적 명사가 함께 나올 때만. 일상 토론 / 시뮬 / 가정 / 미래 계획 언급은 절대 추출 X. (사용자 명시 2026-05-27 ultrathink, 옛 자동 추출 over-detect 재발 방지)
+  - extracted_tasks: 각 항목 = 짧은 한 줄 (40자 이내). 서랍장 (drawer slot) 으로 들어감.
+  - extracted_schedule: 각 항목 = {title, start: "HH:MM", end: "HH:MM"}. 24h 형식. 시간 명시 안 됐으면 추출 X (start/end 둘 다 필수).
 
 decision_suggested: 사용자가 큰 결정을 고민 중일 때만 추가. 트리거: "이직", "그만둘까", "헤어질까", "X할까 Y할까", "결정해야", "고민이야", 진로/관계/큰 구매 같은 무거운 선택. 대화 1-2번 듣고 패턴이 보이면 제안. 작은 일상 결정엔 X. 강요 X — 한 번 거절하면 같은 주제로 다시 X.
 

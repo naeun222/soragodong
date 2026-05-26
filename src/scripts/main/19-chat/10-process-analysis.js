@@ -34,9 +34,90 @@ async function processAnalysis(analysis, messageIdx) {
       };
     }
   }
-  // V4 사용자 명시 2026-05-23 ultrathink — extracted_tasks (vaultProposals) + extracted_schedule (todaySchedule auto-push) 분기 폐기.
-  //   backend system-persona.ts 의 JSON schema 에서 두 키 제거 (2026-05-23) → AI 가 더 이상 출력 X.
-  //   클라이언트 stale path 도 같이 제거. memoryVault 자체는 명시 path (decision-vault / topic-actions / drag-drop) 로 유지.
+  // V4 (사용자 명시 2026-05-27 ultrathink): extracted_tasks / extracted_schedule 복원 — **명시 trigger gate** 적용.
+  //   2026-05-23 폐기 사유 = AI 자동 over-detect ("이거 일정이네" 시뮬 / 토론 중 잘못 감지). 같은 함정 회피:
+  //     1) backend system-persona.ts 가 "추가/등록/넣어 + 할 일/일정/투두/스케줄" 명시적 동사+명사 동시 매칭 시에만 출력 (지침).
+  //     2) 클라이언트도 직전 user 메시지에 trigger regex 재검증 (defense-in-depth) — '박아|잡아' 제외 (사용자 명시 2026-05-27).
+  //   추가 → state.tasks drawer slot (실행 chip 에서 즉시 보임). 잘못 들어가도 chip 안에서 삭제 한 번.
+  //   일정 → state.todaySchedule auto-push (옛 path 그대로) + 📅 토스트.
+  const _lastUserText = (() => {
+    for (let i = (messageIdx ?? state.chatMessages.length - 1) - 1; i >= 0; i--) {
+      const m = state.chatMessages[i];
+      if (m && m.role === 'user') return (m.content || '').toString();
+    }
+    return '';
+  })();
+  // 사용자 명시 2026-05-27 ultrathink: '박아줘' / '잡아줘' 제외. '추가|등록|넣어' + '할 일|일정|투두|스케줄' 만.
+  const _hasExplicitTaskScheduleTrigger = (() => {
+    const t = _lastUserText;
+    if (!t) return false;
+    const hasVerb = /(추가|등록|넣어)/.test(t);
+    const hasNoun = /(할\s*일|일정|투두|스케줄)/.test(t);
+    return hasVerb && hasNoun;
+  })();
+  if (_hasExplicitTaskScheduleTrigger && analysis.extracted_tasks && Array.isArray(analysis.extracted_tasks) && analysis.extracted_tasks.length > 0) {
+    if (!Array.isArray(state.tasks)) state.tasks = [];
+    const todayK = (typeof _scheduleDateKey === 'function') ? _scheduleDateKey() : todayKey();
+    let added = 0;
+    analysis.extracted_tasks.forEach(item => {
+      if (!item || typeof item !== 'string') return;
+      const title = item.trim().slice(0, 40);
+      if (!title) return;
+      // 같은 title fuzzy dup 차단 (최근 30 task)
+      const recentDup = (state.tasks || []).slice(-30).find(t =>
+        t.title && typeof similarText === 'function' && similarText(t.title, title)
+      );
+      if (recentDup) return;
+      state.tasks.push({
+        id: 'task_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+        title,
+        status: 'drawer',
+        slot: 'drawer',
+        date: todayK,
+        weight: 'daily',
+        energy: 'medium',
+        priority: (typeof nextPriority === 'function') ? nextPriority() : 0,
+        source: 'chat_extract',
+        createdAt: new Date().toISOString()
+      });
+      added++;
+    });
+    if (added > 0) {
+      showToast(`📋 할 일 ${added}개 서랍장에 추가됨`);
+      if (typeof renderExecute === 'function') { try { renderExecute(); } catch {} }
+      if (typeof updateExecuteChipMeta === 'function') { try { updateExecuteChipMeta(); } catch {} }
+    }
+  }
+  if (_hasExplicitTaskScheduleTrigger && analysis.extracted_schedule && Array.isArray(analysis.extracted_schedule) && analysis.extracted_schedule.length > 0) {
+    if (!Array.isArray(state.todaySchedule)) state.todaySchedule = [];
+    const todayK = (typeof _scheduleDateKey === 'function') ? _scheduleDateKey() : todayKey();
+    const colors = ['#d4a76a','#8fc88f','#7ec8e3','#b39ddb','#ff8da1','#ffb86b','#5fcfba'];
+    let added = 0;
+    analysis.extracted_schedule.forEach((it, i) => {
+      if (!it || !it.title || !it.start || !it.end) return;
+      if (!/^\d{1,2}:\d{2}$/.test(it.start) || !/^\d{1,2}:\d{2}$/.test(it.end)) return;
+      const dup = state.todaySchedule.some(s =>
+        s.date === todayK && s.title === String(it.title).trim().slice(0,40) && s.start === it.start
+      );
+      if (dup) return;
+      state.todaySchedule.push({
+        id: 'sched_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
+        title: String(it.title).trim().slice(0,40),
+        start: it.start,
+        end: it.end,
+        date: todayK,
+        source: 'chat',
+        taskId: null,
+        color: colors[(state.todaySchedule.length + i) % colors.length]
+      });
+      added++;
+    });
+    if (added > 0) {
+      showToast(`📅 일정 ${added}개 추가됨`);
+      if (typeof renderExecute === 'function') { try { renderExecute(); } catch {} }
+      if (typeof dismissPlaceholder === 'function') dismissPlaceholder('schedule');
+    }
+  }
   // 사용자 요청 2026-04-28: 채팅에서 진주 추가 요청 추출.
   // 사용자 보고 2026-05-11: '진주에 넣어줘' 안 했는데 자동 추가되는 버그 (시뮬 토론 중에 LLM 이 잘못 감지).
   //   → 자동 push 폐기. extracted_pearls 있으면 직전 user message 의 pearlSuggestion=true 만 마킹.

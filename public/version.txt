@@ -1,1 +1,1 @@
-v4.0.256-hallucination-honesty-rules
+v4.0.257-execute-chip-restored

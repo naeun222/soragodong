@@ -1,19 +1,20 @@
 // ═══════════════════════════════════════════════════════════════
-// V4 (사용자 명시 2026-05-16 ultrathink): 실행 탭 UI 전면 폐기. screen-execute / brain-dump / Now 3 / 서랍장 / Vault 핸들러 모두 제거.
-//   옛 24-execute.js (746 lines) 의 render·핸들러 (renderExecute · openBrainDump · processBrainDump · addManualTask · rerollQuest · _renderTimetableStripHTML · toggle* 등) 삭제.
-//   이 파일은 *도서관 캘린더 / 미션 / 채팅 / DNA 진주 / 스토리 등 다른 surface 가 share 하던 helper 만* 보존하는 thin core.
+// V4 (사용자 명시 2026-05-27 ultrathink): 실행 탭 UI 부분 복원 — 홈 (도서관) 안 collapsible chip 으로.
+//   2026-05-16 (f632dd4) 폐기한 renderExecute / brain dump / Now 3 / 서랍장 / 타임테이블 / immerse UI 복원.
+//   bottom-nav '실행' 탭은 복원 X — 홈 chip 진입만. showScreen('execute') 분기도 부활 X.
+//   튜토리얼 11 step (go_execute ~ exec_immerse_done) 도 복원 X (onboarding 가벼움 우선).
+//   shell helper (SHELL_POOLS / pickShellForTask / completeQuest 등) 의 V4 개선 (dedup + anti-recency + typeof guard) 유지.
 //
-// 보존 함수 (외부 callsite 있음):
-//   · _scheduleDateKey            — 25-archive-daily 4 파일 + 19-chat/10-process-analysis
-//   · SHELL_POOLS                 — pickShellForTask / pickLegendaryShells / previewShellForTask 가 사용
-//   · pickShellForTask            — 12-mission/09-complete-mission (미션 완료 셸 가챠)
-//   · pickLegendaryShells         — 13-shell-collection/10-dna-pearl-story + seed
-//   · previewShellForTask         — completeQuest 가 사용 (외부 직접 호출 X 지만 dead 아닌 internal)
-//   · completeQuest               — 25-archive-daily/03-shell-story-task-time + 28-project-tracking/04-shortcut-quest-ritual
-//   · totalShellPoints / shellCountByTier — 셸 통계 helper (도서관 모래사장 surface 가능성 — 보존)
-//
-// 추가:
-//   · renderExecute()             — no-op stub. 외부 typeof-check 콜사이트 + 직접 호출자 모두 안전 (실행 탭 사라짐 → 그릴 컨테이너 X 라 어차피 no-op).
+// chip UX:
+//   · #executeChipBtn 탭 → #executeChipExpanded 펼침/접힘. 컨테이너 ID #executeContent 옛 그대로.
+//   · meta = 오늘 카드 / 오늘 할 일 / 서랍장 카운트 sum. 0 이면 "비어있어".
+// ═══════════════════════════════════════════════════════════════
+
+let _execMode = 'balance';
+
+// V4 (사용자 명시 2026-05-04 ultrathink): 실행 탭 redesign 상태
+let _timetableExpanded = false;          // 타임테이블 strip 펼침 (세션 한정)
+let _expandedExecCards = new Set();      // Now 3 카드 펼침 상태 (세션 한정)
 
 // 사용자 명시 2026-05-06 (정정): 실행탭 일정 = 자정 (00:00) cutoff. todayKey() 의 4AM cutoff X — 일반 자정 기준.
 function _scheduleDateKey() {
@@ -22,6 +23,576 @@ function _scheduleDateKey() {
   const mm = String(d.getMonth() + 1).padStart(2, '0');
   const dd = String(d.getDate()).padStart(2, '0');
   return `${yyyy}-${mm}-${dd}`;
+}
+
+// === EXECUTE CHIP (홈 안 collapsible 진입) ===
+// 사용자 명시 2026-05-27 ultrathink: bottom-nav 진입 폐기 → 홈 chip 으로 복원.
+function toggleExecuteChip() {
+  const wrap = document.getElementById('executeChipExpanded');
+  const arrow = document.getElementById('executeChipArrow');
+  const btn = document.getElementById('executeChipBtn');
+  if (!wrap) return;
+  const opening = !!wrap.hidden;
+  wrap.hidden = !opening;
+  if (arrow) arrow.textContent = opening ? '▾' : '▸';
+  if (btn) btn.setAttribute('aria-expanded', opening ? 'true' : 'false');
+  if (opening) {
+    try { renderExecute(); } catch (e) { console.warn('[executeChip] render:', e); }
+  }
+}
+
+function updateExecuteChipMeta() {
+  const el = document.getElementById('executeChipMeta');
+  if (!el) return;
+  const todayKeyVal = todayKey();
+  const tasks = state.tasks || [];
+  const now3 = tasks.filter(t => t.date === todayKeyVal && t.slot === 'now3' && t.status !== 'done').length;
+  const todayList = tasks.filter(t => t.slot === 'drawer' && t.isToday && t.date === todayKeyVal && t.status !== 'done').length;
+  const drawer = tasks.filter(t => t.slot === 'drawer' && !t.isToday && t.status !== 'done' && (t.title || '').trim()).length;
+  const total = now3 + todayList + drawer;
+  el.textContent = total > 0 ? `${total}개` : '비어있어';
+}
+
+function _renderTimetableStripHTML() {
+  const items = (state.todaySchedule || []).slice().sort((a, b) => (a.start || '').localeCompare(b.start || ''));
+  const todayK = _scheduleDateKey();
+  const todayItems = items.filter(it => !it.date || it.date === todayK);
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const nowLabel = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+  const upcoming = todayItems.find(it => {
+    const sParts = (it.start || '').split(':');
+    const sMin = (parseInt(sParts[0]) || 0) * 60 + (parseInt(sParts[1]) || 0);
+    return sMin >= nowMin;
+  });
+
+  let nextLabel;
+  if (upcoming) {
+    const sParts = (upcoming.start || '').split(':');
+    const sMin = (parseInt(sParts[0]) || 0) * 60 + (parseInt(sParts[1]) || 0);
+    const remainMin = sMin - nowMin;
+    let remainStr;
+    if (remainMin < 60) remainStr = `${remainMin}분 남음`;
+    else remainStr = `${Math.floor(remainMin / 60)}h ${remainMin % 60}m 남음`;
+    nextLabel = `→ ${upcoming.start} ${escapeHtml(upcoming.title)} (${remainStr})`;
+  } else if (todayItems.length === 0) {
+    nextLabel = '— 오늘 일정 비어있어';
+  } else {
+    nextLabel = '— 오늘 일정 다 끝남';
+  }
+
+  return `
+    <div class="exec-tt-strip" onclick="toggleTimetableSection()" title="탭하면 전체 타임테이블 펼침">
+      <span class="exec-tt-strip-now">⏰ ${nowLabel}</span>
+      <span class="exec-tt-strip-next">${nextLabel}</span>
+      <span class="exec-tt-strip-toggle">${_timetableExpanded ? '▾ 접기' : '▸ 펼치기'}</span>
+    </div>
+  `;
+}
+
+function toggleTimetableSection() {
+  _timetableExpanded = !_timetableExpanded;
+  if (typeof renderExecute === 'function') renderExecute();
+}
+
+function toggleExecCardExpand(taskId) {
+  if (_expandedExecCards.has(taskId)) _expandedExecCards.delete(taskId);
+  else _expandedExecCards.add(taskId);
+  if (typeof renderExecute === 'function') renderExecute();
+}
+
+function toggleDrawerSection() {
+  state.preferences = state.preferences || {};
+  state.preferences._drawerSectionExpanded = !state.preferences._drawerSectionExpanded;
+  saveState();
+  if (typeof renderExecute === 'function') renderExecute();
+}
+
+function renderExecute() {
+  const container = document.getElementById('executeContent');
+  if (!container) return;
+  // chip 접힘 상태면 heavy render skip — meta 만 갱신 (#executeChipExpanded hidden 이면 사용자 안 봄).
+  const expandedWrap = document.getElementById('executeChipExpanded');
+  if (expandedWrap && expandedWrap.hidden) {
+    updateExecuteChipMeta();
+    return;
+  }
+
+  // Liquid flow check first — auto-cascade incomplete blocks
+  if (typeof liquidFlow === 'function') liquidFlow();
+
+  const todayKeyVal = todayKey();
+
+  // 사용자 보고 2026-05-09 ultrathink: 옛 promoteToToday (date 갱신 안 한 버그) 로 잃어버린 task 자동 복구.
+  {
+    let _resaved = false;
+    (state.tasks || []).forEach(t => {
+      if (t.slot === 'drawer' && t.isToday && t.date && t.date !== todayKeyVal && t.status !== 'done') {
+        t.date = todayKeyVal;
+        _resaved = true;
+      }
+    });
+    if (_resaved) { try { saveState(); } catch {} }
+  }
+
+  const todayTasks = (state.tasks || []).filter(t => t.date === todayKeyVal);
+  const now3 = todayTasks.filter(t => t.slot === 'now3' && t.status !== 'done');
+  const completed = todayTasks.filter(t => t.status === 'done' && !t.isToday);
+
+  let html = `
+    <div class="screen-title">실행 🚀</div>
+    <div class="screen-sub">머릿속 짐 → 오늘의 카드 → 차근히.</div>
+  `;
+
+  html += _renderTimetableStripHTML();
+  if (_timetableExpanded && typeof renderV4TimetableHTML === 'function') {
+    html += renderV4TimetableHTML();
+    if (!window._v4ttScrolledOnce) {
+      window._v4ttScrolledOnce = true;
+      setTimeout(() => {
+        const nowLine = document.querySelector('.v4-tt-now-line');
+        if (nowLine && nowLine.scrollIntoView) {
+          try { nowLine.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
+        }
+      }, 250);
+    }
+  }
+
+  html += `
+    <button class="exec-immerse-btn" onclick="openImmerseStart()">
+      🌧 시작
+      <div class="sub">빗소리·방해금지·집중 모드 ON</div>
+    </button>
+  `;
+
+  // Now 3 section (있을 때만)
+  if (now3.length > 0) {
+    html += `
+      <div class="exec-now-section">
+        <div class="exec-section-label">✦ 오늘의 카드 · ${now3.length}장</div>
+    `;
+    now3.forEach(task => {
+      const isAIMission = task.source === 'ai_mission';
+      const energyLabel = task.energy === 'low' ? '가벼움' : task.energy === 'high' ? '무거움' : '보통';
+      const tag = isAIMission ? '🐚 소라의 부름' : task.weight === 'main' ? (task.execMode === 'focus' ? '🔥 무거운 메인' : '⚡ 메인') : task.weight === 'light' ? '🍃 가벼움' : '📌 일상';
+      const preview = previewShellForTask(task);
+      const previewEmoji = preview ? preview.emojis[0] : '🐚';
+      const rarityClass = preview?.tier === 'golden' ? 'shell-golden' : preview?.tier === 'call' ? 'shell-call' : preview?.tier === 'main' ? 'shell-main' : '';
+      const isExpanded = _expandedExecCards.has(task.id);
+      const elapsedStr = (typeof getTaskElapsedTime === 'function') ? getTaskElapsedTime(task.id) : '';
+      html += `
+        <div class="exec-card" data-task-id="${task.id}">
+          <div class="exec-card-row" onclick="toggleExecCardExpand('${task.id}')" title="탭하면 자세히 보기">
+            <span class="exec-card-shell-preview-inline ${rarityClass}" title="이거 깨면 ${preview?.label || ''} 소라">${previewEmoji}</span>
+            <span class="exec-card-row-title">${escapeHtml(task.title)}</span>
+            <span class="exec-card-actions-mini" onclick="event.stopPropagation()">
+              <button class="start-mini" onclick="startQuest('${task.id}')">시작</button>
+              <button onclick="toggleQuestComplete('${task.id}')">✓</button>
+            </span>
+          </div>
+          ${isExpanded ? `
+            <div class="exec-card-detail">
+              <span class="exec-card-tag">${tag}</span>
+              ${task.description ? `<div class="exec-card-detail-desc">${escapeHtml(task.description)}</div>` : ''}
+              <div class="exec-card-meta">
+                <span>${energyLabel}</span>
+                ${task.assignedBlock && typeof getBlockLabel === 'function' ? `<span>📅 ${getBlockLabel(task.assignedBlock)}</span>` : ''}
+                ${elapsedStr ? `<span>⏱ ${elapsedStr}</span>` : ''}
+              </div>
+              <div class="exec-card-actions">
+                ${!isAIMission ? `<button onclick="deleteTask('${task.id}')">✕ 삭제</button>` : ''}
+              </div>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    });
+    html += `</div>`;
+  }
+
+  // 오늘 할 일 (drawer 중 isToday=true) — 헤더에 + 추가 버튼
+  const todayListAll = (state.tasks || [])
+    .filter(t => t.slot === 'drawer' && t.isToday && t.date === todayKeyVal)
+    .sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+  const todayList = todayListAll.filter(t => t.status !== 'done');
+  html += `<div class="exec-now-section">
+    <div class="exec-section-label" style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+      <span>📋 오늘 할 일${todayList.length > 0 ? ` · ${todayList.length}개` : ''}</span>
+      <button onclick="addTodayTask()" style="font-size:11px; padding:4px 10px; background:var(--surface2); border:1px solid var(--border); color:var(--accent2); border-radius:8px; cursor:pointer; font-family:inherit; font-weight:500;">+ 추가</button>
+    </div>`;
+  if (todayListAll.length === 0) {
+    html += `<div style="font-size:11px; color:var(--text-soft); padding:8px 4px 6px;">비어있어. + 추가로 시작.</div></div>`;
+  } else {
+    html += `<div class="todo-list">`;
+    todayListAll.forEach(task => {
+      const isDone = task.status === 'done';
+      const schedLabel = task.scheduledStart ? `<span class="todo-sched-label">⏰ ${task.scheduledStart}${task.scheduledEnd ? `–${task.scheduledEnd}` : ''}</span>` : '';
+      html += `
+        <div class="todo-item${isDone ? ' completed' : ''}" data-task-id="${task.id}">
+          <button class="todo-check${isDone ? ' checked' : ''}" onclick="toggleQuestComplete('${task.id}')" aria-label="${isDone ? '되살리기' : '완료'}" title="${isDone ? '되살리기' : '완료'}">${isDone ? '✓' : ''}</button>
+          <span class="todo-title">${escapeHtml(task.title)}${schedLabel}</span>
+          ${isDone ? '' : `<button class="todo-action" onclick="scheduleTaskToTime('${task.id}')" title="일정 적용하기">⏰</button>`}
+          ${isDone ? '' : `<button class="todo-action" onclick="editTaskCard('${task.id}')" title="수정">✎</button>`}
+          ${isDone ? '' : `<button class="todo-action" onclick="demoteFromToday('${task.id}')" title="서랍장으로">↩</button>`}
+          <button class="todo-action" onclick="deleteTask('${task.id}')" title="삭제">✕</button>
+        </div>
+      `;
+    });
+    html += `</div></div>`;
+  }
+
+  // 서랍장 (drawer 중 !isToday)
+  const drawerRaw = (state.tasks || [])
+    .filter(t => t.slot === 'drawer' && !t.isToday && t.status !== 'done')
+    .sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+  const seenTitles = new Set();
+  const drawerTasks = drawerRaw.filter(t => {
+    const key = (t.title || '').trim().toLowerCase();
+    if (!key) return true;
+    if (seenTitles.has(key)) return false;
+    seenTitles.add(key);
+    return true;
+  });
+  if (drawerTasks.length > 0) {
+    const dupCount = drawerRaw.length - drawerTasks.length;
+    const drawerExpanded = !!(state.preferences && state.preferences._drawerSectionExpanded);
+    if (!drawerExpanded) {
+      html += `
+        <div class="exec-drawer-header-collapsed" onclick="toggleDrawerSection()">
+          <span>📂 서랍장 · ${drawerTasks.length}개${dupCount > 0 ? ` <span style="color:var(--text-soft); font-size:11px;">(중복 ${dupCount} 숨김)</span>` : ''}</span>
+          <span class="toggle-arrow">▸ 펼치기</span>
+        </div>
+      `;
+    } else {
+      html += `
+        <div class="exec-now-section">
+          <div class="exec-section-label" style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+            <span style="flex:1; min-width:0; cursor:pointer;" onclick="toggleDrawerSection()" title="탭하면 접기">📂 서랍장 · ${drawerTasks.length}개${dupCount > 0 ? ` <span style="color:var(--text-soft); font-size:10px;">(중복 ${dupCount}개 숨김)</span>` : ''} <span style="color:var(--text-soft); font-size:11px;">▾</span></span>
+            <button onclick="toggleDrawerView()" title="자동 분류 / 시간순 토글" style="font-size:11px; padding:4px 10px; background:var(--surface2); border:1px solid var(--border); color:var(--text-dim); border-radius:8px; cursor:pointer; font-family:inherit; flex-shrink:0; white-space:nowrap;">${typeof _drawerView !== 'undefined' && _drawerView === 'auto' ? '🌅 자동' : '⏱ 시간순'}</button>
+            <button onclick="mergeDuplicateTasks()" title="중복 합치기" style="font-size:12px; padding:5px 12px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:8px; cursor:pointer; font-family:inherit; flex-shrink:0; white-space:nowrap; line-height:1.4; font-weight:500;">🔗 정리</button>
+          </div>
+      `;
+      const renderDrawerRow = (task) => {
+        const isAIMission = task.source === 'ai_mission';
+        const tagEmoji = isAIMission ? '🐚' : task.weight === 'main' ? '⚡' : task.weight === 'light' ? '🍃' : '📌';
+        return `
+          <div class="drawer-row" data-task-id="${task.id}">
+            <span class="drawer-row-tag">${tagEmoji}</span>
+            <span class="drawer-row-title" onclick="editTaskCard('${task.id}')" title="탭해서 수정">${escapeHtml(task.title)}</span>
+            <button class="drawer-row-action up" onclick="promoteToToday('${task.id}')" title="오늘로">↑</button>
+            <button class="drawer-row-action del" onclick="deleteTask('${task.id}')" title="삭제">✕</button>
+          </div>
+        `;
+      };
+      if (typeof _drawerView !== 'undefined' && _drawerView === 'auto' && typeof classifyDrawerTask === 'function') {
+        const groups = { now: [], later: [], idea: [], big: [] };
+        drawerTasks.forEach(t => { groups[classifyDrawerTask(t)].push(t); });
+        const groupOrder = [
+          { key: 'now',   label: '🌅 지금 가능' },
+          { key: 'big',   label: '🎯 큰 것' },
+          { key: 'later', label: '📅 나중' },
+          { key: 'idea',  label: '💭 아이디어' }
+        ];
+        if (!state.preferences) state.preferences = {};
+        if (!state.preferences._drawerGroupCollapsed) {
+          state.preferences._drawerGroupCollapsed = { now: false, big: false, later: true, idea: true };
+        }
+        const collapsed = state.preferences._drawerGroupCollapsed;
+        groupOrder.forEach(({ key, label }) => {
+          const items = groups[key];
+          if (!items.length) return;
+          const isCollapsed = !!collapsed[key];
+          const preview = isCollapsed && items[0]
+            ? `<span class="drawer-group-preview">${escapeHtml((items[0].title || '').slice(0, 24))}${items.length > 1 ? ` +${items.length - 1}` : ''}</span>`
+            : '';
+          html += `<div class="drawer-group group-${key}">
+            <div class="drawer-group-header" onclick="toggleDrawerGroup('${key}')">
+              <span>${isCollapsed ? '▸' : '▾'} ${label} · ${items.length}${preview ? '' : ''}</span>
+              ${preview}
+            </div>`;
+          if (!isCollapsed) {
+            html += `<div class="drawer-row-list">`;
+            items.forEach(t => { html += renderDrawerRow(t); });
+            html += `</div>`;
+          }
+          html += `</div>`;
+        });
+      } else {
+        html += `<div class="drawer-row-list">`;
+        drawerTasks.forEach(task => { html += renderDrawerRow(task); });
+        html += `</div>`;
+      }
+      html += `</div>`;
+    }
+  }
+
+  // Completed today
+  if (completed.length > 0) {
+    html += `
+      <div class="exec-now-section">
+        <div class="exec-section-label">✓ 오늘 클리어 · ${completed.length}장</div>
+    `;
+    completed.forEach(task => {
+      const elapsed = (typeof getTaskElapsedTime === 'function') ? getTaskElapsedTime(task.id) : '';
+      html += `
+        <div class="exec-card completed" onclick="toggleQuestComplete('${task.id}')" style="cursor:pointer;" title="실수로 눌렀으면 다시 탭해서 되살릴 수 있어">
+          <div class="exec-card-title">${escapeHtml(task.title)}</div>
+          <div style="font-size:10px; color:var(--text-soft); margin-top:4px;">${elapsed ? `⏱ ${elapsed} · ` : ''}탭해서 되살리기 ↻</div>
+        </div>
+      `;
+    });
+    html += `</div>`;
+  }
+
+  html += `
+    <div class="exec-actions-row">
+      <button onclick="openBrainDump()">🧠 고동에게 맡기기</button>
+      <button onclick="addManualTask()">➕ 직접 추가</button>
+    </div>
+  `;
+
+  // 추적 항목 (체중/수면/운동 그래프) — 옛 실행 탭에 살았으니 chip 안에도 유지.
+  html += `<div id="projectsSection"></div>`;
+  container.innerHTML = html;
+  if (typeof renderProjects === 'function') renderProjects();
+  updateExecuteChipMeta();
+}
+
+// === BRAIN DUMP ===
+let _brainDumpEscDetach = null;
+function openBrainDump() {
+  const overlay = document.getElementById('brainDumpOverlay');
+  if (!overlay) return;
+  overlay.style.display = 'flex';
+  if (_brainDumpEscDetach) _brainDumpEscDetach();
+  if (typeof _registerModalEsc === 'function') {
+    _brainDumpEscDetach = _registerModalEsc(overlay, () => closeBrainDump());
+  }
+  if (state.preferences && state.preferences.testerMode) {
+    const ta = document.getElementById('brainDumpInput');
+    if (ta && !ta.value.trim()) {
+      ta.value = `교수님 메일 답장 — 다음 주까지
+논문 서론 첫 단락 쓰기
+실험 데이터 정리 (어제 받은 거)
+샴푸 떨어졌어 사야 함
+동생 생일 선물 — 주말 안에
+운동 가야지 진짜 일주일째 미룸
+세탁기 점검 신청
+세금 신고 미뤄놓은 거
+친구 결혼식 답장
+연구실 청소 좀
+SNS 줄여야 하는데
+저녁 약속 답장 안 함
+도서관 책 반납 (오늘 마지막 날)
+약 처방 받기
+휴대폰 데이터 확인
+부모님께 안부 전화
+아 맞다 영양제 떨어짐
+학회 발표 슬라이드 시작
+주간 회의 자료 정리
+새 노트북 케이스 알아보기`;
+    }
+  }
+  setTimeout(() => { const el = document.getElementById('brainDumpInput'); if (el) el.focus(); }, 100);
+  selectExecMode('balance');
+}
+
+function closeBrainDump() {
+  const overlay = document.getElementById('brainDumpOverlay');
+  if (overlay) overlay.style.display = 'none';
+  const input = document.getElementById('brainDumpInput');
+  if (input) input.value = '';
+  if (_brainDumpEscDetach) { _brainDumpEscDetach(); _brainDumpEscDetach = null; }
+}
+
+function selectExecMode(mode) {
+  _execMode = mode;
+  const f = document.getElementById('execModeFocus');
+  const b = document.getElementById('execModeBalance');
+  if (f) f.classList.toggle('selected', mode === 'focus');
+  if (b) b.classList.toggle('selected', mode === 'balance');
+}
+
+async function processBrainDump() {
+  const input = document.getElementById('brainDumpInput');
+  const dump = (input && input.value || '').trim();
+  if (!dump) { showToast('뭐든 좀 써볼래?'); return; }
+
+  const submitBtn = document.getElementById('brainDumpSubmit');
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = '고동이 정리 중... ✦'; }
+
+  if (typeof _canAI !== 'function' || !_canAI()) {
+    // Fallback: split by line, no AI
+    const lines = dump.split('\n').filter(l => l.trim()).slice(0, 10);
+    const todayKeyVal = todayKey();
+    const basePriority = (typeof nextPriority === 'function') ? nextPriority() : 0;
+    lines.forEach((line, i) => {
+      state.tasks.push({
+        id: 'task_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+        title: line.trim(),
+        status: i < 3 ? 'active' : 'drawer',
+        slot: i < 3 ? 'now3' : 'drawer',
+        date: todayKeyVal,
+        weight: i === 0 ? 'main' : (i === 1 ? 'light' : 'daily'),
+        energy: 'medium',
+        priority: basePriority + i,
+        source: 'manual',
+        createdAt: new Date().toISOString()
+      });
+    });
+    saveState();
+    closeBrainDump();
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '고동에게 맡기기 ✦'; }
+    renderExecute();
+    showToast('정리 완료. 카드 3장 발급됨 ✦');
+    return;
+  }
+
+  try {
+    const traits = (state.traits || []).slice(0, 5).map(t => t.name).join(', ');
+    const patterns = (state.patterns || []).slice(0, 5).map(p => p.name).join(', ');
+    const activeModes = Object.keys(state.modes || {}).filter(k => state.modes[k]).join(', ');
+
+    const resp = await callAnthropic({
+      _endpoint: 'brain_dump',
+      _vars: { traits, patterns, activeModes, execMode: _execMode, dump },
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1500,
+      messages: [{ role: 'user', content: '' }]
+    });
+    if (!resp.ok) throw new Error('API ' + resp.status);
+    const data = await resp.json();
+    const text = data.content[0].text;
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('JSON 파싱 실패');
+    const result = JSON.parse(jsonMatch[0]);
+
+    const todayKeyVal = todayKey();
+    const now = new Date().toISOString();
+
+    const existingPriorities = [...(state.tasks || []), ...(state.memoryVault || [])]
+      .map(x => typeof x.priority === 'number' ? x.priority : 0);
+    const basePriority = existingPriorities.length > 0 ? Math.max(...existingPriorities) + 1 : 0;
+    let pIdx = 0;
+
+    (result.now3 || []).slice(0, 3).forEach(card => {
+      state.tasks.push({
+        id: 'task_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+        title: card.title || '(제목 없음)',
+        description: card.description || null,
+        status: 'active',
+        slot: 'now3',
+        date: todayKeyVal,
+        weight: card.weight || 'daily',
+        energy: card.energy || 'medium',
+        priority: basePriority + (pIdx++),
+        source: 'brain_dump',
+        execMode: _execMode,
+        createdAt: now
+      });
+    });
+
+    (result.drawer || []).forEach(card => {
+      state.tasks.push({
+        id: 'task_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+        title: card.title || '(제목 없음)',
+        status: 'drawer',
+        slot: 'drawer',
+        date: todayKeyVal,
+        weight: card.weight || 'daily',
+        energy: 'medium',
+        priority: basePriority + (pIdx++),
+        source: 'brain_dump',
+        createdAt: now
+      });
+    });
+
+    saveState();
+    closeBrainDump();
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '고동에게 맡기기 ✦'; }
+    renderExecute();
+    showToast(`카드 ${(result.now3 || []).length}장 발급됨 ✦`);
+  } catch (e) {
+    console.error(e);
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '고동에게 맡기기 ✦'; }
+    showToast('오류: ' + e.message);
+  }
+}
+
+// === ADD MANUAL TASK ===
+async function addManualTask() {
+  const title = await showInputModal({
+    title: '할 일 추가 ✦',
+    placeholder: '예: 카톡 답장',
+    okLabel: '추가'
+  });
+  if (!title || !title.trim()) return;
+  const todayKeyVal = todayKey();
+  const now3Count = (state.tasks || []).filter(t => t.date === todayKeyVal && t.slot === 'now3' && t.status !== 'done').length;
+  const newTask = {
+    id: 'task_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    title: title.trim(),
+    status: now3Count < 3 ? 'active' : 'drawer',
+    slot: now3Count < 3 ? 'now3' : 'drawer',
+    date: todayKeyVal,
+    weight: 'daily',
+    energy: 'medium',
+    priority: (typeof nextPriority === 'function') ? nextPriority() : 0,
+    source: 'manual',
+    createdAt: new Date().toISOString()
+  };
+  state.tasks.push(newTask);
+  saveState();
+  renderExecute();
+
+  if (now3Count < 3) {
+    const start = await showConfirmModal({
+      title: `"${title.trim()}" 추가됐어 ✦`,
+      message: '바로 시작할래?\n(시작 약속 만들기)',
+      okLabel: '시작',
+      cancelLabel: '나중에'
+    });
+    if (start) {
+      startQuest(newTask.id);
+    } else {
+      showToast('오늘의 카드에 추가됨');
+    }
+  } else {
+    showToast('서랍장에 추가됨');
+  }
+}
+
+// === REROLL ===
+async function rerollQuest(taskId) {
+  const task = state.tasks.find(t => t.id === taskId);
+  if (!task) return;
+  const todayKeyVal = todayKey();
+  const drawer = (state.tasks || []).filter(t =>
+    t.slot === 'drawer' && t.date === todayKeyVal && t.status !== 'done'
+  );
+  if (drawer.length === 0) {
+    const yes = await showConfirmModal({
+      title: '서랍장이 비어있어',
+      message: '이 카드를 그냥 서랍장으로 보낼까?',
+      okLabel: '보내',
+      cancelLabel: '취소'
+    });
+    if (yes) {
+      task.slot = 'drawer';
+      saveState();
+      renderExecute();
+      showToast('서랍장으로 이동');
+    }
+    return;
+  }
+  const replacement = drawer[0];
+  task.slot = 'drawer';
+  replacement.slot = 'now3';
+  replacement.status = 'active';
+  saveState();
+  renderExecute();
+  showToast('새 카드 뽑힘 ↻');
 }
 
 // === SHELL REWARD SYSTEM (V3.1) ===
@@ -198,6 +769,3 @@ function completeQuest(taskId) {
     setTimeout(() => promoteFromDrawer(), 1000);
   }
 }
-
-// 실행 탭 UI 폐기 후 외부 typeof check / 직접 호출자 안전 보호 stub. 컨테이너 #executeContent 도 markup 에서 제거됐으니 호출 = no-op.
-function renderExecute() {}
