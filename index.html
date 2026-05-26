@@ -20,11 +20,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
 <!-- 사용자 명시 2026-05-06 ultrathink (perf): boot splash 핵심 이미지 preload + 외부 API DNS resolve. 비용 거의 0 / 첫 페인트 visual 단축. -->
-<link rel="preload" as="image" href="/character/godong-serious.svg" type="image/svg+xml">
-<!-- 사용자 명시 2026-05-10: 고동이 표정 SVG 자주 쓰는 3종 preload (default 인라인 / thinking AI 대기 / happy 셀러브레이션). 나머지 18종 lazy. -->
+<!-- V4 fix (사용자 보고 2026-05-26 ultrathink) — godong-serious/thinking/happy preload 제거. 부팅 직후 어디서도 안 써서 브라우저가 "preloaded but not used" 경고. default 만 부팅 스플래시 (index.template.html) 에 인라인 → preload 유효. 나머지는 on demand fetch (체감 차이 X). -->
 <link rel="preload" as="image" href="/character/godong-default.svg" type="image/svg+xml">
-<link rel="preload" as="image" href="/character/godong-thinking.svg" type="image/svg+xml">
-<link rel="preload" as="image" href="/character/godong-happy.svg" type="image/svg+xml">
 <link rel="dns-prefetch" href="https://api.anthropic.com">
 <link rel="dns-prefetch" href="https://itunes.apple.com">
 <link rel="dns-prefetch" href="https://browser.sentry-cdn.com">
