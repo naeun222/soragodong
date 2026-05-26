@@ -50,7 +50,22 @@ async function forceAnalyze(opts) {
       decisions: (state.decisions || []).filter(d => !d._deleted).slice(-5).map(d => ({
         topic: d.topic || d.title, status: d.status
       })),
-      activeModes: Object.keys(state.modes || {}).filter(k => state.modes[k])
+      activeModes: Object.keys(state.modes || {}).filter(k => state.modes[k]),
+      // 사용자 명시 2026-05-26 ultrathink: dedup 인플레 잡기 — 기존 항목 이름 AI 한테 전달.
+      //   백엔드 프롬프트가 "이미 등록된 항목과 의미상 같으면 새로 만들지 말고 기존 이름 그대로 반환" 지시 사용.
+      //   slice(80) 토큰 가드. confidence DESC 정렬 후 슬라이스 — 강한 신호 우선 노출.
+      existingTraitNames: (state.traits || [])
+        .filter(t => !t._deleted)
+        .sort((a, b) => (b.confidence || 0) - (a.confidence || 0))
+        .map(t => t.name).filter(Boolean).slice(0, 80),
+      existingValueNames: (state.values || [])
+        .filter(v => !v._deleted)
+        .sort((a, b) => (b.confidence || 0) - (a.confidence || 0))
+        .map(v => v.name).filter(Boolean).slice(0, 80),
+      existingPatternNames: (state.patterns || [])
+        .filter(p => !p._deleted)
+        .sort((a, b) => (b.confidence || 0) - (a.confidence || 0))
+        .map(p => p.name).filter(Boolean).slice(0, 80)
     };
     // 사용자 명시 2026-05-11 ultrathink: prompt template backend 이전 — buildForceAnalyze 가 합성.
     const _dataDumpJson = JSON.stringify(dataDump, null, 2);
@@ -152,10 +167,25 @@ async function forceAnalyze(opts) {
     };
     // 사용자 명시 2026-05-08 ultrathink: 0.6 → 0.4 완화. 너무 빡빡해 새 발견 적었음.
     //   "다음날 나에 대해 새로운 소식 보는 재미" 의도 — 약한 신호도 가설로 등록 후 evidence_count 로 강화.
-    const NEW_THRESHOLD = 0.4;
+    // 사용자 명시 2026-05-26 ultrathink: 0.4 → 0.65. 옛 정책 "약한 신호도 가설로 등록" 은
+    //   dedup 안 잡히는 채로 별개 카드가 됨 = 인플레 원인. 새 정책 — 약한 신호는 fuzzy fallback 으로
+    //   기존 카드 evidence ↑ 만 시도. 매칭 없으면 drop.
+    const NEW_THRESHOLD = 0.65;
+    // 사용자 명시 2026-05-26 ultrathink: similarText 못 잡는 fuzzy 의미 중복 → Levenshtein 폴백.
+    //   _modelSimilarity (18a-model-dedup.js) 재사용. 0.6 = 약한 매칭 — 새 카드 만들지 않을 정도.
+    const FUZZY_MERGE_THRESHOLD = 0.6;
+    const _findFuzzyMatch = (arr, name) => {
+      if (!arr || !name || typeof _modelSimilarity !== 'function') return null;
+      for (const e of arr) {
+        if (!e || !e.name) continue;
+        if (_modelSimilarity(e.name, name) >= FUZZY_MERGE_THRESHOLD) return e;
+      }
+      return null;
+    };
     if (analysis.traits) {
       analysis.traits.forEach(t => {
-        const exist = state.traits.find(e => similarText(e.name, t.name));
+        let exist = state.traits.find(e => similarText(e.name, t.name))
+                 || _findFuzzyMatch(state.traits, t.name);
         if (exist) mergeModelItem(exist, t);
         else {
           const conf = typeof t.confidence === 'number' ? t.confidence : 0.5;
@@ -166,7 +196,8 @@ async function forceAnalyze(opts) {
     }
     if (analysis.values) {
       analysis.values.forEach(v => {
-        const exist = state.values.find(e => similarText(e.name, v.name));
+        let exist = state.values.find(e => similarText(e.name, v.name))
+                 || _findFuzzyMatch(state.values, v.name);
         if (exist) mergeModelItem(exist, v);
         else {
           const conf = typeof v.confidence === 'number' ? v.confidence : 0.5;
@@ -177,7 +208,8 @@ async function forceAnalyze(opts) {
     }
     if (analysis.patterns) {
       analysis.patterns.forEach(p => {
-        const exist = state.patterns.find(e => similarText(e.name, p.name));
+        let exist = state.patterns.find(e => similarText(e.name, p.name))
+                 || _findFuzzyMatch(state.patterns, p.name);
         if (exist) mergeModelItem(exist, p);
         else {
           const conf = typeof p.confidence === 'number' ? p.confidence : 0.5;
@@ -233,6 +265,21 @@ async function forceAnalyze(opts) {
     state.lastForceAnalyzeAt = new Date().toISOString();
     saveState();
     renderModel(); renderModelPreview();
+    // 사용자 명시 2026-05-26 ultrathink: 카드 총량 100+ 시 dedup nudge — 월 1회만.
+    try {
+      const _totalCards = (state.traits || []).length
+                        + (state.values || []).length
+                        + (state.patterns || []).length;
+      const _monthKey = new Date().toISOString().slice(0, 7);
+      if (_totalCards >= 100 && state._dedupNudgeShownMonth !== _monthKey) {
+        state._dedupNudgeShownMonth = _monthKey;
+        saveState();
+        // showToast 가 silent toast 시간 후 dismiss. 사용자 인지 — 나 탭 🧹 버튼.
+        if (typeof showToast === 'function') {
+          showToast(`너에 대한 카드 ${_totalCards}장 쌓였어. 정리해볼래? 나 탭 🧹`);
+        }
+      }
+    } catch (e) { console.warn('[dedup nudge]', e); }
     setSyncStatus('online');
     showToast(isAuto ? '🔍 일주일 모델 분석 자동 완료 ✦' : '분석 완료 ✦');
   } catch (err) {

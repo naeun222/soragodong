@@ -26,14 +26,45 @@
 
     // 사용자 요청 2026-04-29: "임시" 대화도 깊이 있는 내용 → 메인 chat과 동일 0.5 threshold.
     // unverified 마킹은 유지 → 사용자 ✓ 컨펌 흐름.
-    const THRESHOLD = 0.5;
+    // 사용자 명시 2026-05-26 ultrathink: 0.5 → 0.65. 옛 코멘트 "약한 신호 unverified pool" 의도는
+    //   fuzzy 폴백으로 대체 — 약한 신호 → 기존 카드 evidence ↑ 만. 새 카드 X.
+    const THRESHOLD = 0.65;
     let touched = false;
+
+    // 사용자 명시 2026-05-26 ultrathink: similarText 못 잡는 fuzzy 의미 중복 → Levenshtein 폴백.
+    //   30-force-analyze 와 일관. _modelSimilarity ≥ 0.6 = 매칭으로 간주.
+    const _FUZZY_MERGE = 0.6;
+    const _findFuzzyTrait = (name) => {
+      if (!name || typeof _modelSimilarity !== 'function') return null;
+      for (const e of (state.traits || [])) {
+        if (!e || !e.name) continue;
+        if (_modelSimilarity(e.name, name) >= _FUZZY_MERGE) return e;
+      }
+      return null;
+    };
+    const _findFuzzyValue = (name) => {
+      if (!name || typeof _modelSimilarity !== 'function') return null;
+      for (const e of (state.values || [])) {
+        if (!e || !e.name) continue;
+        if (_modelSimilarity(e.name, name) >= _FUZZY_MERGE) return e;
+      }
+      return null;
+    };
+    const _findFuzzyPattern = (name) => {
+      if (!name || typeof _modelSimilarity !== 'function') return null;
+      for (const e of (state.patterns || [])) {
+        if (!e || !e.name) continue;
+        if (_modelSimilarity(e.name, name) >= _FUZZY_MERGE) return e;
+      }
+      return null;
+    };
 
     if (Array.isArray(analysis.new_traits)) {
       analysis.new_traits.forEach(t => {
         if (!t || !t.name || typeof t.name !== 'string') return;
         const conf = typeof t.confidence === 'number' ? t.confidence : 0;
-        const exists = (state.traits || []).find(e => similarText(e.name, t.name));
+        const exists = (state.traits || []).find(e => similarText(e.name, t.name))
+                    || _findFuzzyTrait(t.name);
         if (!exists) {
           if (conf < THRESHOLD) return;
           state.traits = state.traits || [];
@@ -57,7 +88,8 @@
       analysis.new_values.forEach(v => {
         if (!v || !v.name || typeof v.name !== 'string') return;
         const conf = typeof v.confidence === 'number' ? v.confidence : 0;
-        const exists = (state.values || []).find(e => similarText(e.name, v.name));
+        const exists = (state.values || []).find(e => similarText(e.name, v.name))
+                    || _findFuzzyValue(v.name);
         if (!exists) {
           if (conf < THRESHOLD) return;
           state.values = state.values || [];
@@ -82,7 +114,8 @@
       analysis.new_patterns.forEach(p => {
         if (!p || !p.name || typeof p.name !== 'string') return;
         const conf = typeof p.confidence === 'number' ? p.confidence : 0;
-        const exists = (state.patterns || []).find(e => similarText(e.name, p.name));
+        const exists = (state.patterns || []).find(e => similarText(e.name, p.name))
+                    || _findFuzzyPattern(p.name);
         if (!exists) {
           if (conf < THRESHOLD) return;
           state.patterns = state.patterns || [];

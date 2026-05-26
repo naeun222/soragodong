@@ -28,7 +28,24 @@ async function extractChapterCaseAnalysis(messages, opts) {
     const resp = await callAnthropic({
       _endpoint: 'extract_chapter',
       _userContentType: 'chapter_topics',
-      _vars: { chatLog: _chatLog.slice(0, 8000), isSim: _isSim },
+      _vars: {
+        chatLog: _chatLog.slice(0, 8000),
+        isSim: _isSim,
+        // 사용자 명시 2026-05-26 ultrathink: dedup 인플레 잡기 — 30-force-analyze 와 동일 정책.
+        //   백엔드 프롬프트가 활용해야 효과 — 별도 작업 (PR 메모 참조).
+        existingTraitNames: (state.traits || [])
+          .filter(t => !t._deleted)
+          .sort((a, b) => (b.confidence || 0) - (a.confidence || 0))
+          .map(t => t.name).filter(Boolean).slice(0, 80),
+        existingValueNames: (state.values || [])
+          .filter(v => !v._deleted)
+          .sort((a, b) => (b.confidence || 0) - (a.confidence || 0))
+          .map(v => v.name).filter(Boolean).slice(0, 80),
+        existingPatternNames: (state.patterns || [])
+          .filter(p => !p._deleted)
+          .sort((a, b) => (b.confidence || 0) - (a.confidence || 0))
+          .map(p => p.name).filter(Boolean).slice(0, 80)
+      },
       model: _model,
       max_tokens: _maxTok,
       messages: [{ role: 'user', content: '' }]
