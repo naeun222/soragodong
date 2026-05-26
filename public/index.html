@@ -6104,6 +6104,8 @@
     flex-direction: column;
   }
   .input-modal-title, .input-modal-msg, .input-modal-actions { flex-shrink: 0; }
+  /* V4 fix (사용자 보고 2026-05-26 ultrathink): 빗자루 합치는 모달 (modelDedupModal) — AI 미리보기 + 카드 a/b + merged + 힌트 + 버튼 다 보려면 scroll 필수. .input-modal 의 max-height 90vh + flex column 위 + 내부 overflow-y. */
+  .model-dedup-modal { overflow-y: auto; }
   .input-modal-overlay.show .input-modal { transform: translateY(0); }
 
   /* 사용자 명시 2026-05-10: 시나리오 토론 스티커 — 시뮬 → 대화 이어가기 시 chat 화면 상단. 챕터 마무리 시 사라짐. */
@@ -69003,7 +69005,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.248-backup-list-scroll';
+const APP_VERSION = 'v4.0.249-dedup-modal-scroll';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 

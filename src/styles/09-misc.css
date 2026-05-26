@@ -5943,6 +5943,8 @@
     flex-direction: column;
   }
   .input-modal-title, .input-modal-msg, .input-modal-actions { flex-shrink: 0; }
+  /* V4 fix (사용자 보고 2026-05-26 ultrathink): 빗자루 합치는 모달 (modelDedupModal) — AI 미리보기 + 카드 a/b + merged + 힌트 + 버튼 다 보려면 scroll 필수. .input-modal 의 max-height 90vh + flex column 위 + 내부 overflow-y. */
+  .model-dedup-modal { overflow-y: auto; }
   .input-modal-overlay.show .input-modal { transform: translateY(0); }
 
   /* 사용자 명시 2026-05-10: 시나리오 토론 스티커 — 시뮬 → 대화 이어가기 시 chat 화면 상단. 챕터 마무리 시 사라짐. */
