@@ -101,7 +101,6 @@ function renderExecute() {
 
   let html = `
     <div class="screen-title">일정 🚀</div>
-    <div class="screen-sub">머릿속 짐 → 할 일로 정리 → 차근히.</div>
   `;
 
   html += _renderTimetableStripHTML();

@@ -9052,7 +9052,9 @@
     width: 5px !important; height: 5px !important; border-radius: 50%;
     background: var(--accent2) !important;
   }
-  /* V4 (사용자 명시 2026-05-27 ultrathink): 캘린더 표시 필터 — 사진 / 티켓 / 책 SVG 토글. */
+  /* V4 (사용자 명시 2026-05-27 ultrathink): 캘린더 표시 필터 — 사진 / 티켓 / 책 SVG 토글.
+     사용자 보고 2026-05-27: 모바일 narrow 폭에서 legend-items 와 같은 줄에 못 들어가면
+     줄바꿈 됨. margin-left: auto 로 새 줄에서도 오른쪽 강제. */
   .cal-filter-toggle {
     display: flex; gap: 2px; align-items: center;
     background: var(--surface2);
@@ -9060,6 +9062,7 @@
     border-radius: 999px;
     padding: 2px;
     flex-shrink: 0;
+    margin-left: auto;
   }
   .cal-filter-btn {
     background: transparent;
@@ -9105,14 +9108,27 @@
     border-color: #fff;
     box-shadow: 0 0 0 1px var(--accent2);
   }
-  /* hydrate pending / fail 시 부드러운 placeholder */
-  .cal-day-bg-img.diary-loading,
-  .cal-day-bg-img.pearl-loading {
-    background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
-  }
+  /* hydrate pending — mood 색이 비치도록 placeholder bg 없음 (사용자 보고 2026-05-27 ultrathink). */
   .cal-day-bg-img.diary-load-fail,
   .cal-day-bg-img.pearl-load-fail {
     visibility: hidden;
+  }
+  /* 사용자 보고 2026-05-27 ultrathink: stale storageKey 로 hydrate 실패한 셀 = mood 색 fallback 보여줘야 함.
+     cell bg 는 항상 mood 색이고, img 가 visibility:hidden 되면 mood 가 비침. day-num 도 white → 기본 텍스트로 되돌림. */
+  .cal-day.has-bg-img:has(.cal-day-bg-img.diary-load-fail) .cal-day-num,
+  .cal-day.has-bg-img:has(.cal-day-bg-img.pearl-load-fail) .cal-day-num {
+    color: var(--text);
+    text-shadow: none;
+    font-weight: 400;
+  }
+  .cal-day.has-bg-img:has(.cal-day-bg-img.diary-load-fail) .cal-chapter-dot,
+  .cal-day.has-bg-img:has(.cal-day-bg-img.pearl-load-fail) .cal-chapter-dot {
+    background: var(--accent2);
+    box-shadow: none;
+  }
+  .cal-day.has-bg-img:has(.cal-day-bg-img.diary-load-fail) .day-cell-mini-row,
+  .cal-day.has-bg-img:has(.cal-day-bg-img.pearl-load-fail) .day-cell-mini-row {
+    display: flex;
   }
   /* V4-1s: 점프 시 ig-card 깜빡임 */
   .ig-card-flash {
@@ -51789,7 +51805,9 @@ function renderLensCalendarGrid() {
       if (bp) bgImageHtml = pearlImgHtml(bp, 'photo', { cls: 'cal-day-bg-img', alt: '' });
     }
     const hasBgImg = !!bgImageHtml;
-    const bg = (!hasBgImg && mood) ? (moodColor[mood] || 'transparent') : 'transparent';
+    // 사용자 보고 2026-05-27 ultrathink: stale storageKey → hydrate 실패 시 mood 색이 비치도록
+    // cell bg 는 항상 mood 색 유지. 성공한 사진은 위에 absolute img 가 덮어버려서 mood 색 안 보임.
+    const bg = mood ? (moodColor[mood] || 'transparent') : 'transparent';
 
     // V4 (사용자 명시 2026-05-14 ultrathink): 티켓 / 책 mini dot — 첫 1개씩 + 누적 +N.
     //   bg image 깔린 경우 mini dot 충돌 → hide (cal-day.has-bg-img 클래스가 CSS 로 처리).
@@ -53604,7 +53622,6 @@ function renderExecute() {
 
   let html = `
     <div class="screen-title">일정 🚀</div>
-    <div class="screen-sub">머릿속 짐 → 할 일로 정리 → 차근히.</div>
   `;
 
   html += _renderTimetableStripHTML();
@@ -69848,7 +69865,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.261-cal-filter-photo-ticket-book';
+const APP_VERSION = 'v4.0.262-cal-filter-mobile-wrap-stale-key-fallback';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 

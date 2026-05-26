@@ -8891,7 +8891,9 @@
     width: 5px !important; height: 5px !important; border-radius: 50%;
     background: var(--accent2) !important;
   }
-  /* V4 (사용자 명시 2026-05-27 ultrathink): 캘린더 표시 필터 — 사진 / 티켓 / 책 SVG 토글. */
+  /* V4 (사용자 명시 2026-05-27 ultrathink): 캘린더 표시 필터 — 사진 / 티켓 / 책 SVG 토글.
+     사용자 보고 2026-05-27: 모바일 narrow 폭에서 legend-items 와 같은 줄에 못 들어가면
+     줄바꿈 됨. margin-left: auto 로 새 줄에서도 오른쪽 강제. */
   .cal-filter-toggle {
     display: flex; gap: 2px; align-items: center;
     background: var(--surface2);
@@ -8899,6 +8901,7 @@
     border-radius: 999px;
     padding: 2px;
     flex-shrink: 0;
+    margin-left: auto;
   }
   .cal-filter-btn {
     background: transparent;
@@ -8944,14 +8947,27 @@
     border-color: #fff;
     box-shadow: 0 0 0 1px var(--accent2);
   }
-  /* hydrate pending / fail 시 부드러운 placeholder */
-  .cal-day-bg-img.diary-loading,
-  .cal-day-bg-img.pearl-loading {
-    background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
-  }
+  /* hydrate pending — mood 색이 비치도록 placeholder bg 없음 (사용자 보고 2026-05-27 ultrathink). */
   .cal-day-bg-img.diary-load-fail,
   .cal-day-bg-img.pearl-load-fail {
     visibility: hidden;
+  }
+  /* 사용자 보고 2026-05-27 ultrathink: stale storageKey 로 hydrate 실패한 셀 = mood 색 fallback 보여줘야 함.
+     cell bg 는 항상 mood 색이고, img 가 visibility:hidden 되면 mood 가 비침. day-num 도 white → 기본 텍스트로 되돌림. */
+  .cal-day.has-bg-img:has(.cal-day-bg-img.diary-load-fail) .cal-day-num,
+  .cal-day.has-bg-img:has(.cal-day-bg-img.pearl-load-fail) .cal-day-num {
+    color: var(--text);
+    text-shadow: none;
+    font-weight: 400;
+  }
+  .cal-day.has-bg-img:has(.cal-day-bg-img.diary-load-fail) .cal-chapter-dot,
+  .cal-day.has-bg-img:has(.cal-day-bg-img.pearl-load-fail) .cal-chapter-dot {
+    background: var(--accent2);
+    box-shadow: none;
+  }
+  .cal-day.has-bg-img:has(.cal-day-bg-img.diary-load-fail) .day-cell-mini-row,
+  .cal-day.has-bg-img:has(.cal-day-bg-img.pearl-load-fail) .day-cell-mini-row {
+    display: flex;
   }
   /* V4-1s: 점프 시 ig-card 깜빡임 */
   .ig-card-flash {

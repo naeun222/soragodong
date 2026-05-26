@@ -149,7 +149,9 @@ function renderLensCalendarGrid() {
       if (bp) bgImageHtml = pearlImgHtml(bp, 'photo', { cls: 'cal-day-bg-img', alt: '' });
     }
     const hasBgImg = !!bgImageHtml;
-    const bg = (!hasBgImg && mood) ? (moodColor[mood] || 'transparent') : 'transparent';
+    // 사용자 보고 2026-05-27 ultrathink: stale storageKey → hydrate 실패 시 mood 색이 비치도록
+    // cell bg 는 항상 mood 색 유지. 성공한 사진은 위에 absolute img 가 덮어버려서 mood 색 안 보임.
+    const bg = mood ? (moodColor[mood] || 'transparent') : 'transparent';
 
     // V4 (사용자 명시 2026-05-14 ultrathink): 티켓 / 책 mini dot — 첫 1개씩 + 누적 +N.
     //   bg image 깔린 경우 mini dot 충돌 → hide (cal-day.has-bg-img 클래스가 CSS 로 처리).
