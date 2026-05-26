@@ -1,6 +1,12 @@
 async function openReview(type) {
   // batch 처리 중 race 차단 (ERROR #7)
+  // V4 fix (사용자 명시 2026-05-26 ultrathink — pendingReviewBatch race): 신 schema 진행 중에도 동일 차단.
+  //   pendingReviewBatch.review_keys[].cycle === type 매칭. 30-force-analyze.js 의 새 review chain batch.
   if (Array.isArray(state.pendingBatch?.review_pending) && state.pendingBatch.review_pending.includes(type)) {
+    showToast('🌙 자고 있는 동안 정리 중 ⏳ — 잠시 후 다시 봐줘');
+    return;
+  }
+  if (Array.isArray(state.pendingReviewBatch?.review_keys) && state.pendingReviewBatch.review_keys.some(rk => rk && rk.cycle === type)) {
     showToast('🌙 자고 있는 동안 정리 중 ⏳ — 잠시 후 다시 봐줘');
     return;
   }
@@ -63,6 +69,10 @@ async function openQuarterlyReviewCard() {
     showToast('🌙 자고 있는 동안 정리 중 ⏳ — 잠시 후 다시 봐줘');
     return;
   }
+  if (Array.isArray(state.pendingReviewBatch?.review_keys) && state.pendingReviewBatch.review_keys.some(rk => rk && rk.cycle === 'quarterly')) {
+    showToast('🌙 자고 있는 동안 정리 중 ⏳ — 잠시 후 다시 봐줘');
+    return;
+  }
   // 사용자 명시 2026-05-10 (메커니즘 일관): 사용자 click = currentQuarterKey (이번 분기 진행 중 review). 자동 batch = prev (끝난 사이클) 그대로.
   const now = new Date();
   const Q = Math.floor(now.getMonth() / 3) + 1;
@@ -118,6 +128,10 @@ async function openQuarterlyReviewCard() {
 async function openAnnualReviewCard() {
   if (!_canAI()) { showToast('AI 호출 불가능 — 로그인 필요'); return; }
   if (Array.isArray(state.pendingBatch?.review_pending) && state.pendingBatch.review_pending.includes('annual')) {
+    showToast('🌙 자고 있는 동안 정리 중 ⏳ — 잠시 후 다시 봐줘');
+    return;
+  }
+  if (Array.isArray(state.pendingReviewBatch?.review_keys) && state.pendingReviewBatch.review_keys.some(rk => rk && rk.cycle === 'annual')) {
     showToast('🌙 자고 있는 동안 정리 중 ⏳ — 잠시 후 다시 봐줘');
     return;
   }

@@ -19,7 +19,9 @@ function _collectAnnualData(year) {
   const decisions = (state.decisions || []).filter(d => !d._deleted && inYear(d.completedAt || d.startedAt));
   const quarterlies = (state.quarterlyReviews || []).filter(r => r.quarterKey && r.quarterKey.startsWith(targetYear + '-'));
   const insights = (state.insights || []).filter(i => !i._deleted && inYear(i.discoveredAt || i.createdAt));
-  const chatArchive = (state.chatArchive || []).filter(c => !c._deleted && inYear(c.generatedAt || (c.date ? c.date + 'T12:00:00' : null)));
+  // V4 fix (사용자 명시 2026-05-26 ultrathink — createdAt fallback): generatedAt + date 모두 없는 archive 도 createdAt 으로 시점 추정.
+  //   다른 collect 함수 (archive: savedAt || createdAt) 패턴과 일관.
+  const chatArchive = (state.chatArchive || []).filter(c => !c._deleted && inYear(c.generatedAt || c.createdAt || (c.date ? c.date + 'T12:00:00' : null)));
   return { targetYear, entries, pearls, archive, decisions, quarterlies, insights, chatArchive };
 }
 

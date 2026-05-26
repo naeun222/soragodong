@@ -17864,7 +17864,9 @@ function _collectAnnualData(year) {
   const decisions = (state.decisions || []).filter(d => !d._deleted && inYear(d.completedAt || d.startedAt));
   const quarterlies = (state.quarterlyReviews || []).filter(r => r.quarterKey && r.quarterKey.startsWith(targetYear + '-'));
   const insights = (state.insights || []).filter(i => !i._deleted && inYear(i.discoveredAt || i.createdAt));
-  const chatArchive = (state.chatArchive || []).filter(c => !c._deleted && inYear(c.generatedAt || (c.date ? c.date + 'T12:00:00' : null)));
+  // V4 fix (사용자 명시 2026-05-26 ultrathink — createdAt fallback): generatedAt + date 모두 없는 archive 도 createdAt 으로 시점 추정.
+  //   다른 collect 함수 (archive: savedAt || createdAt) 패턴과 일관.
+  const chatArchive = (state.chatArchive || []).filter(c => !c._deleted && inYear(c.generatedAt || c.createdAt || (c.date ? c.date + 'T12:00:00' : null)));
   return { targetYear, entries, pearls, archive, decisions, quarterlies, insights, chatArchive };
 }
 
@@ -27872,7 +27874,13 @@ function ensurePredictionFollowups() {
 // existing 있으면 즉시 read-only 표시 (1-2분 대기 X). batch 처리 중이면 안내.
 async function openReview(type) {
   // batch 처리 중 race 차단 (ERROR #7)
+  // V4 fix (사용자 명시 2026-05-26 ultrathink — pendingReviewBatch race): 신 schema 진행 중에도 동일 차단.
+  //   pendingReviewBatch.review_keys[].cycle === type 매칭. 30-force-analyze.js 의 새 review chain batch.
   if (Array.isArray(state.pendingBatch?.review_pending) && state.pendingBatch.review_pending.includes(type)) {
+    showToast('🌙 자고 있는 동안 정리 중 ⏳ — 잠시 후 다시 봐줘');
+    return;
+  }
+  if (Array.isArray(state.pendingReviewBatch?.review_keys) && state.pendingReviewBatch.review_keys.some(rk => rk && rk.cycle === type)) {
     showToast('🌙 자고 있는 동안 정리 중 ⏳ — 잠시 후 다시 봐줘');
     return;
   }
@@ -27935,6 +27943,10 @@ async function openQuarterlyReviewCard() {
     showToast('🌙 자고 있는 동안 정리 중 ⏳ — 잠시 후 다시 봐줘');
     return;
   }
+  if (Array.isArray(state.pendingReviewBatch?.review_keys) && state.pendingReviewBatch.review_keys.some(rk => rk && rk.cycle === 'quarterly')) {
+    showToast('🌙 자고 있는 동안 정리 중 ⏳ — 잠시 후 다시 봐줘');
+    return;
+  }
   // 사용자 명시 2026-05-10 (메커니즘 일관): 사용자 click = currentQuarterKey (이번 분기 진행 중 review). 자동 batch = prev (끝난 사이클) 그대로.
   const now = new Date();
   const Q = Math.floor(now.getMonth() / 3) + 1;
@@ -27990,6 +28002,10 @@ async function openQuarterlyReviewCard() {
 async function openAnnualReviewCard() {
   if (!_canAI()) { showToast('AI 호출 불가능 — 로그인 필요'); return; }
   if (Array.isArray(state.pendingBatch?.review_pending) && state.pendingBatch.review_pending.includes('annual')) {
+    showToast('🌙 자고 있는 동안 정리 중 ⏳ — 잠시 후 다시 봐줘');
+    return;
+  }
+  if (Array.isArray(state.pendingReviewBatch?.review_keys) && state.pendingReviewBatch.review_keys.some(rk => rk && rk.cycle === 'annual')) {
     showToast('🌙 자고 있는 동안 정리 중 ⏳ — 잠시 후 다시 봐줘');
     return;
   }
@@ -28609,7 +28625,14 @@ function renderReviewScreen(type, reviewData, opts) {
 
     // 사용자 명시 2026-05-06 ultrathink: 주간 = 미시 일기 톤. scenes 카드 = 이번 주 장면 3개 (when/what/feeling).
     //   weekly only — monthly 는 데이터 X (prompt schema 분리).
-    const scenesArr = Array.isArray(reviewData.scenes) ? reviewData.scenes.filter(s => s && (s.what || s.when)) : [];
+    // V4 fix (사용자 명시 2026-05-26 ultrathink — schema 불일치 보호):
+    //   05-data-prompt-process.js prompt 가 string array 로 요구할 수도 있음 → string 항목 도 `{ what }` 객체로 normalize.
+    //   render 가 object schema 만 기대하면 string 응답 시 scenes 카드 영구 미노출 됨.
+    const scenesArr = Array.isArray(reviewData.scenes)
+      ? reviewData.scenes
+          .map(sc => (typeof sc === 'string' ? { what: sc } : sc))
+          .filter(s => s && (s.what || s.when))
+      : [];
     const scenesBlock = (type === 'weekly' && scenesArr.length > 0) ? `
     <div style="margin-bottom:14px;">
       <div style="font-size:11px; color:#a89cd6; letter-spacing:0.15em; text-transform:uppercase; margin-bottom:10px;">📔 이번 주 장면</div>
@@ -60195,9 +60218,22 @@ function deleteReview(type, key, completedAt) {
     state.monthlyReviews = (state.monthlyReviews || []).filter(r => !(r.monthKey === key && matchInstance(r)));
   } else if (type === 'quarterly') {
     state.quarterlyReviews = (state.quarterlyReviews || []).filter(r => !(r.quarterKey === key && matchInstance(r)));
+  } else if (type === 'annual') {
+    // V4 fix (사용자 명시 2026-05-26 ultrathink — annual 삭제 지원): year 필드 매칭. parseInt key 가능 (annual key 는 year 정수).
+    const targetYear = (typeof key === 'number') ? key : parseInt(key, 10);
+    state.annualReviews = (state.annualReviews || []).filter(r => !(r.year === targetYear && matchInstance(r)));
   } else {
     showToast('알 수 없는 리뷰 타입: ' + type);
     return false;
+  }
+  // V4 fix (사용자 명시 2026-05-26 ultrathink — deleteReview 후 청소): dismissedReviews + failedKeys 도 같이 청소 → 재생성 가능.
+  //   안 청소하면 같은 key 로 batch 재시도 시 _markReviewFailedKey sentinel + _dismissedReviews 가 영구 skip 시킴.
+  const failedKeysField = type + 'ReviewsFailedKeys';
+  if (Array.isArray(state[failedKeysField])) {
+    state[failedKeysField] = state[failedKeysField].filter(k => k !== key && k !== String(key));
+  }
+  if (state.preferences && state.preferences._dismissedReviews && state.preferences._dismissedReviews[type] === key) {
+    delete state.preferences._dismissedReviews[type];
   }
   saveState();
   if (typeof saveToCloudNow === 'function') saveToCloudNow().catch(() => {});
@@ -63624,7 +63660,12 @@ async function _resumeReviewChainBatch() {
               if (!existsAnnual && typeof _processAnnualReviewResult === 'function' && typeof _collectAnnualData === 'function') {
                 const dataAnnual = _collectAnnualData(year);
                 const annualReview = _processAnnualReviewResult(narrative, year, dataAnnual, false);
-                if (annualReview) annualReview.auto = true;
+                if (annualReview) {
+                  annualReview.auto = true;
+                  // V4 fix (사용자 명시 2026-05-26 ultrathink — annual auto persist): mutation 직후 즉시 saveState.
+                  //   loop 끝 saveState 만 의존하면 인접 cycle throw 시 annual mutation 메모리 잔존 + persist 누락 가능.
+                  saveState();
+                }
               }
             } else {
               _markReviewFailedKey(cycle, key);
@@ -64001,6 +64042,13 @@ window._diagnoseExtract = async function() {
         console.log('[weekly review] weekKey:', weekKey, 'before count:', state.weeklyReviews?.length, 'exists:', state.weeklyReviews?.some(r => r.weekKey === weekKey));
         await _runReviewExtractInline(['weekly'], { weekly: weekKey });
         console.log('[weekly review] after count:', state.weeklyReviews?.length, 'exists:', state.weeklyReviews?.some(r => r.weekKey === weekKey));
+        // V4 fix (사용자 명시 2026-05-26 ultrathink — diagnose auto:false 정정): 사용자 trigger _diagnoseExtract = manual 의도.
+        //   _runReviewExtractInline 가 auto:true 박는데 사용자 명령이므로 _forceWeeklyReview 와 동일 패턴 정정.
+        const _just = (state.weeklyReviews || []).find(r => r.weekKey === weekKey);
+        if (_just) {
+          _just.auto = false;
+          if (typeof saveState === 'function') saveState();
+        }
       }
     } catch (e) { console.error('[weekly review] FAIL', e); }
   } else {
@@ -69064,7 +69112,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.252-diary-marker-race-fix';
+const APP_VERSION = 'v4.0.253-review-schema-idempotency';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 

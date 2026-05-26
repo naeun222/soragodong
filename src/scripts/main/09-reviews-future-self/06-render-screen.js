@@ -144,7 +144,14 @@ function renderReviewScreen(type, reviewData, opts) {
 
     // 사용자 명시 2026-05-06 ultrathink: 주간 = 미시 일기 톤. scenes 카드 = 이번 주 장면 3개 (when/what/feeling).
     //   weekly only — monthly 는 데이터 X (prompt schema 분리).
-    const scenesArr = Array.isArray(reviewData.scenes) ? reviewData.scenes.filter(s => s && (s.what || s.when)) : [];
+    // V4 fix (사용자 명시 2026-05-26 ultrathink — schema 불일치 보호):
+    //   05-data-prompt-process.js prompt 가 string array 로 요구할 수도 있음 → string 항목 도 `{ what }` 객체로 normalize.
+    //   render 가 object schema 만 기대하면 string 응답 시 scenes 카드 영구 미노출 됨.
+    const scenesArr = Array.isArray(reviewData.scenes)
+      ? reviewData.scenes
+          .map(sc => (typeof sc === 'string' ? { what: sc } : sc))
+          .filter(s => s && (s.what || s.when))
+      : [];
     const scenesBlock = (type === 'weekly' && scenesArr.length > 0) ? `
     <div style="margin-bottom:14px;">
       <div style="font-size:11px; color:#a89cd6; letter-spacing:0.15em; text-transform:uppercase; margin-bottom:10px;">📔 이번 주 장면</div>

@@ -1818,7 +1818,12 @@ async function _resumeReviewChainBatch() {
               if (!existsAnnual && typeof _processAnnualReviewResult === 'function' && typeof _collectAnnualData === 'function') {
                 const dataAnnual = _collectAnnualData(year);
                 const annualReview = _processAnnualReviewResult(narrative, year, dataAnnual, false);
-                if (annualReview) annualReview.auto = true;
+                if (annualReview) {
+                  annualReview.auto = true;
+                  // V4 fix (사용자 명시 2026-05-26 ultrathink — annual auto persist): mutation 직후 즉시 saveState.
+                  //   loop 끝 saveState 만 의존하면 인접 cycle throw 시 annual mutation 메모리 잔존 + persist 누락 가능.
+                  saveState();
+                }
               }
             } else {
               _markReviewFailedKey(cycle, key);
@@ -2195,6 +2200,13 @@ window._diagnoseExtract = async function() {
         console.log('[weekly review] weekKey:', weekKey, 'before count:', state.weeklyReviews?.length, 'exists:', state.weeklyReviews?.some(r => r.weekKey === weekKey));
         await _runReviewExtractInline(['weekly'], { weekly: weekKey });
         console.log('[weekly review] after count:', state.weeklyReviews?.length, 'exists:', state.weeklyReviews?.some(r => r.weekKey === weekKey));
+        // V4 fix (사용자 명시 2026-05-26 ultrathink — diagnose auto:false 정정): 사용자 trigger _diagnoseExtract = manual 의도.
+        //   _runReviewExtractInline 가 auto:true 박는데 사용자 명령이므로 _forceWeeklyReview 와 동일 패턴 정정.
+        const _just = (state.weeklyReviews || []).find(r => r.weekKey === weekKey);
+        if (_just) {
+          _just.auto = false;
+          if (typeof saveState === 'function') saveState();
+        }
       }
     } catch (e) { console.error('[weekly review] FAIL', e); }
   } else {

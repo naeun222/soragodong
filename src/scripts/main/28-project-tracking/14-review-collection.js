@@ -40,9 +40,22 @@ function deleteReview(type, key, completedAt) {
     state.monthlyReviews = (state.monthlyReviews || []).filter(r => !(r.monthKey === key && matchInstance(r)));
   } else if (type === 'quarterly') {
     state.quarterlyReviews = (state.quarterlyReviews || []).filter(r => !(r.quarterKey === key && matchInstance(r)));
+  } else if (type === 'annual') {
+    // V4 fix (사용자 명시 2026-05-26 ultrathink — annual 삭제 지원): year 필드 매칭. parseInt key 가능 (annual key 는 year 정수).
+    const targetYear = (typeof key === 'number') ? key : parseInt(key, 10);
+    state.annualReviews = (state.annualReviews || []).filter(r => !(r.year === targetYear && matchInstance(r)));
   } else {
     showToast('알 수 없는 리뷰 타입: ' + type);
     return false;
+  }
+  // V4 fix (사용자 명시 2026-05-26 ultrathink — deleteReview 후 청소): dismissedReviews + failedKeys 도 같이 청소 → 재생성 가능.
+  //   안 청소하면 같은 key 로 batch 재시도 시 _markReviewFailedKey sentinel + _dismissedReviews 가 영구 skip 시킴.
+  const failedKeysField = type + 'ReviewsFailedKeys';
+  if (Array.isArray(state[failedKeysField])) {
+    state[failedKeysField] = state[failedKeysField].filter(k => k !== key && k !== String(key));
+  }
+  if (state.preferences && state.preferences._dismissedReviews && state.preferences._dismissedReviews[type] === key) {
+    delete state.preferences._dismissedReviews[type];
   }
   saveState();
   if (typeof saveToCloudNow === 'function') saveToCloudNow().catch(() => {});
