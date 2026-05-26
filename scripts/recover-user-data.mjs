@@ -981,9 +981,113 @@ async function mergeAccounts(targetEmail, fromEmail) {
   console.log(`    6. 문제 시 rollback: me_v4_pre_merge row 가 ${targetEmail} 에 보존됨.`);
 }
 
+// ─────────── LIFETIME PREMIUM ───────────
+// soragodong_billing 직접 UPSERT — admin endpoint /api/admin/grant-lifetime-premium 과 동일 동작.
+// 기본 check (read-only). --confirm 으로 실제 grant.
+
+async function checkOrGrantLifetime(emails, doGrant) {
+  const PREMIUM_CAP = 13;
+  const EXPIRES_AT = '2099-12-31T23:59:59Z';
+  const results = [];
+
+  for (const email of emails) {
+    const auth = await findAuthUserByEmail(email);
+    if (auth.error) {
+      console.log(`❌ ${email}: auth lookup — ${auth.error}`);
+      results.push({ email, ok: false });
+      continue;
+    }
+    const uid = auth.user.id;
+    // 현재 billing 상태 조회
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/soragodong_billing?user_id=eq.${uid}&select=subscription_plan,subscription_active,subscription_expires_at,monthly_quota_usd,portone_billing_key,credit_balance_usd`,
+      { headers: SB_HEADERS }
+    );
+    if (!r.ok) {
+      console.log(`❌ ${email}: billing fetch ${r.status}`);
+      results.push({ email, ok: false });
+      continue;
+    }
+    const rows = await r.json();
+    const b = rows[0] || null;
+    const expIso = b?.subscription_expires_at;
+    const isLifetime = expIso && new Date(expIso).getFullYear() >= 2099;
+    const active = b && b.subscription_active && expIso && new Date(expIso) > new Date();
+    const status = b
+      ? `plan=${b.subscription_plan || 'X'} active=${active ? 'YES' : 'no'} expires=${(expIso || '').slice(0, 10)} lifetime=${isLifetime ? 'YES' : 'no'} billing_key=${b.portone_billing_key ? '있음(자동결제)' : '없음'} cred=${b.credit_balance_usd ?? 'X'}`
+      : '(billing row 없음)';
+    console.log(`\n━ ${email} (${uid})`);
+    console.log(`  현재: ${status}`);
+
+    if (!doGrant) {
+      results.push({ email, ok: true, billing: b, isLifetime });
+      continue;
+    }
+    if (isLifetime && active) {
+      console.log(`  → 이미 lifetime premium. skip.`);
+      results.push({ email, ok: true, action: 'skip', billing: b });
+      continue;
+    }
+
+    // UPSERT — admin endpoint 와 동일 payload
+    const payload = {
+      user_id: uid,
+      subscription_plan: 'premium',
+      subscription_active: true,
+      subscription_expires_at: EXPIRES_AT,
+      monthly_quota_usd: PREMIUM_CAP,
+      monthly_token_used: 0,
+      monthly_period_started_at: new Date().toISOString(),
+      daily_quota_used: 0,
+      daily_quota_reset_at: new Date(Date.now() + 86400_000).toISOString(),
+      cancel_at_period_end: false,
+      scheduled_plan_change: null,
+      scheduled_plan_change_at: null
+    };
+    const up = await fetch(`${SUPABASE_URL}/rest/v1/soragodong_billing`, {
+      method: 'POST',
+      headers: { ...SB_HEADERS, 'Content-Type': 'application/json', 'Prefer': 'return=minimal,resolution=merge-duplicates' },
+      body: JSON.stringify(payload)
+    });
+    if (!up.ok) {
+      console.log(`  ❌ UPSERT ${up.status}: ${(await up.text()).slice(0, 200)}`);
+      results.push({ email, ok: false });
+      continue;
+    }
+    console.log(`  ✦ lifetime premium grant 완료. expires=${EXPIRES_AT}, cap=$${PREMIUM_CAP}/월`);
+    results.push({ email, ok: true, action: b ? 'update' : 'insert' });
+  }
+
+  console.log('\n━━━ 요약 ━━━');
+  for (const r of results) {
+    const flag = r.ok ? '✓' : '✗';
+    const note = r.action ? ` (${r.action})` : (r.isLifetime ? ' (이미 lifetime)' : '');
+    console.log(`  ${flag} ${r.email}${note}`);
+  }
+  if (!doGrant) {
+    console.log('\n→ 현황 조회만. lifetime 부여하려면 --confirm 추가.');
+  }
+}
+
 // ─────────── main ───────────
 
 async function main() {
+  if (argMap.lifetime) {
+    let emails = [];
+    if (argMap.emails) {
+      emails = String(argMap.emails).split(',').map(s => s.trim()).filter(Boolean);
+    } else if (argMap.email) {
+      emails = [argMap.email];
+    } else if (argMap['emails-file']) {
+      const path = argMap['emails-file'];
+      if (!existsSync(path)) { console.error(`emails-file 없음: ${path}`); process.exit(1); }
+      emails = readFileSync(path, 'utf-8').split(/\r?\n/).map(l => l.trim()).filter(l => l && !l.startsWith('#'));
+    }
+    if (!emails.length) { console.error('--lifetime 시 --emails=A,B 또는 --email=X 또는 --emails-file=path 필요'); process.exit(1); }
+    const doGrant = !!argMap.confirm;
+    await checkOrGrantLifetime(emails, doGrant);
+    return;
+  }
   if (argMap.merge) {
     const t = argMap['target-email'];
     const f = argMap['from-email'];
