@@ -601,7 +601,7 @@ function renderRotatingCard() {
     const cardHtml = picked ? _rcRenderShell([picked], 0) : '';
     const miniLink = (picked && picked.sourceType === 'checkin')
       ? ''  // 큰 체크인 카드 = 중복 회피
-      : _rcCheckinMiniLink(checkinDone);
+      : _rcCheckinMiniLink();
 
     // mini-link slot 별도 inject (인사 영역 오른쪽).
     const miniSlot = document.getElementById('checkinDoneMiniLinkSlot');
@@ -631,11 +631,11 @@ function _rcOnSourceTap(sourceId) {
 }
 
 // 작은 체크인 링크 — 인사 영역 오른쪽 mini-link slot.
-// 사용자 명시 2026-05-27 (재정정): 5/18-5/26 상태 = right slot + 작은 사이즈 + '✓ 오늘 체크인' + 완료 시에만.
-//   미완료는 priority slot 의 큰 체크인 카드 / sleep widget 로 surface.
-function _rcCheckinMiniLink(isDone) {
+// 사용자 명시 2026-05-27 (3차): right slot + 작은 사이즈 + '✓ 오늘 체크인' 유지 + 항상 노출.
+//   큰 체크인 카드 priority slot 차지 시만 숨김 (중복 회피, 호출부에서 처리).
+//   완료/미완료 무관 — sleep widget 옆에서도, 18+ 완료 케이스에서도 같은 자리.
+function _rcCheckinMiniLink() {
   if (window._onbTutorialMode) return '';
-  if (!isDone) return '';
   return `<div class="rc-checkin-mini-link" onclick="enterCheckin()">✓ 오늘 체크인</div>`;
 }
 
