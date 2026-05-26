@@ -337,6 +337,7 @@ async function _processForceAnalyzeResult(text, isAuto) {
     };
     if (analysis.traits) {
       analysis.traits.forEach(t => {
+        if (!t || typeof t.name !== 'string' || !t.name.trim()) return;
         let exist = state.traits.find(e => similarText(e.name, t.name))
                  || _findFuzzyMatch(state.traits, t.name)
                  || state.patterns.find(e => similarText(e.name, t.name))
@@ -351,6 +352,7 @@ async function _processForceAnalyzeResult(text, isAuto) {
     }
     if (analysis.values) {
       analysis.values.forEach(v => {
+        if (!v || typeof v.name !== 'string' || !v.name.trim()) return;
         let exist = state.values.find(e => similarText(e.name, v.name))
                  || _findFuzzyMatch(state.values, v.name);
         if (exist) mergeModelItem(exist, v);
@@ -363,6 +365,7 @@ async function _processForceAnalyzeResult(text, isAuto) {
     }
     if (analysis.patterns) {
       analysis.patterns.forEach(p => {
+        if (!p || typeof p.name !== 'string' || !p.name.trim()) return;
         let exist = state.patterns.find(e => similarText(e.name, p.name))
                  || _findFuzzyMatch(state.patterns, p.name)
                  || state.traits.find(e => similarText(e.name, p.name))
@@ -1809,7 +1812,7 @@ async function _resumeReviewChainBatch() {
           if (!jm) continue;
           const parsed = JSON.parse(jm[0]);
           const discovered = Array.isArray(parsed && parsed.discovered) ? parsed.discovered : [];
-          const existingContents = (state.insights || []).filter(i => i && !i.dismissed).map(i => (i.content || '').toLowerCase());
+          const existingContents = (state.insights || []).filter(i => i && !i.dismissed).map(i => typeof i.content === 'string' ? i.content.toLowerCase() : '');
           const nowIso = new Date().toISOString();
           discovered.forEach(d => {
             if (!d || typeof d !== 'object') return;
@@ -1834,7 +1837,7 @@ async function _resumeReviewChainBatch() {
               user_verified: false,
               source: 'auto'
             });
-            existingContents.push(content.toLowerCase());
+            existingContents.push(typeof content === 'string' ? content.toLowerCase() : '');
           });
           if (!state.preferences) state.preferences = {};
           state.preferences._lastInsightDiscoverAt = nowIso;
@@ -2048,6 +2051,15 @@ async function maybeRunChapterCleanup() {
   if (!isGuest && typeof forceAnalyze === 'function'
       && _shouldRunSchedule(state.lastForceAnalyzeAt, _lastSunday4amCutoff())) {
     forceAnalyze({ auto: true }).catch(e => console.warn('[forceAnalyze auto sunday]', e));
+  }
+
+  // ─── step E: 자동 인사이트 발견 ────────────────────────
+  // V4 fix (사용자 명시 2026-05-26 ultrathink): e4563480 refactor 에서 누락된
+  //   piggyback 호출 복원. 함수 내부에 7일 cooldown + entries>=7 + !isGuest +
+  //   !testerMode + _canAI() 5중 가드 있어서 외부 가드 불필요. fire-and-forget
+  //   으로 step D 와 동일하게 await X (Sonnet 800 토큰, 10-30s).
+  if (typeof maybeRunDailyInsightDiscover === 'function') {
+    maybeRunDailyInsightDiscover().catch(e => console.warn('[auto-insight]', e));
   }
 }
 

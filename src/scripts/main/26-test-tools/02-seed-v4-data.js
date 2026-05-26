@@ -509,7 +509,8 @@ async function testSeedV4Data() {
         { role: 'assistant', content: '뭐가 막혔어? 시작 자체? 아니면 중간에 끊긴 거?', timestamp: new Date(today.getTime() - 1.5 * 86400000 + 60000).toISOString() }
       ],
       generatedAt: new Date(today.getTime() - 1 * 86400000).toISOString(),
-      _pendingExtract: true  // 4AM 처리 대기
+      // V4 (사용자 명시 2026-05-25 ultrathink): _pendingExtract → _pendingCleanup (재설계 통합 마커).
+      _pendingCleanup: true  // 4AM cleanup batch 대기 (cleanup batch: case+topic+diary, Opus)
     },
     {
       id: 'arch_seed_magic', date: getDayKey(new Date(today.getTime() - 3 * 86400000)),
@@ -520,7 +521,7 @@ async function testSeedV4Data() {
       ],
       generatedAt: new Date(today.getTime() - 3 * 86400000).toISOString(),
       source: 'magic_help',
-      _pendingExtract: false
+      _pendingCleanup: false  // 처리완료 시뮬 (mix)
     },
     {
       id: 'arch_seed_refl', date: getDayKey(new Date(today.getTime() - 5 * 86400000)),
@@ -531,7 +532,7 @@ async function testSeedV4Data() {
       ],
       generatedAt: new Date(today.getTime() - 5 * 86400000).toISOString(),
       source: 'reflection_chat',
-      _pendingExtract: false
+      _pendingCleanup: false  // 처리완료 시뮬 (mix)
     }
   ];
 

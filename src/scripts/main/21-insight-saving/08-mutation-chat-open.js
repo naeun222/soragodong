@@ -94,8 +94,10 @@ async function _generateMutationOptions(strategyId, missionTitle, opts) {
           max_tokens: 900,
           messages: [{ role: 'user', content: '' }]
       });
+      if (!resp.ok) throw new Error('API '+resp.status);
       const data = await resp.json();
-      let raw = data.content[0].text.trim();
+      let raw = (data?.content?.[0]?.text || '').trim();
+      if (!raw) throw new Error('empty response');
       raw = raw.replace(/^```\w*\s*/, '').replace(/\s*```\s*$/, '').trim();
       const m = raw.match(/\{[\s\S]*\}/);
       if (m) {

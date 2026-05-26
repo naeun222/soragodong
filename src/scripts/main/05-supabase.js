@@ -354,7 +354,9 @@ async function loadFromCloud() {
               messages: _chapMsgs,
               generatedAt: new Date().toISOString(),
               endedManually: false,
-              _pendingExtract: true,
+              // V4 (사용자 명시 2026-05-25 ultrathink): _pendingExtract → _pendingCleanup (재설계 통합 마커).
+              //   cleanup batch (case+topic+diary) 가 처리 후 _cleanedAt stamp. 옛 마커 호환은 init 시 migration shim 이 처리.
+              _pendingCleanup: true,
               _migrated: true
             });
           }

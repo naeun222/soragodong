@@ -282,7 +282,7 @@ function _processExtractChapterAnalysis(analysis, opts) {
 
     if (Array.isArray(analysis.new_traits)) {
       analysis.new_traits.forEach(t => {
-        if (!t || !t.name) return;
+        if (!t || typeof t.name !== 'string' || !t.name.trim()) return;
         const conf = typeof t.confidence === 'number' ? t.confidence : 0.5;
         const exists = (state.traits || []).find(e => similarText(e.name, t.name));
         if (!exists) {
@@ -290,8 +290,9 @@ function _processExtractChapterAnalysis(analysis, opts) {
           state.traits = state.traits || [];
           state.traits.push({
             id: 'trait_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-            name: t.name.trim(), description: (t.description || '').trim(),
-            quiz_question: (t.quiz_question || '').trim() || null,
+            name: t.name.trim(),
+            description: typeof t.description === 'string' ? t.description.trim() : '',
+            quiz_question: (typeof t.quiz_question === 'string' ? t.quiz_question.trim() : '') || null,
             confidence: conf, user_verified: false, evidence_count: 1,
             extractedFrom: _extractedFrom,
             created_at: new Date().toISOString()
@@ -300,14 +301,14 @@ function _processExtractChapterAnalysis(analysis, opts) {
         } else {
           exists.evidence_count = (exists.evidence_count || 1) + 1;
           exists.confidence = Math.min(1.0, (exists.confidence || 0.5) + 0.1);
-          if (t.quiz_question && !exists.quiz_question) exists.quiz_question = t.quiz_question.trim();
+          if (typeof t.quiz_question === 'string' && t.quiz_question.trim() && !exists.quiz_question) exists.quiz_question = t.quiz_question.trim();
           touched = true;
         }
       });
     }
     if (Array.isArray(analysis.new_values)) {
       analysis.new_values.forEach(v => {
-        if (!v || !v.name) return;
+        if (!v || typeof v.name !== 'string' || !v.name.trim()) return;
         const conf = typeof v.confidence === 'number' ? v.confidence : 0.5;
         const exists = (state.values || []).find(e => similarText(e.name, v.name));
         if (!exists) {
@@ -315,8 +316,9 @@ function _processExtractChapterAnalysis(analysis, opts) {
           state.values = state.values || [];
           state.values.push({
             id: 'val_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-            name: v.name.trim(), description: (v.description || '').trim(),
-            quiz_question: (v.quiz_question || '').trim() || null,
+            name: v.name.trim(),
+            description: typeof v.description === 'string' ? v.description.trim() : '',
+            quiz_question: (typeof v.quiz_question === 'string' ? v.quiz_question.trim() : '') || null,
             confidence: conf, user_verified: false, evidence_count: 1,
             sdt_need: v.sdt_need || null,
             extractedFrom: _extractedFrom,
@@ -326,14 +328,14 @@ function _processExtractChapterAnalysis(analysis, opts) {
         } else {
           exists.evidence_count = (exists.evidence_count || 1) + 1;
           exists.confidence = Math.min(1.0, (exists.confidence || 0.5) + 0.1);
-          if (v.quiz_question && !exists.quiz_question) exists.quiz_question = v.quiz_question.trim();
+          if (typeof v.quiz_question === 'string' && v.quiz_question.trim() && !exists.quiz_question) exists.quiz_question = v.quiz_question.trim();
           touched = true;
         }
       });
     }
     if (Array.isArray(analysis.new_patterns)) {
       analysis.new_patterns.forEach(p => {
-        if (!p || !p.name) return;
+        if (!p || typeof p.name !== 'string' || !p.name.trim()) return;
         const conf = typeof p.confidence === 'number' ? p.confidence : 0.5;
         const exists = (state.patterns || []).find(e => similarText(e.name, p.name));
         if (!exists) {
@@ -341,9 +343,11 @@ function _processExtractChapterAnalysis(analysis, opts) {
           state.patterns = state.patterns || [];
           state.patterns.push({
             id: 'pat_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-            name: p.name.trim(), description: (p.description || '').trim(),
-            trigger: (p.trigger || '').trim(), sequence: (p.sequence || '').trim(),
-            quiz_question: (p.quiz_question || '').trim() || null,
+            name: p.name.trim(),
+            description: typeof p.description === 'string' ? p.description.trim() : '',
+            trigger: typeof p.trigger === 'string' ? p.trigger.trim() : '',
+            sequence: typeof p.sequence === 'string' ? p.sequence.trim() : '',
+            quiz_question: (typeof p.quiz_question === 'string' ? p.quiz_question.trim() : '') || null,
             confidence: conf, user_verified: false, evidence_count: 1,
             extractedFrom: _extractedFrom,
             created_at: new Date().toISOString()
@@ -352,7 +356,7 @@ function _processExtractChapterAnalysis(analysis, opts) {
         } else {
           exists.evidence_count = (exists.evidence_count || 1) + 1;
           exists.confidence = Math.min(1.0, (exists.confidence || 0.5) + 0.1);
-          if (p.quiz_question && !exists.quiz_question) exists.quiz_question = p.quiz_question.trim();
+          if (typeof p.quiz_question === 'string' && p.quiz_question.trim() && !exists.quiz_question) exists.quiz_question = p.quiz_question.trim();
           touched = true;
         }
       });

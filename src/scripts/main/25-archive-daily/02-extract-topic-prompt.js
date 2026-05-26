@@ -118,7 +118,8 @@ async function extractPreviousChapterTopics(passedMessages) {
     });
     if (!resp.ok) return;
     const data = await resp.json();
-    let text = data.content[0].text.trim();
+    let text = (data?.content?.[0]?.text || '').trim();
+    if (!text) return;
     text = text.replace(/```json/g, '').replace(/```/g, '').trim();
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) return;

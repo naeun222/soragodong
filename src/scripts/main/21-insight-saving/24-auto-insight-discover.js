@@ -82,7 +82,7 @@ async function maybeRunDailyInsightDiscover(opts) {
 
       const existingContents = (Array.isArray(state.insights) ? state.insights : [])
         .filter(i => i && !i.dismissed)
-        .map(i => (i.content || '').toLowerCase());
+        .map(i => typeof i.content === 'string' ? i.content.toLowerCase() : '');
 
       let pushedCount = 0;
       const nowIso = new Date().toISOString();
@@ -109,7 +109,7 @@ async function maybeRunDailyInsightDiscover(opts) {
           user_verified: false,
           source: 'auto'
         });
-        existingContents.push(content.toLowerCase());
+        existingContents.push(typeof content === 'string' ? content.toLowerCase() : '');
         pushedCount++;
       });
 

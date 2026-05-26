@@ -17211,7 +17211,9 @@ function _mergeGuestSnapshotIntoExisting(guest) {
       messages: _existingChat,
       generatedAt: new Date().toISOString(),
       endedManually: false,
-      _pendingExtract: true,
+      // V4 (사용자 명시 2026-05-25 ultrathink): _pendingExtract → _pendingCleanup (재설계 통합 마커).
+      //   cleanup batch (case+topic+diary) 가 처리 후 _cleanedAt stamp. 옛 마커 호환은 init 시 migration shim 이 처리.
+      _pendingCleanup: true,
       _premergeArchive: true
     });
   }
@@ -20699,7 +20701,9 @@ async function loadFromCloud() {
               messages: _chapMsgs,
               generatedAt: new Date().toISOString(),
               endedManually: false,
-              _pendingExtract: true,
+              // V4 (사용자 명시 2026-05-25 ultrathink): _pendingExtract → _pendingCleanup (재설계 통합 마커).
+              //   cleanup batch (case+topic+diary) 가 처리 후 _cleanedAt stamp. 옛 마커 호환은 init 시 migration shim 이 처리.
+              _pendingCleanup: true,
               _migrated: true
             });
           }
@@ -22606,12 +22610,14 @@ async function init() {
       if (window._onbTutorialMode) return;
       if (state.preferences && state.preferences.testerMode) return;
       const _isFreeOrGuest = (typeof _isTutorialEligibleUser === 'function') && _isTutorialEligibleUser();
+      // V4 (사용자 명시 2026-05-25 ultrathink): 마커 이관 후 호환 OR — 옛 _pendingExtract + 신 _pendingCleanup 둘 다 처리.
+      //   신규 코드는 _pendingCleanup 만 박지만, 옛 데이터 _pendingExtract 잔존 + batch stuck signature 의 두 마커 모두 안전망 유지.
       const _hasBatchStuck = state.chatArchive.some(a =>
-        a && !a._deleted && a._pendingExtract && a._batchSubmittedAt && !state.pendingBatch
+        a && !a._deleted && (a._pendingExtract || a._pendingCleanup) && a._batchSubmittedAt && !state.pendingBatch
       );
       if (!_isFreeOrGuest && !_hasBatchStuck) return;  // 구독자 = batch stuck 케이스만 통과.
       const stuckArchives = state.chatArchive.filter(a =>
-        a && !a._deleted && a._pendingExtract && Array.isArray(a.messages) && a.messages.length >= 3
+        a && !a._deleted && (a._pendingExtract || a._pendingCleanup) && Array.isArray(a.messages) && a.messages.length >= 3
       );
       if (stuckArchives.length === 0) return;
       console.log('[pending extract recovery] stuck archives:', stuckArchives.length);
@@ -22649,6 +22655,7 @@ async function init() {
             }
             delete arch._pendingExtract;
             delete arch._pendingCaseAnalysis;
+            delete arch._pendingCleanup;  // V4 (사용자 명시 2026-05-25 ultrathink): 신 마커도 정리.
             saveState();
             if (typeof renderChatArchiveModal === 'function') renderChatArchiveModal();
           } catch (e) { console.warn('[pending recovery] guard:', arch.id, e); }
@@ -27121,7 +27128,9 @@ async function endMagicHelpChat() {
     source: 'magic_help',
     decisionId: decision.id,
     stepId,
-    _pendingExtract: true
+    // V4 (사용자 명시 2026-05-25 ultrathink): _pendingExtract → _pendingCleanup (재설계 통합 마커).
+    //   cleanup batch (case+topic+diary) 가 처리 후 _cleanedAt stamp. 옛 마커 호환은 init 시 migration shim 이 처리.
+    _pendingCleanup: true
   });
   // 마법 helpChat 안 messages 비움 (이송 후)
   if (decision.helpChats) decision.helpChats[stepId] = [];
@@ -28296,7 +28305,13 @@ JSON 객체 하나만 반환. markdown code fence X. 다른 글 X. 모든 필수
   const volatile = `[기간 데이터]
 체크인: ${JSON.stringify(entriesInRange, null, 2).slice(0, 4000)}
 미션: ${JSON.stringify(missionsInRange.map(m => ({title: m.title, status: m.status, attemptStatus: m.attemptStatus, strategyId: m.strategyId})), null, 2).slice(0, 1500)}
-대화 발췌 (사용자): ${chatInRange.map(m => m.content.slice(0, 200)).join('\n---\n').slice(0, 3000)}
+대화 발췌 (사용자): ${chatInRange.map(m => {
+  const c = m && m.content;
+  const s = typeof c === 'string' ? c
+    : Array.isArray(c) ? c.map(b => b?.text || '').join(' ')
+    : '';
+  return s.slice(0, 200);
+}).join('\n---\n').slice(0, 3000)}
 결정 + 예측: ${JSON.stringify(decisionsInRange.map(d => ({title: d.title, status: d.status, finalDecision: d.finalDecision, predictions: d.predictions})), null, 2).slice(0, 1500)}
 챕터: ${JSON.stringify(chaptersInRange.map(c => ({date: c.date, messageCount: c.messageCount})), null, 0).slice(0, 1500)}
 가닥(topicCards): ${JSON.stringify(topicCardsInRange.map(t => ({title: t.title, summary: t.summary, category: t.category})), null, 0).slice(0, 1500)}
@@ -28364,7 +28379,7 @@ async function generateReview(type) {
   });
   if (!resp.ok) throw new Error('API ' + resp.status);
   const respData = await resp.json();
-  const text = respData.content[0].text;
+  const text = respData?.content?.[0]?.text || '';
   const result = _processReviewResult(text);
   // 사용자 명시 2026-05-09 ultrathink: quotes 환각 방지 — entries/chat/archive raw 매칭 안 되면 drop.
   if (result && Array.isArray(result.quotes)) {
@@ -32255,7 +32270,9 @@ async function resolveReflectionQuestion(id) {
       generatedAt: new Date().toISOString(),
       source: 'reflection_chat',
       reflectionQuestionId: q.id,
-      _pendingExtract: true
+      // V4 (사용자 명시 2026-05-25 ultrathink): _pendingExtract → _pendingCleanup (재설계 통합 마커).
+      //   cleanup batch (case+topic+diary) 가 처리 후 _cleanedAt stamp. 옛 마커 호환은 init 시 migration shim 이 처리.
+      _pendingCleanup: true
     });
     q.chatMessages = [];  // 이송 후 비움
     if (typeof pruneOldChatArchive === 'function') pruneOldChatArchive();
@@ -32686,7 +32703,7 @@ function _processExtractChapterAnalysis(analysis, opts) {
 
     if (Array.isArray(analysis.new_traits)) {
       analysis.new_traits.forEach(t => {
-        if (!t || !t.name) return;
+        if (!t || typeof t.name !== 'string' || !t.name.trim()) return;
         const conf = typeof t.confidence === 'number' ? t.confidence : 0.5;
         const exists = (state.traits || []).find(e => similarText(e.name, t.name));
         if (!exists) {
@@ -32694,8 +32711,9 @@ function _processExtractChapterAnalysis(analysis, opts) {
           state.traits = state.traits || [];
           state.traits.push({
             id: 'trait_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-            name: t.name.trim(), description: (t.description || '').trim(),
-            quiz_question: (t.quiz_question || '').trim() || null,
+            name: t.name.trim(),
+            description: typeof t.description === 'string' ? t.description.trim() : '',
+            quiz_question: (typeof t.quiz_question === 'string' ? t.quiz_question.trim() : '') || null,
             confidence: conf, user_verified: false, evidence_count: 1,
             extractedFrom: _extractedFrom,
             created_at: new Date().toISOString()
@@ -32704,14 +32722,14 @@ function _processExtractChapterAnalysis(analysis, opts) {
         } else {
           exists.evidence_count = (exists.evidence_count || 1) + 1;
           exists.confidence = Math.min(1.0, (exists.confidence || 0.5) + 0.1);
-          if (t.quiz_question && !exists.quiz_question) exists.quiz_question = t.quiz_question.trim();
+          if (typeof t.quiz_question === 'string' && t.quiz_question.trim() && !exists.quiz_question) exists.quiz_question = t.quiz_question.trim();
           touched = true;
         }
       });
     }
     if (Array.isArray(analysis.new_values)) {
       analysis.new_values.forEach(v => {
-        if (!v || !v.name) return;
+        if (!v || typeof v.name !== 'string' || !v.name.trim()) return;
         const conf = typeof v.confidence === 'number' ? v.confidence : 0.5;
         const exists = (state.values || []).find(e => similarText(e.name, v.name));
         if (!exists) {
@@ -32719,8 +32737,9 @@ function _processExtractChapterAnalysis(analysis, opts) {
           state.values = state.values || [];
           state.values.push({
             id: 'val_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-            name: v.name.trim(), description: (v.description || '').trim(),
-            quiz_question: (v.quiz_question || '').trim() || null,
+            name: v.name.trim(),
+            description: typeof v.description === 'string' ? v.description.trim() : '',
+            quiz_question: (typeof v.quiz_question === 'string' ? v.quiz_question.trim() : '') || null,
             confidence: conf, user_verified: false, evidence_count: 1,
             sdt_need: v.sdt_need || null,
             extractedFrom: _extractedFrom,
@@ -32730,14 +32749,14 @@ function _processExtractChapterAnalysis(analysis, opts) {
         } else {
           exists.evidence_count = (exists.evidence_count || 1) + 1;
           exists.confidence = Math.min(1.0, (exists.confidence || 0.5) + 0.1);
-          if (v.quiz_question && !exists.quiz_question) exists.quiz_question = v.quiz_question.trim();
+          if (typeof v.quiz_question === 'string' && v.quiz_question.trim() && !exists.quiz_question) exists.quiz_question = v.quiz_question.trim();
           touched = true;
         }
       });
     }
     if (Array.isArray(analysis.new_patterns)) {
       analysis.new_patterns.forEach(p => {
-        if (!p || !p.name) return;
+        if (!p || typeof p.name !== 'string' || !p.name.trim()) return;
         const conf = typeof p.confidence === 'number' ? p.confidence : 0.5;
         const exists = (state.patterns || []).find(e => similarText(e.name, p.name));
         if (!exists) {
@@ -32745,9 +32764,11 @@ function _processExtractChapterAnalysis(analysis, opts) {
           state.patterns = state.patterns || [];
           state.patterns.push({
             id: 'pat_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-            name: p.name.trim(), description: (p.description || '').trim(),
-            trigger: (p.trigger || '').trim(), sequence: (p.sequence || '').trim(),
-            quiz_question: (p.quiz_question || '').trim() || null,
+            name: p.name.trim(),
+            description: typeof p.description === 'string' ? p.description.trim() : '',
+            trigger: typeof p.trigger === 'string' ? p.trigger.trim() : '',
+            sequence: typeof p.sequence === 'string' ? p.sequence.trim() : '',
+            quiz_question: (typeof p.quiz_question === 'string' ? p.quiz_question.trim() : '') || null,
             confidence: conf, user_verified: false, evidence_count: 1,
             extractedFrom: _extractedFrom,
             created_at: new Date().toISOString()
@@ -32756,7 +32777,7 @@ function _processExtractChapterAnalysis(analysis, opts) {
         } else {
           exists.evidence_count = (exists.evidence_count || 1) + 1;
           exists.confidence = Math.min(1.0, (exists.confidence || 0.5) + 0.1);
-          if (p.quiz_question && !exists.quiz_question) exists.quiz_question = p.quiz_question.trim();
+          if (typeof p.quiz_question === 'string' && p.quiz_question.trim() && !exists.quiz_question) exists.quiz_question = p.quiz_question.trim();
           touched = true;
         }
       });
@@ -46329,8 +46350,10 @@ async function saveMsgAsStrategy(idx) {
         max_tokens: 700,
         messages: [{ role: 'user', content: '' }]
       });
+      if (!resp.ok) throw new Error('API '+resp.status);
       const data = await resp.json();
-      let raw = data.content[0].text.trim();
+      let raw = (data?.content?.[0]?.text || '').trim();
+      if (!raw) throw new Error('empty response');
       raw = raw.replace(/^```\w*\s*/, '').replace(/\s*```\s*$/, '').trim();
       raw = raw.replace(/\*\*/g, '').replace(/^#+\s*/gm, '');
       const grab = (label) => {
@@ -46776,8 +46799,10 @@ async function _generateMutationOptions(strategyId, missionTitle, opts) {
           max_tokens: 900,
           messages: [{ role: 'user', content: '' }]
       });
+      if (!resp.ok) throw new Error('API '+resp.status);
       const data = await resp.json();
-      let raw = data.content[0].text.trim();
+      let raw = (data?.content?.[0]?.text || '').trim();
+      if (!raw) throw new Error('empty response');
       raw = raw.replace(/^```\w*\s*/, '').replace(/\s*```\s*$/, '').trim();
       const m = raw.match(/\{[\s\S]*\}/);
       if (m) {
@@ -49191,7 +49216,7 @@ async function maybeRunDailyInsightDiscover(opts) {
 
       const existingContents = (Array.isArray(state.insights) ? state.insights : [])
         .filter(i => i && !i.dismissed)
-        .map(i => (i.content || '').toLowerCase());
+        .map(i => typeof i.content === 'string' ? i.content.toLowerCase() : '');
 
       let pushedCount = 0;
       const nowIso = new Date().toISOString();
@@ -49218,7 +49243,7 @@ async function maybeRunDailyInsightDiscover(opts) {
           user_verified: false,
           source: 'auto'
         });
-        existingContents.push(content.toLowerCase());
+        existingContents.push(typeof content === 'string' ? content.toLowerCase() : '');
         pushedCount++;
       });
 
@@ -53897,7 +53922,8 @@ async function extractPreviousChapterTopics(passedMessages) {
     });
     if (!resp.ok) return;
     const data = await resp.json();
-    let text = data.content[0].text.trim();
+    let text = (data?.content?.[0]?.text || '').trim();
+    if (!text) return;
     text = text.replace(/```json/g, '').replace(/```/g, '').trim();
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) return;
@@ -55285,7 +55311,8 @@ async function testSeedV4Data() {
         { role: 'assistant', content: '뭐가 막혔어? 시작 자체? 아니면 중간에 끊긴 거?', timestamp: new Date(today.getTime() - 1.5 * 86400000 + 60000).toISOString() }
       ],
       generatedAt: new Date(today.getTime() - 1 * 86400000).toISOString(),
-      _pendingExtract: true  // 4AM 처리 대기
+      // V4 (사용자 명시 2026-05-25 ultrathink): _pendingExtract → _pendingCleanup (재설계 통합 마커).
+      _pendingCleanup: true  // 4AM cleanup batch 대기 (cleanup batch: case+topic+diary, Opus)
     },
     {
       id: 'arch_seed_magic', date: getDayKey(new Date(today.getTime() - 3 * 86400000)),
@@ -55296,7 +55323,7 @@ async function testSeedV4Data() {
       ],
       generatedAt: new Date(today.getTime() - 3 * 86400000).toISOString(),
       source: 'magic_help',
-      _pendingExtract: false
+      _pendingCleanup: false  // 처리완료 시뮬 (mix)
     },
     {
       id: 'arch_seed_refl', date: getDayKey(new Date(today.getTime() - 5 * 86400000)),
@@ -55307,7 +55334,7 @@ async function testSeedV4Data() {
       ],
       generatedAt: new Date(today.getTime() - 5 * 86400000).toISOString(),
       source: 'reflection_chat',
-      _pendingExtract: false
+      _pendingCleanup: false  // 처리완료 시뮬 (mix)
     }
   ];
 
@@ -57017,7 +57044,7 @@ async function generateQuarterlyReview(quarterKey, stats) {
   });
   if (!resp.ok) throw new Error('API ' + resp.status);
   const respData = await resp.json();
-  const text = respData.content[0].text;
+  const text = respData?.content?.[0]?.text || '';
   const result = _processQuarterlyReviewResult(text);
   // 사용자 명시 2026-05-09 ultrathink: quotes 환각 방지 — quotes / transformation.start_quote / end_quote 검증.
   if (result && typeof _filterValidQuotes === 'function') {
@@ -61943,6 +61970,7 @@ async function _processForceAnalyzeResult(text, isAuto) {
     };
     if (analysis.traits) {
       analysis.traits.forEach(t => {
+        if (!t || typeof t.name !== 'string' || !t.name.trim()) return;
         let exist = state.traits.find(e => similarText(e.name, t.name))
                  || _findFuzzyMatch(state.traits, t.name)
                  || state.patterns.find(e => similarText(e.name, t.name))
@@ -61957,6 +61985,7 @@ async function _processForceAnalyzeResult(text, isAuto) {
     }
     if (analysis.values) {
       analysis.values.forEach(v => {
+        if (!v || typeof v.name !== 'string' || !v.name.trim()) return;
         let exist = state.values.find(e => similarText(e.name, v.name))
                  || _findFuzzyMatch(state.values, v.name);
         if (exist) mergeModelItem(exist, v);
@@ -61969,6 +61998,7 @@ async function _processForceAnalyzeResult(text, isAuto) {
     }
     if (analysis.patterns) {
       analysis.patterns.forEach(p => {
+        if (!p || typeof p.name !== 'string' || !p.name.trim()) return;
         let exist = state.patterns.find(e => similarText(e.name, p.name))
                  || _findFuzzyMatch(state.patterns, p.name)
                  || state.traits.find(e => similarText(e.name, p.name))
@@ -63415,7 +63445,7 @@ async function _resumeReviewChainBatch() {
           if (!jm) continue;
           const parsed = JSON.parse(jm[0]);
           const discovered = Array.isArray(parsed && parsed.discovered) ? parsed.discovered : [];
-          const existingContents = (state.insights || []).filter(i => i && !i.dismissed).map(i => (i.content || '').toLowerCase());
+          const existingContents = (state.insights || []).filter(i => i && !i.dismissed).map(i => typeof i.content === 'string' ? i.content.toLowerCase() : '');
           const nowIso = new Date().toISOString();
           discovered.forEach(d => {
             if (!d || typeof d !== 'object') return;
@@ -63440,7 +63470,7 @@ async function _resumeReviewChainBatch() {
               user_verified: false,
               source: 'auto'
             });
-            existingContents.push(content.toLowerCase());
+            existingContents.push(typeof content === 'string' ? content.toLowerCase() : '');
           });
           if (!state.preferences) state.preferences = {};
           state.preferences._lastInsightDiscoverAt = nowIso;
@@ -63654,6 +63684,15 @@ async function maybeRunChapterCleanup() {
   if (!isGuest && typeof forceAnalyze === 'function'
       && _shouldRunSchedule(state.lastForceAnalyzeAt, _lastSunday4amCutoff())) {
     forceAnalyze({ auto: true }).catch(e => console.warn('[forceAnalyze auto sunday]', e));
+  }
+
+  // ─── step E: 자동 인사이트 발견 ────────────────────────
+  // V4 fix (사용자 명시 2026-05-26 ultrathink): e4563480 refactor 에서 누락된
+  //   piggyback 호출 복원. 함수 내부에 7일 cooldown + entries>=7 + !isGuest +
+  //   !testerMode + _canAI() 5중 가드 있어서 외부 가드 불필요. fire-and-forget
+  //   으로 step D 와 동일하게 await X (Sonnet 800 토큰, 10-30s).
+  if (typeof maybeRunDailyInsightDiscover === 'function') {
+    maybeRunDailyInsightDiscover().catch(e => console.warn('[auto-insight]', e));
   }
 }
 
@@ -68820,7 +68859,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.242-semantic-truncation-fix';
+const APP_VERSION = 'v4.0.244-pending-cleanup-marker-migration';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 

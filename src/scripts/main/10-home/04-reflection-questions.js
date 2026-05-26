@@ -176,7 +176,9 @@ async function resolveReflectionQuestion(id) {
       generatedAt: new Date().toISOString(),
       source: 'reflection_chat',
       reflectionQuestionId: q.id,
-      _pendingExtract: true
+      // V4 (사용자 명시 2026-05-25 ultrathink): _pendingExtract → _pendingCleanup (재설계 통합 마커).
+      //   cleanup batch (case+topic+diary) 가 처리 후 _cleanedAt stamp. 옛 마커 호환은 init 시 migration shim 이 처리.
+      _pendingCleanup: true
     });
     q.chatMessages = [];  // 이송 후 비움
     if (typeof pruneOldChatArchive === 'function') pruneOldChatArchive();

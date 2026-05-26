@@ -299,7 +299,7 @@ async function generateQuarterlyReview(quarterKey, stats) {
   });
   if (!resp.ok) throw new Error('API ' + resp.status);
   const respData = await resp.json();
-  const text = respData.content[0].text;
+  const text = respData?.content?.[0]?.text || '';
   const result = _processQuarterlyReviewResult(text);
   // 사용자 명시 2026-05-09 ultrathink: quotes 환각 방지 — quotes / transformation.start_quote / end_quote 검증.
   if (result && typeof _filterValidQuotes === 'function') {

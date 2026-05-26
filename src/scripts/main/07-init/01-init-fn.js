@@ -390,12 +390,14 @@ async function init() {
       if (window._onbTutorialMode) return;
       if (state.preferences && state.preferences.testerMode) return;
       const _isFreeOrGuest = (typeof _isTutorialEligibleUser === 'function') && _isTutorialEligibleUser();
+      // V4 (사용자 명시 2026-05-25 ultrathink): 마커 이관 후 호환 OR — 옛 _pendingExtract + 신 _pendingCleanup 둘 다 처리.
+      //   신규 코드는 _pendingCleanup 만 박지만, 옛 데이터 _pendingExtract 잔존 + batch stuck signature 의 두 마커 모두 안전망 유지.
       const _hasBatchStuck = state.chatArchive.some(a =>
-        a && !a._deleted && a._pendingExtract && a._batchSubmittedAt && !state.pendingBatch
+        a && !a._deleted && (a._pendingExtract || a._pendingCleanup) && a._batchSubmittedAt && !state.pendingBatch
       );
       if (!_isFreeOrGuest && !_hasBatchStuck) return;  // 구독자 = batch stuck 케이스만 통과.
       const stuckArchives = state.chatArchive.filter(a =>
-        a && !a._deleted && a._pendingExtract && Array.isArray(a.messages) && a.messages.length >= 3
+        a && !a._deleted && (a._pendingExtract || a._pendingCleanup) && Array.isArray(a.messages) && a.messages.length >= 3
       );
       if (stuckArchives.length === 0) return;
       console.log('[pending extract recovery] stuck archives:', stuckArchives.length);
@@ -433,6 +435,7 @@ async function init() {
             }
             delete arch._pendingExtract;
             delete arch._pendingCaseAnalysis;
+            delete arch._pendingCleanup;  // V4 (사용자 명시 2026-05-25 ultrathink): 신 마커도 정리.
             saveState();
             if (typeof renderChatArchiveModal === 'function') renderChatArchiveModal();
           } catch (e) { console.warn('[pending recovery] guard:', arch.id, e); }

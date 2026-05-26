@@ -355,7 +355,13 @@ JSON 객체 하나만 반환. markdown code fence X. 다른 글 X. 모든 필수
   const volatile = `[기간 데이터]
 체크인: ${JSON.stringify(entriesInRange, null, 2).slice(0, 4000)}
 미션: ${JSON.stringify(missionsInRange.map(m => ({title: m.title, status: m.status, attemptStatus: m.attemptStatus, strategyId: m.strategyId})), null, 2).slice(0, 1500)}
-대화 발췌 (사용자): ${chatInRange.map(m => m.content.slice(0, 200)).join('\n---\n').slice(0, 3000)}
+대화 발췌 (사용자): ${chatInRange.map(m => {
+  const c = m && m.content;
+  const s = typeof c === 'string' ? c
+    : Array.isArray(c) ? c.map(b => b?.text || '').join(' ')
+    : '';
+  return s.slice(0, 200);
+}).join('\n---\n').slice(0, 3000)}
 결정 + 예측: ${JSON.stringify(decisionsInRange.map(d => ({title: d.title, status: d.status, finalDecision: d.finalDecision, predictions: d.predictions})), null, 2).slice(0, 1500)}
 챕터: ${JSON.stringify(chaptersInRange.map(c => ({date: c.date, messageCount: c.messageCount})), null, 0).slice(0, 1500)}
 가닥(topicCards): ${JSON.stringify(topicCardsInRange.map(t => ({title: t.title, summary: t.summary, category: t.category})), null, 0).slice(0, 1500)}
@@ -423,7 +429,7 @@ async function generateReview(type) {
   });
   if (!resp.ok) throw new Error('API ' + resp.status);
   const respData = await resp.json();
-  const text = respData.content[0].text;
+  const text = respData?.content?.[0]?.text || '';
   const result = _processReviewResult(text);
   // 사용자 명시 2026-05-09 ultrathink: quotes 환각 방지 — entries/chat/archive raw 매칭 안 되면 drop.
   if (result && Array.isArray(result.quotes)) {
