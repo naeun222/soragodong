@@ -76,9 +76,13 @@ function buildSystemPromptParts() {
     stable.push(`[Case Formulation v.${cf.version}]`);
     // 사용자 요청 2026-04-29 (perf #5): cf 문자열 array는 너무 길면 슬라이스
     const _cfTrunc = (arr) => arr.map(s => typeof s === 'string' ? s.slice(0, 120) : (s && s.text ? s.text.slice(0, 120) : '')).filter(Boolean).join('; ');
-    if (cf.problems.length) stable.push('문제: ' + _cfTrunc(cf.problems));
-    if (cf.mechanisms.length) stable.push('메커니즘: ' + _cfTrunc(cf.mechanisms));
-    if (cf.strengths.length) stable.push('강점: ' + _cfTrunc(cf.strengths));
+    // V4 feat (사용자 명시 2026-05-26 ultrathink): 4 클러스터 양식 통일 — chat AI 도 cluster wording 인식하도록.
+    //   강점 + 메커니즘 → 자기조절 도구 클러스터 합본. problems → 다루어야 할 곳. goals/growth 있을 때만 추가 (있는 cf 만 push).
+    const _selfReg = [...(cf.strengths || []), ...(cf.mechanisms || [])];
+    if (_selfReg.length) stable.push('자기조절 도구: ' + _cfTrunc(_selfReg));
+    if (cf.problems && cf.problems.length) stable.push('다루어야 할 곳: ' + _cfTrunc(cf.problems));
+    if (cf.goals && cf.goals.length) stable.push('가고 싶은 곳: ' + _cfTrunc(cf.goals));
+    if (cf.growth && cf.growth.length) stable.push('자라는 곳: ' + _cfTrunc(cf.growth));
     stable.push('');
   }
 

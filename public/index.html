@@ -1407,6 +1407,8 @@
   .model-item.model-item-new { border-left: 3px solid var(--purple); padding-left: 11px; }
   .model-item.model-item-new .model-item-name { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .model-item-name { font-size: 13px; font-weight: 500; margin-bottom: 4px; }
+  /* V4 feat (사용자 명시 2026-05-26 ultrathink): cluster 통합 섹션 mini badge — 핵심 작동 패턴 (🌿/🌀) + 자기조절 도구 (✦/⟳). source 시각 구분. */
+  .model-cluster-badge { display: inline-block; font-size: 12px; margin-right: 4px; opacity: 0.75; vertical-align: baseline; }
   .model-item-desc { font-size: 12px; color: var(--text-dim); line-height: 1.6; }
   .model-item-meta { font-size: 10px; color: var(--text-soft); margin-top: 6px; display: flex; gap: 8px; }
   .model-item-meta .conf { padding: 2px 8px; background: var(--surface2); border-radius: 10px; }
@@ -40639,7 +40641,7 @@ function renderModel() {
   // 정체성 위 (values / traits / patterns) → 분석 중 (case_formulation / diagnoses) → 메타 아래 (task 평균 / 더 깊은 나).
   // 자기친밀 hook 우선 / 분석 해석 후순위 / 메타 데이터 collapse.
   let html = '';
-  // _renderConfirmableSection — 정체성 3종 공용 헬퍼
+  // _renderConfirmableSection — 정체성 단일 카테고리 공용 헬퍼 (values 용)
   const _renderConfirmableSection = (category, label, arr) => {
     if (!arr || arr.length === 0) return '';
     const split = splitItems(arr, 1, 0.4, true);
@@ -40658,18 +40660,66 @@ function renderModel() {
     return inner;
   };
 
-  // ── 1. 정체성 — values / traits / patterns (top, 자기친밀 hook 매일) ──
+  // V4 feat (사용자 명시 2026-05-26 ultrathink): cluster 통합 섹션 — 핵심 작동 패턴 (traits ∪ patterns).
+  //   sources = [{cat, arr, badge}, ...]. 각 item 의 source category 유지 → onclick 의 category 가 정확한 state array 가리킴.
+  //   sort: verified 우선 → confidence DESC → evidence_count DESC (sortItems 와 동일 규칙). idx 는 state[cat].indexOf 그대로.
+  //   mini badge inline — 사용자 명시 (옵션 A 선택).
+  const _renderClusterSection = (label, sources) => {
+    const flat = sources.flatMap(s => (s.arr || []).map(it => ({ it, cat: s.cat, badge: s.badge })));
+    if (flat.length === 0) return '';
+    flat.sort((a, b) => {
+      const va = a.it.user_verified === false ? 0 : 1;
+      const vb = b.it.user_verified === false ? 0 : 1;
+      if (va !== vb) return va - vb;
+      const ca = a.it.confidence || 0;
+      const cb = b.it.confidence || 0;
+      if (cb !== ca) return cb - ca;
+      return (b.it.evidence_count || 0) - (a.it.evidence_count || 0);
+    });
+    const main = flat.filter(w => (w.it.confidence || 0) >= 0.4);
+    const draft = flat.filter(w => (w.it.confidence || 0) < 0.4);
+    const top = main.slice(0, 1);
+    const more = main.slice(1);
+    let inner = `<div class="model-section"><div class="model-section-title">${label}</div>`;
+    top.forEach(w => {
+      const idx = state[w.cat].indexOf(w.it);
+      inner += renderModelItem(w.it, w.cat, idx, w.badge);
+    });
+    if (more.length > 0) {
+      inner += `<details class="model-collapse"><summary>+${more.length}</summary><div class="model-collapse-content">`;
+      more.forEach(w => {
+        const idx = state[w.cat].indexOf(w.it);
+        inner += renderModelItem(w.it, w.cat, idx, w.badge);
+      });
+      inner += '</div></details>';
+    }
+    if (draft.length > 0) {
+      inner += `<details class="model-collapse model-draft"><summary>+${draft.length}</summary><div class="model-collapse-content">`;
+      draft.forEach(w => {
+        const idx = state[w.cat].indexOf(w.it);
+        inner += renderModelItem(w.it, w.cat, idx, w.badge);
+      });
+      inner += '</div></details>';
+    }
+    inner += '</div>';
+    return inner;
+  };
+
+  // ── 1. 정체성 — 네가 중시하는 것 (values) + 핵심 작동 패턴 (traits ∪ patterns 통합) ──
   // 사용자 명시 2026-05-10 (큐 10): 시뮬 추출 항목 (extractedFrom='simulation') 은 hide.
+  // 사용자 명시 2026-05-26 ultrathink: 4 클러스터 양식 통합 — traits + patterns 한 섹션.
   html += _renderConfirmableSection('values', '네가 중시하는 것', _valuesForRender);
-  html += _renderConfirmableSection('traits', '네 특성', _traitsForRender);
-  html += _renderConfirmableSection('patterns', '보이는 패턴', _patternsForRender);
+  html += _renderClusterSection('핵심 작동 패턴', [
+    { cat: 'traits', arr: _traitsForRender, badge: '🌿' },
+    { cat: 'patterns', arr: _patternsForRender, badge: '🌀' }
+  ]);
 
   // ── 2. 분석 — 통합 분석 + 작동 중인 패턴 (mid, 큰 그림 가끔) ──
   // 사용자 보고 2026-05-05: 신규 사용자 (caseFormulation.version=0) 한테 '통합 분석' 섹션 자체가 안 떠서 존재 모르던 문제 — placeholder 추가.
   if (state.caseFormulation.version === 0 || !state.caseFormulation.version) {
     html += `<div class="model-section">
       <div class="model-section-title">통합 분석</div>
-      <div style="font-size:11.5px; color:var(--text-soft); line-height:1.7; padding:10px 12px; background:rgba(255,255,255,0.02); border-radius:8px; border-left:2px solid rgba(255,255,255,0.06);">며칠 같이 지내면 너의 데이터에서 큰 그림 (강점 · 어떻게 작동하는지 · 다루어야 할 특성) 을 종합해줄게 ✦</div>
+      <div style="font-size:11.5px; color:var(--text-soft); line-height:1.7; padding:10px 12px; background:rgba(255,255,255,0.02); border-radius:8px; border-left:2px solid rgba(255,255,255,0.06);">며칠 같이 지내면 너의 데이터에서 큰 그림 (자기조절 도구 · 다루어야 할 것) 을 종합해줄게 ✦</div>
     </div>`;
   } else {
     html += `<div class="model-section"><div class="model-section-title">통합 분석</div>`;
@@ -40712,10 +40762,45 @@ function renderModel() {
         <div class="model-item-desc cf-list">${topHtml}</div>
         ${restHtml}</div>`;
     };
-    // 사용자 요청 2026-04-30: 강점 → 작동 → 다루어야 할 특성 순서 (긍정 먼저)
-    html += cfSection('네 강점', '', state.caseFormulation.strengths, 'strengths');
-    html += cfSection('어떻게 작동하는지', '네 마음과 행동의 흐름', state.caseFormulation.mechanisms, 'mechanisms');
-    html += cfSection('다루어야 할 특성', '', state.caseFormulation.problems, 'problems');
+    // V4 feat (사용자 명시 2026-05-26 ultrathink): cf cluster 통합 섹션 — 자기조절 도구 (strengths ∪ mechanisms).
+    //   sources = [{field, arr, badge}, ...]. 각 item 의 source field 유지 → editCFItem/deleteCFItem 의 field 인자 정확.
+    //   sort: _sortCFItems 와 동일 (created_at DESC). string/object hybrid 안전.
+    //   mini badge inline — ✦ strengths / ⟳ mechanisms.
+    const _renderClusterCfSection = (label, sources) => {
+      const flat = sources.flatMap(s => (s.arr || []).map((it, originalIdx) => ({ it, field: s.field, badge: s.badge, idx: originalIdx })));
+      if (flat.length === 0) return '';
+      flat.sort((a, b) => {
+        const aT = (a.it && typeof a.it === 'object' && a.it.created_at) ? new Date(a.it.created_at).getTime() : 0;
+        const bT = (b.it && typeof b.it === 'object' && b.it.created_at) ? new Date(b.it.created_at).getTime() : 0;
+        return bT - aT;
+      });
+      const top = flat.slice(0, 1);
+      const rest = flat.slice(1);
+      const cfBulletWithBadge = (w) => {
+        const text = (typeof w.it === 'string') ? w.it : (w.it?.text || w.it?.name || '');
+        const verified = (typeof w.it === 'object' && w.it && w.it.user_verified === true);
+        const cls = 'cf-bullet' + (verified ? ' cf-verified' : '');
+        const mark = verified ? '✓' : '•';
+        const badgeHtml = w.badge ? `<span class="model-cluster-badge">${w.badge}</span>` : '';
+        return `<div class="${cls}">
+          <span class="cf-text">${mark} ${badgeHtml}${escapeHtml(text)}</span>
+          <span class="cf-actions"><button onclick="editCFItem('${w.field}', ${w.idx})" title="수정">✎</button><button onclick="deleteCFItem('${w.field}', ${w.idx})" title="삭제">✕</button></span>
+        </div>`;
+      };
+      const topHtml = top.map(cfBulletWithBadge).join('');
+      const restHtml = rest.length > 0
+        ? `<details class="cf-more"><summary>+${rest.length}</summary><div class="cf-list">${rest.map(cfBulletWithBadge).join('')}</div></details>`
+        : '';
+      return `<div class="model-item"><div class="model-item-name">${label}</div>
+        <div class="model-item-desc cf-list">${topHtml}</div>
+        ${restHtml}</div>`;
+    };
+    // 사용자 명시 2026-05-26 ultrathink: 4 클러스터 양식 — 자기조절 도구 (강점+작동 통합) + 다루어야 할 것.
+    html += _renderClusterCfSection('자기조절 도구', [
+      { field: 'strengths', arr: state.caseFormulation.strengths, badge: '✦' },
+      { field: 'mechanisms', arr: state.caseFormulation.mechanisms, badge: '⟳' }
+    ]);
+    html += cfSection('다루어야 할 것', '', state.caseFormulation.problems, 'problems');
     html += '</div>';
   }
 
@@ -41026,9 +41111,11 @@ function renderMoreSection(category, more, draft) {
   return html;
 }
 
-function renderModelItem(item, category, idx) {
+function renderModelItem(item, category, idx, badge) {
   // V4 (사용자 보고 2026-05-13): 옛 e750781 dead code 청소에서 잘못 삭제된 confLabel + model-item-meta 복원.
   //   각 model item 아래 "확신/관찰 중/가설 N%" 칩 + "근거 N개" 표시.
+  // V4 feat (사용자 명시 2026-05-26 ultrathink): cluster 통합 섹션 mini badge — 핵심 작동 패턴 (🌿 trait / 🌀 pattern) 인라인.
+  const clusterBadgeHtml = badge ? `<span class="model-cluster-badge">${badge}</span>` : '';
   const confLabel = item.confidence >= 0.7 ? '확신' : item.confidence >= 0.4 ? '관찰 중' : '가설';
   // V4-1l-mini + 사용자 fix: values/patterns/traits 모두 '맞아' / '아니야' / '확인됨' 토글
   const isVerifiable = (category === 'values' || category === 'patterns' || category === 'traits');
@@ -41069,7 +41156,7 @@ function renderModelItem(item, category, idx) {
     return '';
   })();
   return `<div class="model-item${newClass}" data-cat="${category}" data-idx="${idx}">
-    <div class="model-item-name">${newBadge}${escapeHtml(item.name)}</div>
+    <div class="model-item-name">${clusterBadgeHtml}${newBadge}${escapeHtml(item.name)}</div>
     <div class="model-item-desc">${escapeHtml(item.description || '')}</div>
     ${subMeta}
     <div class="model-item-meta">
@@ -45018,9 +45105,13 @@ function buildSystemPromptParts() {
     stable.push(`[Case Formulation v.${cf.version}]`);
     // 사용자 요청 2026-04-29 (perf #5): cf 문자열 array는 너무 길면 슬라이스
     const _cfTrunc = (arr) => arr.map(s => typeof s === 'string' ? s.slice(0, 120) : (s && s.text ? s.text.slice(0, 120) : '')).filter(Boolean).join('; ');
-    if (cf.problems.length) stable.push('문제: ' + _cfTrunc(cf.problems));
-    if (cf.mechanisms.length) stable.push('메커니즘: ' + _cfTrunc(cf.mechanisms));
-    if (cf.strengths.length) stable.push('강점: ' + _cfTrunc(cf.strengths));
+    // V4 feat (사용자 명시 2026-05-26 ultrathink): 4 클러스터 양식 통일 — chat AI 도 cluster wording 인식하도록.
+    //   강점 + 메커니즘 → 자기조절 도구 클러스터 합본. problems → 다루어야 할 곳. goals/growth 있을 때만 추가 (있는 cf 만 push).
+    const _selfReg = [...(cf.strengths || []), ...(cf.mechanisms || [])];
+    if (_selfReg.length) stable.push('자기조절 도구: ' + _cfTrunc(_selfReg));
+    if (cf.problems && cf.problems.length) stable.push('다루어야 할 곳: ' + _cfTrunc(cf.problems));
+    if (cf.goals && cf.goals.length) stable.push('가고 싶은 곳: ' + _cfTrunc(cf.goals));
+    if (cf.growth && cf.growth.length) stable.push('자라는 곳: ' + _cfTrunc(cf.growth));
     stable.push('');
   }
 
@@ -67999,7 +68090,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.237-cluster-dedup';
+const APP_VERSION = 'v4.0.238-cluster-ui';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 

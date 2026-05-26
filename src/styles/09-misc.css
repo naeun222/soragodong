@@ -1246,6 +1246,8 @@
   .model-item.model-item-new { border-left: 3px solid var(--purple); padding-left: 11px; }
   .model-item.model-item-new .model-item-name { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .model-item-name { font-size: 13px; font-weight: 500; margin-bottom: 4px; }
+  /* V4 feat (사용자 명시 2026-05-26 ultrathink): cluster 통합 섹션 mini badge — 핵심 작동 패턴 (🌿/🌀) + 자기조절 도구 (✦/⟳). source 시각 구분. */
+  .model-cluster-badge { display: inline-block; font-size: 12px; margin-right: 4px; opacity: 0.75; vertical-align: baseline; }
   .model-item-desc { font-size: 12px; color: var(--text-dim); line-height: 1.6; }
   .model-item-meta { font-size: 10px; color: var(--text-soft); margin-top: 6px; display: flex; gap: 8px; }
   .model-item-meta .conf { padding: 2px 8px; background: var(--surface2); border-radius: 10px; }
