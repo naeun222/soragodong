@@ -216,9 +216,9 @@ function _refreshAllMsgAvatars() {
 //   1) _chatEmptyAreaHtml 의 placeholder welcome bubble (DOM only, chatMessages 비어있을 때).
 //   2) sendChat 의 첫 메시지 push 직전 welcome 실제 메시지 (state.chatMessages 안 박음 — AI 가 자기 첫 발화로 인식).
 const _CHAT_WELCOME_TEXTS = {
-  daily:   '편하게 말해 보소. 오늘 하루 어땠는지 궁금하오.',
-  inquiry: '편하게 말해 보소. 고민이 무엇인가.',
-  vent:    '편하게 말해 보소. 다 괜찮다. 난 여기 있으니.'
+  daily:   '오늘 뭐 했어?',
+  inquiry: '고민이 뭐야?',
+  vent:    '편하게 말해줘. 다 괜찮아.'
 };
 function _chatWelcomeText(mode) {
   return _CHAT_WELCOME_TEXTS[mode] || _CHAT_WELCOME_TEXTS.daily;
