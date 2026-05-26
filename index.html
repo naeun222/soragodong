@@ -45531,6 +45531,9 @@ function _recentChapterInject(perCall) {
   if (allMsgs.length === 0) return null;
 
   const lastMsgTs = recent.messages[recent.messages.length - 1]?.timestamp;
+  // V4 fix (사용자 명시 2026-05-27 ultrathink): 시간 라벨 강화 — calendar date + 요일 + 자연어 라벨 동시 표기.
+  //   옛: "1일 전 끝남" → 모델이 "어제" 로 추측 박는 경우 발생 (실제는 그저께/3일 전일 수도). H2 룰 (system-persona.ts) 의 anchor.
+  //   신: "1일 전 끝남 (2026-05-26 화, 어제)" — 모델이 그대로 인용하면 정확.
   const delta = _formatTimeDelta(recent.generatedAt || lastMsgTs);
 
   // V4 (사용자 명시 2026-05-25 ultrathink, 2 번째 묶음): topicCards 알맹이 inject + 윈도우 -4 → -12 확장.
@@ -45541,7 +45544,8 @@ function _recentChapterInject(perCall) {
   const topicTitles = topics.map(t => (t.title || '').trim()).filter(Boolean).join(' · ');
 
   const lines = ['', '[방금 직전 챕터 — ' + (delta || '시점 불명') + ']'];
-  lines.push(`- [${recent.date || ''}]${topicTitles ? ' ' + topicTitles : ''}`);
+  const _dateLabel = _formatChapterDateLabel(recent.date);
+  lines.push(`- ${_dateLabel}${topicTitles ? ' ' + topicTitles : ''}`);
 
   // topicCards 있으면 summary 직접 inject, 없으면 길이 상위 user msg 3 개 fallback.
   if (topics.length > 0) {
@@ -45576,12 +45580,18 @@ function _recentChapterInject(perCall) {
 
   lines.push('  · 사용자가 anaphor ("그거", "끝났어" 류) 쓰면 이 챕터의 referent 일 가능성 ↑.');
   lines.push('  · 위 토픽·마지막 흐름의 구체 내용 *직접 인용 OK* — 사용자가 옛 얘기 묻든 자기관찰 흐름이든 구분 X (사용자 명시 2026-05-25).');
+  // V4 fix (사용자 명시 2026-05-27 ultrathink): 시간 anchor hallucination 방지 (H2 룰).
+  lines.push('  · ⚠️ 시간 단어 ("어제", "그저께", "지난주") 는 위 라벨 *그대로* 만 사용. 라벨 안에 명시 안 된 시간 단어 만들어내지 X.');
+  lines.push('  · ⚠️ 위 마지막 흐름·토픽에 *없는* 사용자 발화 인용 X. 비슷한 거 추측해서 "너 ___ 라고 했지" 식 X (H1 룰).');
   lines.push('');
 
   perCall.push(lines.join('\n'));
   return recent.id;
 }
 
+// V4 fix (사용자 명시 2026-05-27 ultrathink): 시간 라벨 강화.
+//   "1일 전 끝남" → "1일 전 끝남 (어제)" — calendar date 와 사용자 자연어 동시 제공.
+//   H2 룰 (시간 anchor 정확성) 의 데이터 소스.
 function _formatTimeDelta(iso) {
   if (!iso) return '';
   const ms = Date.now() - new Date(iso).getTime();
@@ -45591,8 +45601,35 @@ function _formatTimeDelta(iso) {
   const hrs = Math.floor(mins / 60);
   if (hrs < 24) return hrs + '시간 전 끝남';
   const days = Math.floor(hrs / 24);
-  if (days < 7) return days + '일 전 끝남';
+  // 0~6일은 자연어 라벨 함께 (어제/그저께/N일 전).
+  const natLabel = _naturalDayLabel(days);
+  if (days < 7) return `${days}일 전 끝남${natLabel ? ' (' + natLabel + ')' : ''}`;
   return Math.floor(days / 7) + '주 전 끝남';
+}
+
+// V4 fix (사용자 명시 2026-05-27 ultrathink): 사용자 자연어 시간 라벨 매핑.
+//   AI 가 "어제" / "그저께" / "N일 전" 시 *항상 이 라벨* 사용. 추측 X.
+function _naturalDayLabel(days) {
+  if (days === 0) return '오늘';
+  if (days === 1) return '어제';
+  if (days === 2) return '그저께';
+  if (days >= 3 && days <= 6) return days + '일 전';
+  return '';
+}
+
+// V4 fix (사용자 명시 2026-05-27 ultrathink): chapter date 를 더 명시적 라벨로 (YYYY-MM-DD + 요일).
+//   옛: "- [2026-05-26] ..." → 신: "- [2026-05-26 화요일] ..."
+//   요일 박혀있으면 모델이 시간 anchor 만들 때 정확도 ↑.
+function _formatChapterDateLabel(dateStr) {
+  if (!dateStr) return '[날짜 불명]';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return `[${dateStr}]`;
+    const dow = ['일', '월', '화', '수', '목', '금', '토'][d.getDay()];
+    return `[${dateStr} ${dow}요일]`;
+  } catch {
+    return `[${dateStr}]`;
+  }
 }
 // V4 사용자 요청 2026-05-25 ultrathink — 챗 탭 배경 모드별 tint helper. #screen-chat 만 적용 (다른 탭 영향 X).
 //   null = 색 없음 (default 다크). state.chatMode set/morph/reload 시 자동 호출.
@@ -69212,7 +69249,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.255-defensive-invariant-layer';
+const APP_VERSION = 'v4.0.256-hallucination-honesty-rules';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 
