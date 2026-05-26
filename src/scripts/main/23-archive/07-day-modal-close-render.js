@@ -3,6 +3,31 @@ function closeDayModal() {
   if (el) el.remove();
 }
 
+// V4 (사용자 명시 2026-05-27 ultrathink): 캘린더 day cell 배경 필터 — 사진 / 티켓 / 책.
+//   priority: photo > ticket > book. 토글 OFF or 자산 없으면 무드 색 fallback.
+//   영구 저장 = state.preferences.calendarFilters.{photo,ticket,book}.
+function _getCalFilters() {
+  const pref = state.preferences || {};
+  const f = pref.calendarFilters || {};
+  return { photo: !!f.photo, ticket: !!f.ticket, book: !!f.book };
+}
+
+function toggleCalendarFilter(kind) {
+  if (!['photo', 'ticket', 'book'].includes(kind)) return;
+  if (!state.preferences) state.preferences = {};
+  if (!state.preferences.calendarFilters) state.preferences.calendarFilters = { photo: false, ticket: false, book: false };
+  state.preferences.calendarFilters[kind] = !state.preferences.calendarFilters[kind];
+  try { saveState(); } catch (e) { console.warn('[calFilter save]', e); }
+  renderLensCalendarGrid();
+}
+
+// SVG 아이콘 3종 — currentColor stroke, no fill. 14×14 viewBox 24.
+const _CAL_FILTER_SVG = {
+  photo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 1 2-2h2.5l1.5-2h6l1.5 2H19a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8z"/><circle cx="12" cy="13" r="3.5"/></svg>',
+  ticket: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v2.5a2 2 0 0 0 0 4V18a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-3.5a2 2 0 0 0 0-4V8z"/><path d="M10 7v1M10 11v1M10 15v1M10 19v0" stroke-dasharray="0.1 2"/></svg>',
+  book: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a1 1 0 0 1 1-1h5a2 2 0 0 1 2 2v13a2 2 0 0 0-2-2H4V5z"/><path d="M20 5a1 1 0 0 0-1-1h-5a2 2 0 0 0-2 2v13a2 2 0 0 1 2-2h6V5z"/></svg>'
+};
+
 function renderLensCalendarGrid() {
   const container = document.getElementById('lensCalendarGrid');
   if (!container) { return; }
@@ -30,6 +55,9 @@ function renderLensCalendarGrid() {
     4: '#c7b288',
     5: '#d4a76a'   // 밝은 금 (높은 무드)
   };
+
+  const calFilters = _getCalFilters();
+  const _anyFilter = calFilters.photo || calFilters.ticket || calFilters.book;
 
   // 각 날짜 entries / chatMessages 매핑
   const entriesByDate = {};
@@ -96,7 +124,6 @@ function renderLensCalendarGrid() {
     const dateKey = `${year}-${mm}-${dd}`;
     const entry = entriesByDate[dateKey];
     const mood = entry?.mood;
-    const bg = mood ? moodColor[mood] || 'transparent' : 'transparent';
     const hasChapter = !!chaptersByDate[dateKey];
     const dayTickets = ticketsByDate[dateKey] || [];
     const dayBooks = booksByDate[dateKey] || [];
@@ -105,7 +132,27 @@ function renderLensCalendarGrid() {
     const isFuture = dateKey > todayKey();
     const empty = !entry && !hasChapter && dayTickets.length === 0 && dayBooks.length === 0;
 
+    // V4 (사용자 명시 2026-05-27 ultrathink): 필터 priority — photo > ticket > book.
+    //   필터 ON + 자산 있음 = 그 자산 정사각 bg. 아니면 무드 색 fallback.
+    let bgImageHtml = '';
+    if (calFilters.photo && entry && typeof diaryEntryHasPhoto === 'function' && diaryEntryHasPhoto(entry, 0)) {
+      bgImageHtml = (typeof diaryImgHtml === 'function')
+        ? diaryImgHtml(entry, 0, { cls: 'cal-day-bg-img', alt: '' })
+        : '';
+    }
+    if (!bgImageHtml && calFilters.ticket && dayTickets.length > 0 && typeof pearlImgHtml === 'function') {
+      const tp = dayTickets.find(p => typeof pearlHasMedia === 'function' && pearlHasMedia(p, 'photo'));
+      if (tp) bgImageHtml = pearlImgHtml(tp, 'photo', { cls: 'cal-day-bg-img', alt: '' });
+    }
+    if (!bgImageHtml && calFilters.book && dayBooks.length > 0 && typeof pearlImgHtml === 'function') {
+      const bp = dayBooks.find(p => typeof pearlHasMedia === 'function' && pearlHasMedia(p, 'photo'));
+      if (bp) bgImageHtml = pearlImgHtml(bp, 'photo', { cls: 'cal-day-bg-img', alt: '' });
+    }
+    const hasBgImg = !!bgImageHtml;
+    const bg = (!hasBgImg && mood) ? (moodColor[mood] || 'transparent') : 'transparent';
+
     // V4 (사용자 명시 2026-05-14 ultrathink): 티켓 / 책 mini dot — 첫 1개씩 + 누적 +N.
+    //   bg image 깔린 경우 mini dot 충돌 → hide (cal-day.has-bg-img 클래스가 CSS 로 처리).
     let miniIcons = '';
     if (dayTickets.length > 0) {
       const first = dayTickets[0];
@@ -126,28 +173,50 @@ function renderLensCalendarGrid() {
     const miniWrap = miniIcons ? `<span class="day-cell-mini-row">${miniIcons}</span>` : '';
 
     html += `
-      <div class="cal-day${isToday ? ' today' : ''}${empty ? ' empty' : ''}${isFuture ? ' future' : ''}"
+      <div class="cal-day${isToday ? ' today' : ''}${empty ? ' empty' : ''}${isFuture ? ' future' : ''}${hasBgImg ? ' has-bg-img' : ''}"
            data-date="${dateKey}"
            style="background:${bg};"
            onclick="${isFuture ? '' : `jumpToTimelineDate('${dateKey}')`}"
            title="${dateKey}${mood ? ` · 기분 ${mood}/5` : ''}">
+        ${bgImageHtml}
         <span class="cal-day-num">${d}</span>
         ${hasChapter ? `<span class="cal-chapter-dot"></span>` : ''}
         ${miniWrap}
       </div>
     `;
   }
+  const _filterBtn = (kind, label) => `
+    <button type="button"
+            class="cal-filter-btn${calFilters[kind] ? ' active' : ''}"
+            aria-pressed="${calFilters[kind] ? 'true' : 'false'}"
+            aria-label="${label}"
+            title="${label}"
+            onclick="toggleCalendarFilter('${kind}')">${_CAL_FILTER_SVG[kind]}</button>
+  `;
   html += `
       </div>
       <div class="cal-legend">
-        <span style="background:#5a4a72;"></span> 낮은 무드
-        <span style="background:#a89dc8;"></span> 중성
-        <span style="background:#d4a76a;"></span> 높은 무드
-        <span class="cal-legend-dot"></span> 챕터 있음
+        <div class="cal-legend-items">
+          <span style="background:#5a4a72;"></span> 낮은 무드
+          <span style="background:#a89dc8;"></span> 중성
+          <span style="background:#d4a76a;"></span> 높은 무드
+          <span class="cal-legend-dot"></span> 챕터 있음
+        </div>
+        <div class="cal-filter-toggle" role="group" aria-label="캘린더 표시 필터">
+          ${_filterBtn('photo', '일기 사진')}
+          ${_filterBtn('ticket', '티켓 진주')}
+          ${_filterBtn('book', '책 진주')}
+        </div>
       </div>
     </div>
   `;
   container.innerHTML = html;
+
+  // V4 (사용자 명시 2026-05-27 ultrathink): 필터 ON 시 신 path (storageKey) 이미지 hydrate.
+  if (_anyFilter) {
+    try { if (typeof hydrateDiaryPhotos === 'function') hydrateDiaryPhotos(container); } catch (e) { console.warn('[cal hydrateDiary]', e); }
+    try { if (typeof hydratePearlMedia === 'function') hydratePearlMedia(container); } catch (e) { console.warn('[cal hydratePearl]', e); }
+  }
 }
 
 function switchLibraryCat(cat) {
