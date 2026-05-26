@@ -278,10 +278,8 @@ function switchLibraryCat(cat) {
   if (typeof renderLensCalendarGrid === 'function') renderLensCalendarGrid();
   if (typeof _applyDiaryGridHide === 'function') _applyDiaryGridHide();
   // 사용자 요청 2026-04-29: 토글 5 카테고리 모두 통일 (SVG 아이콘 — 라벨 동적 X)
-  // 사용자 명시 2026-05-27 ultrathink: 실행 chip 은 그리드·타임라인 토글 적용 X → hide.
+  // 사용자 재정정 2026-05-27 ultrathink (캘린더 일정/할 일 2단계 재정정): 일정 lens (execute) 도 grid/timeline 토글 사용. grid = 일정 캘린더, timeline = 기존 execute (오늘 timetable + 할 일).
   const toggleEl = document.querySelector('.library-view-toggle');
-  if (toggleEl) toggleEl.style.display = (cat === 'execute') ? 'none' : '';
-  // 사용자 명시 2026-05-27 ultrathink (캘린더 일정/할 일 2-1단계): 카테고리 전환 시 일기/일정 토글 display 동기화.
-  if (typeof _applyCalViewModeDisplay === 'function') _applyCalViewModeDisplay();
+  if (toggleEl) toggleEl.style.display = '';
 }
 

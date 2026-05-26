@@ -284,15 +284,10 @@
       </div>
 
       <!-- 검색바 + 토글 (사용자 요청 2026-04-29: 토글 우측 배치) -->
-      <!-- 사용자 명시 2026-05-27 ultrathink (캘린더 일정/할 일 2-1단계): 일기·대화 grid 뷰 한정 일기/일정 토글 추가 — 검색 input 자리 교체. timeline 뷰 / 다른 카테고리에서는 검색 input 노출 (기존). -->
       <div id="archiveSearchBar" style="margin-bottom:16px; display:flex; gap:8px; align-items:center;">
         <input type="text" id="archiveSearch" placeholder="🔎 키워드, 날짜로 검색..."
                oninput="searchArchive()"
                style="flex:1; min-width:0; padding:12px 14px; background:var(--surface); border:1px solid var(--border); border-radius:12px; color:var(--text); font-size:13px; font-family:inherit;">
-        <div id="calViewModeToggle" style="display:none; flex:1; min-width:0; padding:5px; background:var(--surface); border:1px solid var(--border); border-radius:12px; gap:4px; align-items:stretch; box-sizing:border-box;">
-          <button class="cal-mode-btn" data-mode="diary"    onclick="switchCalViewMode('diary')"    style="flex:1; padding:8px 10px; background:var(--surface2); border:none; color:var(--text); border-radius:8px; cursor:pointer; font-family:inherit; font-size:13px; font-weight:500;">📔 일기</button>
-          <button class="cal-mode-btn" data-mode="schedule" onclick="switchCalViewMode('schedule')" style="flex:1; padding:8px 10px; background:transparent;       border:none; color:var(--text-soft); border-radius:8px; cursor:pointer; font-family:inherit; font-size:13px; font-weight:500;">📅 일정</button>
-        </div>
         <div class="library-view-toggle" style="margin:0; flex-shrink:0;">
           <button class="lib-view-btn active" data-view="grid"     onclick="switchLibraryView('grid')"     aria-label="그리드"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg></button>
           <button class="lib-view-btn"        data-view="timeline" onclick="switchLibraryView('timeline')" aria-label="타임라인"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="14" height="2" rx="1"/><rect x="1" y="7" width="14" height="2" rx="1"/><rect x="1" y="12" width="14" height="2" rx="1"/></svg></button>
@@ -330,8 +325,10 @@
       <div id="libGalpi" class="library-cat-view" style="display:none;">
         <!-- 사용자 요청 2026-04-29: 피드/목록 토글 통일 — JS에서 동적 렌더 -->
       </div>
-      <!-- 🚀 실행 (사용자 명시 2026-05-27 ultrathink — library-cats 5번째 chip) -->
+      <!-- 🚀 일정 (사용자 명시 2026-05-27 ultrathink — library-cats 5번째 chip) -->
+      <!-- 사용자 재정정 2026-05-27 ultrathink (캘린더 일정/할 일 2단계 재정정): 일정 lens 에 grid (캘린더) / timeline (기존 execute) 토글. _libView 따라 둘 중 하나만 노출 (08-lens-switching.js _renderActiveLens execute 분기). -->
       <div id="libExecute" class="library-cat-view" style="display:none;">
+        <div id="libExecuteGrid" style="display:none;"></div>
         <div id="executeContent"></div>
       </div>
     </div>

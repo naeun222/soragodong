@@ -21,8 +21,6 @@ function switchLibraryView(view) {
     _renderActiveLens();
     if (typeof _applyDiaryGridHide === 'function') _applyDiaryGridHide();
   }
-  // 사용자 명시 2026-05-27 ultrathink (캘린더 일정/할 일 2-1단계): grid/timeline 전환 시 일기/일정 토글 display 동기화.
-  if (typeof _applyCalViewModeDisplay === 'function') _applyCalViewModeDisplay();
 }
 
 // V4-fix (audit HIGH #2): 카테고리별 active lens만 재렌더 (전체 7 lens 호출 X — 비효율 fix)
@@ -41,6 +39,21 @@ function _renderActiveLens() {
     if (typeof renderLensPearls === 'function') renderLensPearls();
   } else if (cat === 'galpi') {
     if (typeof renderLensGalpi === 'function') renderLensGalpi();
+  } else if (cat === 'execute') {
+    // 사용자 재정정 2026-05-27 ultrathink (캘린더 일정/할 일 2단계 재정정): 일정 lens grid/timeline 분기.
+    //   grid = renderScheduleCalendarGrid (월간 캘린더 + schedules + task.dueDate dot)
+    //   timeline = renderExecute (기존 동작 — 오늘 timetable + 할 일 + 서랍장)
+    const gridEl = document.getElementById('libExecuteGrid');
+    const tlEl = document.getElementById('executeContent');
+    if (_libView === 'grid') {
+      if (gridEl) gridEl.style.display = '';
+      if (tlEl) tlEl.style.display = 'none';
+      if (typeof renderScheduleCalendarGrid === 'function') renderScheduleCalendarGrid();
+    } else {
+      if (gridEl) gridEl.style.display = 'none';
+      if (tlEl) tlEl.style.display = '';
+      if (typeof renderExecute === 'function') renderExecute();
+    }
   }
   if (typeof updateArchiveQuickCounts === 'function') updateArchiveQuickCounts();
 }
