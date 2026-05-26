@@ -20,6 +20,14 @@ let _archiveSearchQuery = '';
 //   renderLensPearls 가 screen-pearls.active 시 _pearlsTabSearchQuery, 그 외 _archiveSearchQuery 사용.
 let _pearlsTabSearchQuery = '';
 let _libView = 'grid';  // V4-1p: 그리드 ↔ 타임라인 토글
+// 사용자 명시 2026-05-27 ultrathink (캘린더 일정/할 일 2-1단계): 일기·대화 grid 뷰 한정 일기/일정 토글 모드.
+//   'diary' = 기존 (캘린더에 일기 표시). 'schedule' = 캘린더에 일정 (state.schedules) 표시 — 2-2 단계 구현.
+//   timeline 뷰 / 다른 카테고리에서는 무시 (검색 input 노출 유지).
+let _calViewMode = 'diary';
+try {
+  const _storedCalMode = localStorage.getItem('soragodong_cal_view_mode');
+  if (_storedCalMode === 'diary' || _storedCalMode === 'schedule') _calViewMode = _storedCalMode;
+} catch (e) {}
 let _archiveTagFilter = null;  // V4-1q: 깨달음 태그 칩 필터 (단일 선택)
 // 사용자 요청 2026-04-29: 카테고리별 피드/목록 토글 + 목록 모드 카테고리 필터
 // 사용자 명시 2026-05-02 cleanup: yangsaeng/galpi 별 view state 는 통합 _libView 로 대체. CatFilter 만 lens 별 유지 (UI onclick).
@@ -51,6 +59,8 @@ function renderArchive() {
   updateArchiveQuickCounts();
   // V4-fix #6: 일기·대화 grid 뷰 = 캘린더만 (lensTopicCards / lensTimeline 숨김). 매 호출 일관 적용.
   if (typeof _applyDiaryGridHide === 'function') _applyDiaryGridHide();
+  // 사용자 명시 2026-05-27 ultrathink (캘린더 일정/할 일 2-1단계): 일기/일정 토글 display 동기화 (첫 진입 시 + 매 재렌더).
+  if (typeof _applyCalViewModeDisplay === 'function') _applyCalViewModeDisplay();
 }
 
 function _applyDiaryGridHide() {
@@ -67,5 +77,40 @@ function _applyDiaryGridHide() {
   //   timeline 자체가 일기 + 대화 정리 통합 feed (renderLensTimeline 에서 topicCards 합쳐 inline 표시) → 중복 방지.
   //   grid + diary + 검색 케이스만 topicCards 살림 (기존 동작 유지).
   if (tc && _libView === 'timeline' && _currentLens === 'diary') tc.style.display = 'none';
+}
+
+// 사용자 명시 2026-05-27 ultrathink (캘린더 일정/할 일 2-1단계): 일기·대화 grid 뷰 한정 일기/일정 토글.
+//   일기·대화 + grid 일 때만 토글 노출 + 검색 input hide. 그 외는 검색 input 노출 (timeline / 다른 카테고리).
+function switchCalViewMode(mode) {
+  if (mode !== 'diary' && mode !== 'schedule') mode = 'diary';
+  if (_calViewMode === mode) return;
+  _calViewMode = mode;
+  try { localStorage.setItem('soragodong_cal_view_mode', mode); } catch (e) {}
+  _applyCalViewModeDisplay();
+  // 2-2 단계에서 일정 모드 캘린더 렌더링 추가. 현재는 캘린더 재호출만 (mode 전환 신호).
+  if (typeof renderLensCalendarGrid === 'function') renderLensCalendarGrid();
+  // 2-2 단계 (캘린더 일정 표시 + 추가/수정/삭제) 미구현 안내 — 사용자 확인용. 다음 step 후 제거.
+  if (mode === 'schedule' && typeof showToast === 'function') {
+    showToast('📅 일정 모드 — 캘린더 표시 + 추가는 다음 단계에서');
+  }
+}
+
+function _applyCalViewModeDisplay() {
+  const input = document.getElementById('archiveSearch');
+  const toggleEl = document.getElementById('calViewModeToggle');
+  if (!input || !toggleEl) return;
+  const showToggle = (_currentLens === 'diary' && _libView === 'grid');
+  if (showToggle) {
+    input.style.display = 'none';
+    toggleEl.style.display = 'flex';
+    document.querySelectorAll('#calViewModeToggle .cal-mode-btn').forEach(b => {
+      const isActive = b.dataset.mode === _calViewMode;
+      b.style.background = isActive ? 'var(--surface2)' : 'transparent';
+      b.style.color = isActive ? 'var(--text)' : 'var(--text-soft)';
+    });
+  } else {
+    input.style.display = '';
+    toggleEl.style.display = 'none';
+  }
 }
 

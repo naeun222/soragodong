@@ -13938,10 +13938,15 @@ img.pearl-load-fail {
       </div>
 
       <!-- 검색바 + 토글 (사용자 요청 2026-04-29: 토글 우측 배치) -->
+      <!-- 사용자 명시 2026-05-27 ultrathink (캘린더 일정/할 일 2-1단계): 일기·대화 grid 뷰 한정 일기/일정 토글 추가 — 검색 input 자리 교체. timeline 뷰 / 다른 카테고리에서는 검색 input 노출 (기존). -->
       <div id="archiveSearchBar" style="margin-bottom:16px; display:flex; gap:8px; align-items:center;">
         <input type="text" id="archiveSearch" placeholder="🔎 키워드, 날짜로 검색..."
                oninput="searchArchive()"
                style="flex:1; min-width:0; padding:12px 14px; background:var(--surface); border:1px solid var(--border); border-radius:12px; color:var(--text); font-size:13px; font-family:inherit;">
+        <div id="calViewModeToggle" style="display:none; flex:1; min-width:0; padding:5px; background:var(--surface); border:1px solid var(--border); border-radius:12px; gap:4px; align-items:stretch; box-sizing:border-box;">
+          <button class="cal-mode-btn" data-mode="diary"    onclick="switchCalViewMode('diary')"    style="flex:1; padding:8px 10px; background:var(--surface2); border:none; color:var(--text); border-radius:8px; cursor:pointer; font-family:inherit; font-size:13px; font-weight:500;">📔 일기</button>
+          <button class="cal-mode-btn" data-mode="schedule" onclick="switchCalViewMode('schedule')" style="flex:1; padding:8px 10px; background:transparent;       border:none; color:var(--text-soft); border-radius:8px; cursor:pointer; font-family:inherit; font-size:13px; font-weight:500;">📅 일정</button>
+        </div>
         <div class="library-view-toggle" style="margin:0; flex-shrink:0;">
           <button class="lib-view-btn active" data-view="grid"     onclick="switchLibraryView('grid')"     aria-label="그리드"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg></button>
           <button class="lib-view-btn"        data-view="timeline" onclick="switchLibraryView('timeline')" aria-label="타임라인"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="14" height="2" rx="1"/><rect x="1" y="7" width="14" height="2" rx="1"/><rect x="1" y="12" width="14" height="2" rx="1"/></svg></button>
@@ -50298,6 +50303,14 @@ let _archiveSearchQuery = '';
 //   renderLensPearls 가 screen-pearls.active 시 _pearlsTabSearchQuery, 그 외 _archiveSearchQuery 사용.
 let _pearlsTabSearchQuery = '';
 let _libView = 'grid';  // V4-1p: 그리드 ↔ 타임라인 토글
+// 사용자 명시 2026-05-27 ultrathink (캘린더 일정/할 일 2-1단계): 일기·대화 grid 뷰 한정 일기/일정 토글 모드.
+//   'diary' = 기존 (캘린더에 일기 표시). 'schedule' = 캘린더에 일정 (state.schedules) 표시 — 2-2 단계 구현.
+//   timeline 뷰 / 다른 카테고리에서는 무시 (검색 input 노출 유지).
+let _calViewMode = 'diary';
+try {
+  const _storedCalMode = localStorage.getItem('soragodong_cal_view_mode');
+  if (_storedCalMode === 'diary' || _storedCalMode === 'schedule') _calViewMode = _storedCalMode;
+} catch (e) {}
 let _archiveTagFilter = null;  // V4-1q: 깨달음 태그 칩 필터 (단일 선택)
 // 사용자 요청 2026-04-29: 카테고리별 피드/목록 토글 + 목록 모드 카테고리 필터
 // 사용자 명시 2026-05-02 cleanup: yangsaeng/galpi 별 view state 는 통합 _libView 로 대체. CatFilter 만 lens 별 유지 (UI onclick).
@@ -50329,6 +50342,8 @@ function renderArchive() {
   updateArchiveQuickCounts();
   // V4-fix #6: 일기·대화 grid 뷰 = 캘린더만 (lensTopicCards / lensTimeline 숨김). 매 호출 일관 적용.
   if (typeof _applyDiaryGridHide === 'function') _applyDiaryGridHide();
+  // 사용자 명시 2026-05-27 ultrathink (캘린더 일정/할 일 2-1단계): 일기/일정 토글 display 동기화 (첫 진입 시 + 매 재렌더).
+  if (typeof _applyCalViewModeDisplay === 'function') _applyCalViewModeDisplay();
 }
 
 function _applyDiaryGridHide() {
@@ -50345,6 +50360,41 @@ function _applyDiaryGridHide() {
   //   timeline 자체가 일기 + 대화 정리 통합 feed (renderLensTimeline 에서 topicCards 합쳐 inline 표시) → 중복 방지.
   //   grid + diary + 검색 케이스만 topicCards 살림 (기존 동작 유지).
   if (tc && _libView === 'timeline' && _currentLens === 'diary') tc.style.display = 'none';
+}
+
+// 사용자 명시 2026-05-27 ultrathink (캘린더 일정/할 일 2-1단계): 일기·대화 grid 뷰 한정 일기/일정 토글.
+//   일기·대화 + grid 일 때만 토글 노출 + 검색 input hide. 그 외는 검색 input 노출 (timeline / 다른 카테고리).
+function switchCalViewMode(mode) {
+  if (mode !== 'diary' && mode !== 'schedule') mode = 'diary';
+  if (_calViewMode === mode) return;
+  _calViewMode = mode;
+  try { localStorage.setItem('soragodong_cal_view_mode', mode); } catch (e) {}
+  _applyCalViewModeDisplay();
+  // 2-2 단계에서 일정 모드 캘린더 렌더링 추가. 현재는 캘린더 재호출만 (mode 전환 신호).
+  if (typeof renderLensCalendarGrid === 'function') renderLensCalendarGrid();
+  // 2-2 단계 (캘린더 일정 표시 + 추가/수정/삭제) 미구현 안내 — 사용자 확인용. 다음 step 후 제거.
+  if (mode === 'schedule' && typeof showToast === 'function') {
+    showToast('📅 일정 모드 — 캘린더 표시 + 추가는 다음 단계에서');
+  }
+}
+
+function _applyCalViewModeDisplay() {
+  const input = document.getElementById('archiveSearch');
+  const toggleEl = document.getElementById('calViewModeToggle');
+  if (!input || !toggleEl) return;
+  const showToggle = (_currentLens === 'diary' && _libView === 'grid');
+  if (showToggle) {
+    input.style.display = 'none';
+    toggleEl.style.display = 'flex';
+    document.querySelectorAll('#calViewModeToggle .cal-mode-btn').forEach(b => {
+      const isActive = b.dataset.mode === _calViewMode;
+      b.style.background = isActive ? 'var(--surface2)' : 'transparent';
+      b.style.color = isActive ? 'var(--text)' : 'var(--text-soft)';
+    });
+  } else {
+    input.style.display = '';
+    toggleEl.style.display = 'none';
+  }
 }
 
 // V4-1t: 🌟 오늘의 너 — 진주 1개 회전 (안 본 진주 우선)
@@ -52175,6 +52225,8 @@ function switchLibraryCat(cat) {
   // 사용자 명시 2026-05-27 ultrathink: 실행 chip 은 그리드·타임라인 토글 적용 X → hide.
   const toggleEl = document.querySelector('.library-view-toggle');
   if (toggleEl) toggleEl.style.display = (cat === 'execute') ? 'none' : '';
+  // 사용자 명시 2026-05-27 ultrathink (캘린더 일정/할 일 2-1단계): 카테고리 전환 시 일기/일정 토글 display 동기화.
+  if (typeof _applyCalViewModeDisplay === 'function') _applyCalViewModeDisplay();
 }
 
 // V3 호환: 옛 switchLens('conversations'|'wisdom') 호출 지원 (튜토리얼 등 외부 참조)
@@ -52200,6 +52252,8 @@ function switchLibraryView(view) {
     _renderActiveLens();
     if (typeof _applyDiaryGridHide === 'function') _applyDiaryGridHide();
   }
+  // 사용자 명시 2026-05-27 ultrathink (캘린더 일정/할 일 2-1단계): grid/timeline 전환 시 일기/일정 토글 display 동기화.
+  if (typeof _applyCalViewModeDisplay === 'function') _applyCalViewModeDisplay();
 }
 
 // V4-fix (audit HIGH #2): 카테고리별 active lens만 재렌더 (전체 7 lens 호출 X — 비효율 fix)
@@ -70338,7 +70392,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.275-schedule-crud-phase1';
+const APP_VERSION = 'v4.0.276-cal-mode-toggle-2-1';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 

@@ -21,6 +21,8 @@ function switchLibraryView(view) {
     _renderActiveLens();
     if (typeof _applyDiaryGridHide === 'function') _applyDiaryGridHide();
   }
+  // 사용자 명시 2026-05-27 ultrathink (캘린더 일정/할 일 2-1단계): grid/timeline 전환 시 일기/일정 토글 display 동기화.
+  if (typeof _applyCalViewModeDisplay === 'function') _applyCalViewModeDisplay();
 }
 
 // V4-fix (audit HIGH #2): 카테고리별 active lens만 재렌더 (전체 7 lens 호출 X — 비효율 fix)

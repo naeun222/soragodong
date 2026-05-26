@@ -281,5 +281,7 @@ function switchLibraryCat(cat) {
   // 사용자 명시 2026-05-27 ultrathink: 실행 chip 은 그리드·타임라인 토글 적용 X → hide.
   const toggleEl = document.querySelector('.library-view-toggle');
   if (toggleEl) toggleEl.style.display = (cat === 'execute') ? 'none' : '';
+  // 사용자 명시 2026-05-27 ultrathink (캘린더 일정/할 일 2-1단계): 카테고리 전환 시 일기/일정 토글 display 동기화.
+  if (typeof _applyCalViewModeDisplay === 'function') _applyCalViewModeDisplay();
 }
 
