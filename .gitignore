@@ -69,3 +69,11 @@ scripts/recover-*.local.json
 soragodong-rescue*.json
 soragodong_v4_*.json
 soragodong_v4_*.txt
+
+# 사용자 명시 2026-05-27 ultrathink — repo PUBLIC. 사적 진단 / 운영 dump 자동 차단.
+#   재설계-* : 본인 일기 인용 포함 (5/16 사건 등 사생활).
+#   payload / main-current / cron-snap : E2EE payload + UID 평문 + 사용자 task 평문.
+재설계-*.md
+payload.json
+main-current.json
+cron-snap-*.json
