@@ -30,28 +30,7 @@ function classifyDrawerTask(task) {
   return 'now';
 }
 
-async function promoteFromDrawer() {
-  const todayKeyVal = todayKey();
-  const drawer = (state.tasks || []).filter(t => t.slot === 'drawer' && t.date === todayKeyVal && t.status !== 'done');
-  if (drawer.length === 0) {
-    showToast('오늘 할 일 다 끝! 잘했어 🐚');
-    return;
-  }
-  const yes = await showConfirmModal({
-    title: '오늘의 카드 다 깼어 🐚',
-    message: `서랍장에 ${drawer.length}장 더 있어.\n다음 3장 꺼낼까?`,
-    okLabel: '꺼낼래',
-    cancelLabel: '쉴래'
-  });
-  if (!yes) return;
-  drawer.slice(0, 3).forEach(t => {
-    t.slot = 'now3';
-    t.status = 'active';
-  });
-  saveState();
-  renderExecute();
-  showToast('새 카드 3장 ✦');
-}
+// 사용자 명시 2026-05-27 ultrathink (re-iter): promoteFromDrawer 폐기 — now3 surface 폐기 후 무의미. 자동 trigger callsite (completeQuest setTimeout) 도 같이 제거.
 
 // === IMMERSE START — V4 redesign (사용자 명시 2026-05-04 ultrathink): 진입장벽 제거 ===
 // 옛: task 입력 modal → ritual 모달 (IF-THEN 4 step) → 발사

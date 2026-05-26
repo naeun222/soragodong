@@ -90,17 +90,17 @@ function nextPriority() {
   return all.length === 0 ? 0 : Math.max(...all) + 1;
 }
 
+// 사용자 명시 2026-05-27 ultrathink (re-iter): now3 폐기 → 모두 '오늘 할 일' (drawer + isToday=true) 로 promote. promoteTaskToNow3 함수 자체 폐기 (외부 callsite 없음).
 function promoteFromVault(itemId) {
   const item = state.memoryVault.find(v => v.id === itemId);
   if (!item) return;
   const todayKeyVal = todayKey();
-  const now3Count = (state.tasks || []).filter(t => t.date === todayKeyVal && t.slot === 'now3' && t.status !== 'done').length;
-  
   state.tasks.push({
     id: 'task_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
     title: item.content,
-    status: now3Count < 3 ? 'active' : 'drawer',
-    slot: now3Count < 3 ? 'now3' : 'drawer',
+    status: 'drawer',
+    slot: 'drawer',
+    isToday: true,
     date: todayKeyVal,
     weight: 'daily',
     energy: 'medium',
@@ -110,27 +110,9 @@ function promoteFromVault(itemId) {
   });
   item.processed = true;
   saveState();
-  renderVault();
-  renderExecute();
-  showToast(now3Count < 3 ? '오늘의 카드에 추가됨' : '서랍장으로');
-}
-
-function promoteTaskToNow3(taskId) {
-  const task = state.tasks.find(t => t.id === taskId);
-  if (!task) return;
-  const todayKeyVal = todayKey();
-  const now3Count = (state.tasks || []).filter(t => t.date === todayKeyVal && t.slot === 'now3' && t.status !== 'done').length;
-  if (now3Count >= 3) {
-    showToast('오늘의 카드가 꽉 찼어. 하나 끝내거나 리롤 해.');
-    return;
-  }
-  task.slot = 'now3';
-  task.status = 'active';
-  task.date = todayKeyVal;
-  saveState();
-  renderVault();
-  renderExecute();
-  showToast('오늘의 카드에 추가됨');
+  if (typeof renderVault === 'function') renderVault();
+  if (typeof renderExecute === 'function') renderExecute();
+  showToast('오늘 할 일에 추가됨');
 }
 
 async function deleteVaultItem(itemId) {
@@ -229,29 +211,7 @@ async function deleteTask(taskId) {
   renderExecute();
 }
 
-// === NIGHT SHUTDOWN — 미완료 자동 처리 ===
-function nightShutdown() {
-  // Called when user opens app at night and has incomplete tasks
-  const todayKeyVal = todayKey();
-  const incomplete = (state.tasks || []).filter(t => 
-    t.date === todayKeyVal && t.slot === 'now3' && t.status !== 'done'
-  );
-  
-  if (incomplete.length === 0) return;
-  
-  // Move to drawer for tomorrow (gentle, no shame)
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowKey = tomorrow.toISOString().split('T')[0];
-  
-  incomplete.forEach(t => {
-    t.date = tomorrowKey;
-    t.slot = 'drawer';
-    t.status = 'rolled_over';
-    t.rolledOverAt = new Date().toISOString();
-  });
-  saveState();
-}
+// 사용자 명시 2026-05-27 ultrathink (re-iter): nightShutdown 폐기 — now3 surface 폐기 후 무의미. 외부 callsite 없음.
 
 function showArchiveReviews() {
   showScreen('archive-reviews');

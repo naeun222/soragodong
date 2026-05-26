@@ -1,17 +1,20 @@
 // ═══════════════════════════════════════════════════════════════
-// V4 (사용자 명시 2026-05-27 ultrathink): 실행 탭 UI 복원 — 홈 (도서관) library-cats 5번째 chip 으로.
-//   2026-05-16 (f632dd4) 폐기한 renderExecute / brain dump / Now 3 / 서랍장 / 타임테이블 / immerse UI 복원.
-//   bottom-nav '실행' 탭 복원 X — 도서관 chip (data-cat="execute") 만. showScreen('execute') 분기도 부활 X.
-//   튜토리얼 11 step (go_execute ~ exec_immerse_done) 도 복원 X (onboarding 가벼움 우선).
-//   shell helper (SHELL_POOLS / pickShellForTask / completeQuest 등) 의 V4 개선 (dedup + anti-recency + typeof guard) 유지.
-//   chip 진입: switchLibraryCat('execute') → #libExecute 노출 → #executeContent 안 renderExecute 결과.
+// V4 (사용자 명시 2026-05-27 ultrathink — re-iter): 일정 chip — '오늘의 카드' (now3 slot) 폐기. brain dump / 직접 추가 결과 모두 그냥 '오늘 할 일' (drawer slot + isToday=true) 로 통합.
+//   변경 (이번 commit):
+//     · renderExecute: 오늘의 카드 섹션 (✦ 큰 카드 + 셸 미리보기 + [시작][✓]) 제거.
+//     · processBrainDump / addManualTask: 모든 신규 task → drawer + isToday=true. AI brain_dump 의 result.now3 + result.drawer 둘 다 합쳐서 같은 surface 로.
+//     · completeQuest 셸 보상 게이트: `task.slot === 'now3' || task.source === 'ai_mission'` → `task.source === 'ai_mission'` 만. now3 자리 셸 보상 폐기 (사용자 명시: '지금 now3 셸 보상만 폐기' — AI 미션 보상은 유지).
+//     · promoteFromDrawer setTimeout 자동 trigger 폐기 ('오늘의 카드 다 깼어 / 다음 3장 꺼낼까?' 모달).
+//     · rerollQuest / toggleExecCardExpand / _expandedExecCards / previewShellForTask 폐기 — 옛 now3 카드 surface 전용.
+//     · brain dump 모달 sub-text 에 'AI 호출 = 본인 plan 토큰 차감' 한 줄 추가 (사용자 명시: API 토큰 = 사용자 부담).
+//   '시작' 버튼은 유지 (사용자 명시: '시작 버튼은 냅둬'). 일정 lens 상단 큰 🌧 시작 (openImmerseStart) + addManualTask 후 '바로 시작?' 확인 모달 모두 그대로.
+//   shell helper (SHELL_POOLS / pickShellForTask / completeQuest 의 dedup + anti-recency + typeof guard) 유지.
 // ═══════════════════════════════════════════════════════════════
 
 let _execMode = 'balance';
 
 // V4 (사용자 명시 2026-05-04 ultrathink): 실행 탭 redesign 상태
 let _timetableExpanded = false;          // 타임테이블 strip 펼침 (세션 한정)
-let _expandedExecCards = new Set();      // Now 3 카드 펼침 상태 (세션 한정)
 
 // 사용자 명시 2026-05-06 (정정): 실행탭 일정 = 자정 (00:00) cutoff. todayKey() 의 4AM cutoff X — 일반 자정 기준.
 function _scheduleDateKey() {
@@ -65,12 +68,6 @@ function toggleTimetableSection() {
   if (typeof renderExecute === 'function') renderExecute();
 }
 
-function toggleExecCardExpand(taskId) {
-  if (_expandedExecCards.has(taskId)) _expandedExecCards.delete(taskId);
-  else _expandedExecCards.add(taskId);
-  if (typeof renderExecute === 'function') renderExecute();
-}
-
 function toggleDrawerSection() {
   state.preferences = state.preferences || {};
   state.preferences._drawerSectionExpanded = !state.preferences._drawerSectionExpanded;
@@ -100,12 +97,11 @@ function renderExecute() {
   }
 
   const todayTasks = (state.tasks || []).filter(t => t.date === todayKeyVal);
-  const now3 = todayTasks.filter(t => t.slot === 'now3' && t.status !== 'done');
   const completed = todayTasks.filter(t => t.status === 'done' && !t.isToday);
 
   let html = `
     <div class="screen-title">일정 🚀</div>
-    <div class="screen-sub">머릿속 짐 → 오늘의 카드 → 차근히.</div>
+    <div class="screen-sub">머릿속 짐 → 할 일로 정리 → 차근히.</div>
   `;
 
   html += _renderTimetableStripHTML();
@@ -129,50 +125,7 @@ function renderExecute() {
     </button>
   `;
 
-  // Now 3 section (있을 때만)
-  if (now3.length > 0) {
-    html += `
-      <div class="exec-now-section">
-        <div class="exec-section-label">✦ 오늘의 카드 · ${now3.length}장</div>
-    `;
-    now3.forEach(task => {
-      const isAIMission = task.source === 'ai_mission';
-      const energyLabel = task.energy === 'low' ? '가벼움' : task.energy === 'high' ? '무거움' : '보통';
-      const tag = isAIMission ? '🐚 소라의 부름' : task.weight === 'main' ? (task.execMode === 'focus' ? '🔥 무거운 메인' : '⚡ 메인') : task.weight === 'light' ? '🍃 가벼움' : '📌 일상';
-      const preview = previewShellForTask(task);
-      const previewEmoji = preview ? preview.emojis[0] : '🐚';
-      const rarityClass = preview?.tier === 'golden' ? 'shell-golden' : preview?.tier === 'call' ? 'shell-call' : preview?.tier === 'main' ? 'shell-main' : '';
-      const isExpanded = _expandedExecCards.has(task.id);
-      const elapsedStr = (typeof getTaskElapsedTime === 'function') ? getTaskElapsedTime(task.id) : '';
-      html += `
-        <div class="exec-card" data-task-id="${task.id}">
-          <div class="exec-card-row" onclick="toggleExecCardExpand('${task.id}')" title="탭하면 자세히 보기">
-            <span class="exec-card-shell-preview-inline ${rarityClass}" title="이거 깨면 ${preview?.label || ''} 소라">${previewEmoji}</span>
-            <span class="exec-card-row-title">${escapeHtml(task.title)}</span>
-            <span class="exec-card-actions-mini" onclick="event.stopPropagation()">
-              <button class="start-mini" onclick="startQuest('${task.id}')">시작</button>
-              <button onclick="toggleQuestComplete('${task.id}')">✓</button>
-            </span>
-          </div>
-          ${isExpanded ? `
-            <div class="exec-card-detail">
-              <span class="exec-card-tag">${tag}</span>
-              ${task.description ? `<div class="exec-card-detail-desc">${escapeHtml(task.description)}</div>` : ''}
-              <div class="exec-card-meta">
-                <span>${energyLabel}</span>
-                ${task.assignedBlock && typeof getBlockLabel === 'function' ? `<span>📅 ${getBlockLabel(task.assignedBlock)}</span>` : ''}
-                ${elapsedStr ? `<span>⏱ ${elapsedStr}</span>` : ''}
-              </div>
-              <div class="exec-card-actions">
-                ${!isAIMission ? `<button onclick="deleteTask('${task.id}')">✕ 삭제</button>` : ''}
-              </div>
-            </div>
-          ` : ''}
-        </div>
-      `;
-    });
-    html += `</div>`;
-  }
+  // 사용자 명시 2026-05-27 ultrathink (re-iter): '오늘의 카드' (now3 slot) 섹션 폐기. 옛 큰 카드 + 셸 미리보기 + [시작][✓] surface 모두 제거 — brain dump / 직접 추가 결과는 모두 아래 '오늘 할 일' 로 합류.
 
   // 오늘 할 일 (drawer 중 isToday=true) — 헤더에 + 추가 버튼
   const todayListAll = (state.tasks || [])
@@ -383,7 +336,7 @@ async function processBrainDump() {
   if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = '고동이 정리 중... ✦'; }
 
   if (typeof _canAI !== 'function' || !_canAI()) {
-    // Fallback: split by line, no AI
+    // Fallback: split by line, no AI. 모두 '오늘 할 일' (drawer + isToday=true) 로.
     const lines = dump.split('\n').filter(l => l.trim()).slice(0, 10);
     const todayKeyVal = todayKey();
     const basePriority = (typeof nextPriority === 'function') ? nextPriority() : 0;
@@ -391,10 +344,11 @@ async function processBrainDump() {
       state.tasks.push({
         id: 'task_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
         title: line.trim(),
-        status: i < 3 ? 'active' : 'drawer',
-        slot: i < 3 ? 'now3' : 'drawer',
+        status: 'drawer',
+        slot: 'drawer',
+        isToday: true,
         date: todayKeyVal,
-        weight: i === 0 ? 'main' : (i === 1 ? 'light' : 'daily'),
+        weight: 'daily',
         energy: 'medium',
         priority: basePriority + i,
         source: 'manual',
@@ -405,7 +359,7 @@ async function processBrainDump() {
     closeBrainDump();
     if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '고동에게 맡기기 ✦'; }
     renderExecute();
-    showToast('정리 완료. 카드 3장 발급됨 ✦');
+    showToast(`정리 완료. 할 일 ${lines.length}개 추가됨 ✦`);
     return;
   }
 
@@ -436,13 +390,16 @@ async function processBrainDump() {
     const basePriority = existingPriorities.length > 0 ? Math.max(...existingPriorities) + 1 : 0;
     let pIdx = 0;
 
-    (result.now3 || []).slice(0, 3).forEach(card => {
+    // 사용자 명시 2026-05-27 ultrathink (re-iter): now3 / drawer 분기 폐기. AI 가 분류한 결과 두 배열 다 그냥 '오늘 할 일' (drawer + isToday=true) 로 합쳐 push.
+    const merged = [...((result.now3 || [])), ...((result.drawer || []))];
+    merged.forEach(card => {
       state.tasks.push({
         id: 'task_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
         title: card.title || '(제목 없음)',
         description: card.description || null,
-        status: 'active',
-        slot: 'now3',
+        status: 'drawer',
+        slot: 'drawer',
+        isToday: true,
         date: todayKeyVal,
         weight: card.weight || 'daily',
         energy: card.energy || 'medium',
@@ -453,26 +410,11 @@ async function processBrainDump() {
       });
     });
 
-    (result.drawer || []).forEach(card => {
-      state.tasks.push({
-        id: 'task_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-        title: card.title || '(제목 없음)',
-        status: 'drawer',
-        slot: 'drawer',
-        date: todayKeyVal,
-        weight: card.weight || 'daily',
-        energy: 'medium',
-        priority: basePriority + (pIdx++),
-        source: 'brain_dump',
-        createdAt: now
-      });
-    });
-
     saveState();
     closeBrainDump();
     if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '고동에게 맡기기 ✦'; }
     renderExecute();
-    showToast(`카드 ${(result.now3 || []).length}장 발급됨 ✦`);
+    showToast(`할 일 ${merged.length}개 추가됨 ✦`);
   } catch (e) {
     console.error(e);
     if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '고동에게 맡기기 ✦'; }
@@ -481,6 +423,8 @@ async function processBrainDump() {
 }
 
 // === ADD MANUAL TASK ===
+// 사용자 명시 2026-05-27 ultrathink (re-iter): now3 / drawer 분기 폐기. 항상 '오늘 할 일' (drawer + isToday=true) 로 추가.
+//   '바로 시작?' 확인 모달은 유지 (사용자 명시: 시작 버튼 냅둬).
 async function addManualTask() {
   const title = await showInputModal({
     title: '할 일 추가 ✦',
@@ -489,12 +433,12 @@ async function addManualTask() {
   });
   if (!title || !title.trim()) return;
   const todayKeyVal = todayKey();
-  const now3Count = (state.tasks || []).filter(t => t.date === todayKeyVal && t.slot === 'now3' && t.status !== 'done').length;
   const newTask = {
     id: 'task_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
     title: title.trim(),
-    status: now3Count < 3 ? 'active' : 'drawer',
-    slot: now3Count < 3 ? 'now3' : 'drawer',
+    status: 'drawer',
+    slot: 'drawer',
+    isToday: true,
     date: todayKeyVal,
     weight: 'daily',
     energy: 'medium',
@@ -506,53 +450,17 @@ async function addManualTask() {
   saveState();
   renderExecute();
 
-  if (now3Count < 3) {
-    const start = await showConfirmModal({
-      title: `"${title.trim()}" 추가됐어 ✦`,
-      message: '바로 시작할래?\n(시작 약속 만들기)',
-      okLabel: '시작',
-      cancelLabel: '나중에'
-    });
-    if (start) {
-      startQuest(newTask.id);
-    } else {
-      showToast('오늘의 카드에 추가됨');
-    }
+  const start = await showConfirmModal({
+    title: `"${title.trim()}" 추가됐어 ✦`,
+    message: '바로 시작할래?\n(시작 약속 만들기)',
+    okLabel: '시작',
+    cancelLabel: '나중에'
+  });
+  if (start) {
+    startQuest(newTask.id);
   } else {
-    showToast('서랍장에 추가됨');
+    showToast('오늘 할 일에 추가됨');
   }
-}
-
-// === REROLL ===
-async function rerollQuest(taskId) {
-  const task = state.tasks.find(t => t.id === taskId);
-  if (!task) return;
-  const todayKeyVal = todayKey();
-  const drawer = (state.tasks || []).filter(t =>
-    t.slot === 'drawer' && t.date === todayKeyVal && t.status !== 'done'
-  );
-  if (drawer.length === 0) {
-    const yes = await showConfirmModal({
-      title: '서랍장이 비어있어',
-      message: '이 카드를 그냥 서랍장으로 보낼까?',
-      okLabel: '보내',
-      cancelLabel: '취소'
-    });
-    if (yes) {
-      task.slot = 'drawer';
-      saveState();
-      renderExecute();
-      showToast('서랍장으로 이동');
-    }
-    return;
-  }
-  const replacement = drawer[0];
-  task.slot = 'drawer';
-  replacement.slot = 'now3';
-  replacement.status = 'active';
-  saveState();
-  renderExecute();
-  showToast('새 카드 뽑힘 ↻');
 }
 
 // === SHELL REWARD SYSTEM (V3.1) ===
@@ -633,14 +541,7 @@ function pickLegendaryShells(n) {
   return picked;
 }
 
-function previewShellForTask(task) {
-  if (!task) return null;
-  if (task.source === 'ai_mission') return SHELL_POOLS.call;
-  if (task.weight === 'main' && task.execMode === 'focus') return SHELL_POOLS.golden;
-  if (task.weight === 'main') return SHELL_POOLS.main;
-  if (task.weight === 'daily') return SHELL_POOLS.daily;
-  return SHELL_POOLS.light;
-}
+// 사용자 명시 2026-05-27 ultrathink (re-iter): previewShellForTask 폐기 — 옛 now3 카드 안 셸 미리보기 surface 전용이었음. 외부 callsite X.
 
 function totalShellPoints() {
   return (state.shellCollection || []).reduce((sum, s) => sum + (s.points || 1), 0);
@@ -666,8 +567,10 @@ function completeQuest(taskId) {
   task.status = 'done';
   task.completedAt = new Date().toISOString();
 
-  // 사용자 명시 2026-05-08 ultrathink: 소라 보상 = '오늘의 카드' (now3 slot) 한정.
-  if (task.slot !== 'now3' && task.source !== 'ai_mission') {
+  // 사용자 명시 2026-05-27 ultrathink (re-iter): now3 자리 셸 보상 폐기 → AI 미션 (소라의 부름) 만 셸 가챠.
+  //   옛 게이트: `task.slot !== 'now3' && task.source !== 'ai_mission'` 면 셸 X.
+  //   새 게이트: `task.source !== 'ai_mission'` 면 셸 X. 옛 데이터의 now3 task 도 자연 새 정책으로.
+  if (task.source !== 'ai_mission') {
     saveState();
     if (typeof renderExecute === 'function') renderExecute();
     return;
@@ -722,10 +625,5 @@ function completeQuest(taskId) {
   saveState();
 
   if (typeof renderExecute === 'function') renderExecute();
-  // Check if all Now 3 done — promote drawer if available
-  const todayKeyVal = todayKey();
-  const remaining = state.tasks.filter(t => t.date === todayKeyVal && t.slot === 'now3' && t.status !== 'done').length;
-  if (remaining === 0 && typeof promoteFromDrawer === 'function') {
-    setTimeout(() => promoteFromDrawer(), 1000);
-  }
+  // 사용자 명시 2026-05-27 ultrathink (re-iter): now3 폐기 → 자동 promoteFromDrawer setTimeout trigger 도 폐기 ('오늘의 카드 다 깼어 / 다음 3장 꺼낼까?' 모달).
 }

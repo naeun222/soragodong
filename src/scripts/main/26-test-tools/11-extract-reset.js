@@ -30,8 +30,8 @@ async function testForceExtract() {
 
 async function testResetExecute() {
   const yes = await showConfirmModal({
-    title: '실행 탭 초기화?',
-    message: '오늘의 카드, 진행 중 task, dayPlan 다 지워.\n다른 데이터(체크인/대화/프로젝트 등)는 유지.',
+    title: '일정 chip 초기화?',
+    message: '오늘 할 일, 서랍장, 진행 중 task, dayPlan 다 지워.\n다른 데이터(체크인/대화/프로젝트 등)는 유지.',
     okLabel: '🗑 초기화', cancelLabel: '아니'
   });
   if (!yes) return;

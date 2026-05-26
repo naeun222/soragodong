@@ -27,21 +27,21 @@ function renderBlockPickerContent() {
   if (!container) return;
   
   const todayKeyVal = todayKey();
-  // Available tasks: now3 + drawer + memoryVault items
-  const now3OtherBlocks = (state.tasks || []).filter(t => 
-    t.date === todayKeyVal && t.slot === 'now3' && t.status !== 'done' && t.assignedBlock !== _currentPickerBlock
+  // 사용자 명시 2026-05-27 ultrathink (re-iter): now3 폐기 → 오늘 할 일 (drawer + isToday=true) + 서랍장 (drawer + !isToday) + memoryVault 로 단순화.
+  const todayOtherBlocks = (state.tasks || []).filter(t =>
+    t.date === todayKeyVal && t.slot === 'drawer' && t.isToday && t.status !== 'done' && t.assignedBlock !== _currentPickerBlock
   );
-  const drawer = (state.tasks || []).filter(t => 
-    t.slot === 'drawer' && t.status !== 'done'
+  const drawer = (state.tasks || []).filter(t =>
+    t.slot === 'drawer' && !t.isToday && t.status !== 'done'
   );
   const vault = (state.memoryVault || []).filter(v => !v.processed);
-  
+
   let html = '';
-  
-  if (now3OtherBlocks.length > 0) {
+
+  if (todayOtherBlocks.length > 0) {
     html += `<div class="vault-section">
-      <div class="vault-section-label">🐚 오늘의 카드</div>`;
-    now3OtherBlocks.forEach(t => {
+      <div class="vault-section-label">📋 오늘 할 일</div>`;
+    todayOtherBlocks.forEach(t => {
       html += `
         <div class="vault-item">
           <div class="content">${escapeHtml(t.title)}</div>
@@ -51,10 +51,10 @@ function renderBlockPickerContent() {
     });
     html += `</div>`;
   }
-  
+
   if (drawer.length > 0) {
     html += `<div class="vault-section">
-      <div class="vault-section-label">📋 서랍장 — 카드</div>`;
+      <div class="vault-section-label">📂 서랍장</div>`;
     drawer.forEach(t => {
       html += `
         <div class="vault-item">
@@ -80,11 +80,11 @@ function renderBlockPickerContent() {
     html += `</div>`;
   }
   
-  if (now3OtherBlocks.length === 0 && drawer.length === 0 && vault.length === 0) {
+  if (todayOtherBlocks.length === 0 && drawer.length === 0 && vault.length === 0) {
     html = `<div style="text-align:center; padding:30px 16px; color:var(--text-dim); font-size:13px; line-height:1.8;">
       <div style="font-size:32px; margin-bottom:12px;">🐚</div>
       넣을 게 없어.<br>
-      "🧠 고동에게 맡기기"로 카드 발급받거나<br>
+      "🧠 고동에게 맡기기"로 할 일 정리하거나<br>
       대화에서 할 일 흘리면 여기 모여.
     </div>`;
   }
@@ -102,15 +102,16 @@ function assignTaskToBlock(taskId) {
   renderExecute();
 }
 
+// 사용자 명시 2026-05-27 ultrathink (re-iter): now3 폐기 → 모두 '오늘 할 일' (drawer + isToday=true) 로 promote.
 function promoteAndAssign(taskId) {
   const task = state.tasks.find(t => t.id === taskId);
   if (!task) return;
-  task.slot = 'now3';
-  task.status = 'active';
+  task.slot = 'drawer';
+  task.isToday = true;
   task.date = todayKey();
   task.assignedBlock = _currentPickerBlock;
   saveState();
-  showToast('오늘의 카드 + 시간 지정 ✦');
+  showToast('오늘 할 일 + 시간 지정 ✦');
   closeBlockPicker();
   renderExecute();
 }
@@ -121,8 +122,9 @@ function vaultPromoteAndAssign(itemId) {
   state.tasks.push({
     id: 'task_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
     title: item.content,
-    status: 'active',
-    slot: 'now3',
+    status: 'drawer',
+    slot: 'drawer',
+    isToday: true,
     date: todayKey(),
     weight: 'daily',
     energy: 'medium',
@@ -133,7 +135,7 @@ function vaultPromoteAndAssign(itemId) {
   });
   item.processed = true;
   saveState();
-  showToast('카드 추가됨 ✦');
+  showToast('할 일 추가됨 ✦');
   closeBlockPicker();
   renderExecute();
 }
@@ -202,8 +204,9 @@ function renderTimetableHTML() {
     <div class="exec-timetable-title">📅 오늘의 큰 그림</div>
   `;
   blocks.forEach(b => {
-    const tasksInBlock = (state.tasks || []).filter(t => 
-      t.date === todayKeyVal && t.assignedBlock === b && t.slot === 'now3'
+    // 사용자 명시 2026-05-27 ultrathink (re-iter): now3 폐기 → 오늘 할 일 (drawer + isToday=true) 만 표시.
+    const tasksInBlock = (state.tasks || []).filter(t =>
+      t.date === todayKeyVal && t.assignedBlock === b && t.slot === 'drawer' && t.isToday
     );
     html += `
       <div class="exec-tt-block ${b === current ? 'current' : ''}" onclick="openBlockPicker('${b}')" style="cursor:pointer;">

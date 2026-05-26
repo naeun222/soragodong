@@ -106,7 +106,7 @@ function renderBeach() {
       <div class="beach-empty" style="grid-column: 1 / -1;">
         <div class="icon">🏖</div>
         ${_beachTab === 'call' ? '아직 소라의 부름 클리어한 적 없어' :
-          _beachTab === 'card' ? '아직 오늘의 카드 클리어한 적 없어' :
+          _beachTab === 'card' ? '여기는 옛 할 일 셸이 모이던 곳 — 지금은 부름만 셸 발급' :
           '아직 비어있어. 첫 소라 모아보자.'}
       </div>
     `;
