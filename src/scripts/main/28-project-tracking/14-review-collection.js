@@ -363,8 +363,11 @@ function renderLensPearls() {
     html += `<div class="pearls-empty"></div>`;
   } else if (_libView === 'grid') {
     // V4-fix v2 (사용자 보고): Pinterest masonry — 다양 사이즈 + 미세 회전 + 날짜 + 음악 placeholder
-    html += `<div class="pearls-pinterest">`;
-    pearls.forEach((p, idx) => {
+    // 사용자 보고 2026-05-28: column-count multicol 의 2번째 컬럼 첫 타일 (오른쪽 맨 위) 이 스크롤 중 깜빡임.
+    //   원인: Chromium WebView 가 multicol fragmentation 경계 (컬럼 분할 지점) 의 타일을 repaint 불안정하게 처리.
+    //   위치로 결정 (항상 column 2 first child) → 사진 내용/순서 무관. isolation/backface-visibility 패치로도 미해결.
+    //   fix: column-count → 2 flex 컬럼 + JS round-robin 분배. fragmentation 경계 자체가 사라져 근본 제거.
+    const _renderPearlTile = (p, idx) => {
       // deterministic seed per pearl
       const seed = (p.id || '').split('').reduce((a, c) => a + c.charCodeAt(0), idx);
       // 미세 회전 (4 variant) — 진짜 흩뿌림 느낌
@@ -380,9 +383,9 @@ function renderLensPearls() {
         : '';
       // V4 (사용자 명시 2026-05-14 ultrathink): 티켓 / 책 카드 분기 (사진 dominant).
       if (p.category === '티켓' && typeof _renderTicketCardHTML === 'function') {
-        html += _renderTicketCardHTML(p, { large: isLarge });
+        return _renderTicketCardHTML(p, { large: isLarge });
       } else if (p.category === '책' && typeof _renderBookCardHTML === 'function') {
-        html += _renderBookCardHTML(p, { large: isLarge });
+        return _renderBookCardHTML(p, { large: isLarge });
       } else if (p.category === '음악' && p.track) {
         // 사용자 보고 2026-04-29: artwork onerror replaceWith가 DOM 변경 → masonry layout 재계산 → 첫 카드 깜빡임.
         // onerror=null로 무한 retry 차단 + decoding/loading 힌트로 안정적 로드.
@@ -396,7 +399,7 @@ function renderLensPearls() {
         const appleBtnHtml = (p.track.trackUrl || p.track.title)
           ? `<button class="pearl-tile-apple" onclick="event.stopPropagation(); _openMusicServiceByPearlId('${escapeHtml(p.id)}')" aria-label="음악 듣기">${_MUSIC_WAVE_SVG}</button>`
           : '';
-        html += `
+        return `
           <div class="pinterest-tile tile-music${sizeClass}"${tiltStr} onclick="openPearl('${p.id}')">
             <div class="tile-music-art-wrap">
               ${artHtml}
@@ -423,7 +426,7 @@ function renderLensPearls() {
         const visual = thumbImg
           ? thumbImg
           : `<div class="tile-photo-art video-thumb-placeholder">📹</div>`;
-        html += `
+        return `
           <div class="pinterest-tile tile-photo${sizeClass}"${tiltStr} onclick="openPearl('${p.id}')">
             ${visual}
             <div class="tile-music-meta">
@@ -437,7 +440,7 @@ function renderLensPearls() {
         // V4 (사용자 명시 2026-05-18 ultrathink): Phase 1D — pearlImgHtml 이 옛 dataURL / 신 storageKey 자동 분기.
         const iconMap = { 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥' };
         const icon = iconMap[p.category] || '💎';
-        html += `
+        return `
           <div class="pinterest-tile tile-photo${sizeClass}"${tiltStr} onclick="openPearl('${p.id}')">
             ${pearlImgHtml(p, 'photo', { cls: 'tile-photo-art', alt: p.content || '' })}
             <div class="tile-music-meta">
@@ -450,7 +453,7 @@ function renderLensPearls() {
       } else {
         const iconMap = { 음악: '🎵', 음식: '🍴', 장소: '📍', 순간: '✨', 사람: '👥', 기타: '💎' };
         const icon = iconMap[p.category || '기타'] || '💎';
-        html += `
+        return `
           <div class="pinterest-tile tile-text${sizeClass}"${tiltStr} onclick="openPearl('${p.id}')">
             <div class="tile-icon">${icon}</div>
             <div class="tile-text-content">${escapeHtml(p.content || '')}</div>
@@ -459,8 +462,14 @@ function renderLensPearls() {
           </div>
         `;
       }
-    });
-    html += `</div>`;
+    };
+    // round-robin 2 컬럼 분배 (최신 → 좌상단부터 지그재그)
+    const _colL = [], _colR = [];
+    pearls.forEach((p, idx) => { (idx % 2 === 0 ? _colL : _colR).push({ p, idx }); });
+    html += `<div class="pearls-pinterest">`
+      + `<div class="pinterest-col">` + _colL.map(({ p, idx }) => _renderPearlTile(p, idx)).join('') + `</div>`
+      + `<div class="pinterest-col">` + _colR.map(({ p, idx }) => _renderPearlTile(p, idx)).join('') + `</div>`
+      + `</div>`;
   } else {
     // timeline (시간순 평면 — 카테고리 그룹 X)
     html += `<div class="pearls-timeline">`;

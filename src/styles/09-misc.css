@@ -9244,13 +9244,22 @@
     margin-left: 2px;
   }
   /* V4-fix v2 (사용자 보고): Pinterest masonry — 2 column + 다양 사이즈/회전/날짜 */
+  /* 사용자 보고 2026-05-28: column-count multicol 의 2번째 컬럼 첫 타일 (오른쪽 맨 위) 이 스크롤 중 깜빡임.
+     원인: Chromium WebView 가 multicol fragmentation 경계 타일을 repaint 불안정하게 처리 (위치로 결정 — 내용 무관).
+     fix: column-count → 2 flex 컬럼. JS round-robin 분배 (14-review-collection.js). fragmentation 경계 자체 제거. */
   .pearls-pinterest {
-    column-count: 2;
-    column-gap: 10px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
     margin-top: 4px;
   }
+  .pinterest-col {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
   .pinterest-tile {
-    break-inside: avoid;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 14px;
@@ -9260,14 +9269,6 @@
     transition: transform 0.2s ease, border-color 0.15s, box-shadow 0.2s;
     position: relative;
     box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-    /* 사용자 보고 2026-05-02 ultrathink: 오른쪽 맨 위 (column 2 first child) 가 가끔 투명해지는 버그.
-       원인: column-count masonry + data-tilt rotate + lazy image load layout shift 의 paint sub-pixel glitch.
-       fix: isolation = stacking context 분리 (column 안 paint 격리),
-            backface-visibility: hidden = GPU layer promotion (transform 의 paint 안정).
-       transform conflict X (data-tilt rotate 그대로 동작). */
-    isolation: isolate;
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
   }
   .pinterest-tile:hover {
     transform: translateY(-2px) rotate(0deg) !important;
