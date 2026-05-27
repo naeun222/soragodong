@@ -10,6 +10,14 @@ async function openV4ScheduleItem(id) {
     }
   }
 
+  // 사용자 명시 2026-05-27 ultrathink (오늘 ↔ 타임라인 연동): 그리드의 task 마감 항목 클릭 → 할 일 메뉴 (수정/완료).
+  const _tk = (state.tasks || []).find(t => t.id === id);
+  if (_tk) {
+    if (typeof _schedDayTaskMenu === 'function') return _schedDayTaskMenu(id);
+    if (typeof editTaskCard === 'function') return editTaskCard(id);
+    return;
+  }
+
   const it = (state.todaySchedule || []).find(x => x.id === id);
   if (!it) return;
 
@@ -36,6 +44,7 @@ async function openV4ScheduleItem(id) {
     }
     saveState();
     renderExecute();
+    if (typeof _refreshScheduleDayTimelineIfOpen === 'function') _refreshScheduleDayTimelineIfOpen();
     showToast('일정 삭제됨');
   } else if (action === 'edit') {
     const result = await showTimeRangePicker({
@@ -52,6 +61,7 @@ async function openV4ScheduleItem(id) {
     }
     saveState();
     renderExecute();
+    if (typeof _refreshScheduleDayTimelineIfOpen === 'function') _refreshScheduleDayTimelineIfOpen();
     showToast('수정됨 ✦');
   }
 }

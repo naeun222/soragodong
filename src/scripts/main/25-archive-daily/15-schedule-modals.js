@@ -228,6 +228,22 @@ function openScheduleDayTimeline(dateKey) {
     timed.push({ kind: 'task', id: t.id, title: `✓ ${t.title || ''}`, startMin: sMin, endMin: Math.min(sMin + 30, 24 * 60), color: _SCHED_MOD_TASK_COLOR, sub: `${t.dueTime || ''} 마감`, done: isDone });
   }
 
+  // 사용자 명시 2026-05-27 ultrathink (오늘 ↔ 타임라인 연동): 옛 timeline 일정 (state.todaySchedule — ICS / 할 일 시간적용) 도 day view 에 표시.
+  //   kind 'legacy' = 비드래그(state.schedules/tasks 에 없어 이동 commit 불가). tap → openV4ScheduleItem (옛 편집 흐름).
+  const _shownTaskIds = new Set(tasks.map(t => t.id));
+  const _legacy = Array.isArray(state.todaySchedule) ? state.todaySchedule : [];
+  for (const it of _legacy) {
+    if (it.date && it.date !== dateKey) continue;
+    if (it.taskId && _shownTaskIds.has(it.taskId)) continue; // 이미 task 로 표시됨 → 중복 방지
+    const _taskTone = it.source === 'task' || !!it.taskId;
+    const color = _taskTone ? _SCHED_MOD_TASK_COLOR : _SCHED_MOD_SCHED_COLOR;
+    const sMin = _hhmmToMin(it.start);
+    let eMin = _hhmmToMin(it.end);
+    if (sMin == null) { allDay.push({ kind: 'legacy', id: it.id, title: it.title || '', color, done: false, _taskTone }); continue; }
+    if (eMin == null || eMin <= sMin) eMin = Math.min(sMin + 60, 24 * 60);
+    timed.push({ kind: 'legacy', id: it.id, title: it.title || '', startMin: sMin, endMin: eMin, color, sub: `${it.start || ''}–${it.end || ''}`, done: false, _taskTone });
+  }
+
   timed.sort((a, b) => (a.startMin - b.startMin) || (a.endMin - b.endMin));
   _schedDayAssignColumns(timed);
 
@@ -245,7 +261,7 @@ function openScheduleDayTimeline(dateKey) {
     const leftPct = (ev._col || 0) * widthPct;
     const top = (ev.startMin / 60) * HOUR_H;
     const height = Math.max(((ev.endMin - ev.startMin) / 60) * HOUR_H - 2, 20);
-    const ink = ev.kind === 'task' ? _SCHED_MOD_TASK_INK : _SCHED_MOD_SCHED_INK;
+    const ink = (ev.kind === 'task' || ev._taskTone) ? _SCHED_MOD_TASK_INK : _SCHED_MOD_SCHED_INK;
     const doneStyle = ev.done ? ' opacity:0.5;' : '';
     const titleStyle = ev.done ? ' text-decoration:line-through;' : '';
     blocksHtml += `
@@ -276,8 +292,8 @@ function openScheduleDayTimeline(dateKey) {
   if (allDay.length > 0) {
     allDayHtml = `<div style="display:flex; flex-wrap:wrap; gap:6px; padding:8px 14px; border-bottom:1px solid var(--border);">
       ${allDay.map(a => {
-        const act = a.kind === 'schedule' ? `openScheduleEditModal('${a.id}')` : `_schedDayTaskMenu('${a.id}')`;
-        const ink = a.kind === 'task' ? _SCHED_MOD_TASK_INK : _SCHED_MOD_SCHED_INK;
+        const act = a.kind === 'schedule' ? `openScheduleEditModal('${a.id}')` : (a.kind === 'legacy' ? `openV4ScheduleItem('${a.id}')` : `_schedDayTaskMenu('${a.id}')`);
+        const ink = (a.kind === 'task' || a._taskTone) ? _SCHED_MOD_TASK_INK : _SCHED_MOD_SCHED_INK;
         const ds = a.done ? ' opacity:0.5; text-decoration:line-through;' : '';
         return `<div onclick="${act}" style="font-size:11px; font-weight:600; padding:4px 9px; background:${a.color}; border-radius:5px; color:${ink}; cursor:pointer; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;${ds}">${escapeHtml(a.title)}</div>`;
       }).join('')}
@@ -511,8 +527,8 @@ function _schedDayDown(e) {
     timer: null,
     scrollEl: document.querySelector('#schedDayTimelineOverlay .sched-day-scroll'),
   };
-  // 완료된 할 일은 드래그 비활성 (tap 메뉴만).
-  if (!_schedDrag.done) {
+  // 완료된 할 일 + legacy(옛 timeline 항목)는 드래그 비활성 (tap 만).
+  if (!_schedDrag.done && _schedDrag.kind !== 'legacy') {
     _schedDrag.timer = setTimeout(() => {
       if (!_schedDrag) return;
       _schedDrag.active = true;
@@ -600,6 +616,8 @@ function _schedDayCleanup() {
 function _schedDayTapDispatch(kind, itemId) {
   if (kind === 'schedule') {
     if (typeof openScheduleEditModal === 'function') openScheduleEditModal(itemId);
+  } else if (kind === 'legacy') {
+    if (typeof openV4ScheduleItem === 'function') openV4ScheduleItem(itemId);
   } else {
     _schedDayTaskMenu(itemId);
   }

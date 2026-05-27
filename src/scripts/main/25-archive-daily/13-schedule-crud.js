@@ -201,6 +201,32 @@ function getTodaySchedulesDerivedView() {
     out.push(it);
   }
 
+  // 3) 사용자 명시 2026-05-27 ultrathink (오늘 ↔ 타임라인 연동): 오늘 마감(시각 有) 할 일도 그리드에 표시 — day view 와 같은 내용.
+  const _seenTaskIds = new Set();
+  for (const it of out) { if (it.taskId) _seenTaskIds.add(it.taskId); }
+  const tasksToday = Array.isArray(state.tasks) ? state.tasks : [];
+  for (const t of tasksToday) {
+    if (t.dueDate !== todayK) continue;
+    if (!t.dueTime) continue;             // 종일 마감은 시각형 그리드에 X
+    if (_seenTaskIds.has(t.id)) continue; // 이미 시간 적용된 할 일 (todaySchedule) → 중복 방지
+    const sParts = t.dueTime.split(':');
+    const sMin = (parseInt(sParts[0]) || 0) * 60 + (parseInt(sParts[1]) || 0);
+    const eMin = Math.min(sMin + 30, 24 * 60);
+    const end = `${String(Math.floor(eMin / 60)).padStart(2, '0')}:${String(eMin % 60).padStart(2, '0')}`;
+    out.push({
+      id: t.id,
+      title: '✓ ' + (t.title || ''),
+      start: t.dueTime,
+      end,
+      date: todayK,
+      source: 'task',
+      taskId: t.id,
+      color: '#d8ac63',
+      _task: true,
+      _derived: true
+    });
+  }
+
   out.sort((a, b) => (a.start || '').localeCompare(b.start || ''));
   return out;
 }

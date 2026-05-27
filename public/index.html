@@ -55776,6 +55776,7 @@ async function scheduleTaskToTime(taskId) {
       task.scheduledEnd = null;
       saveState();
       renderExecute();
+      if (typeof _refreshScheduleDayTimelineIfOpen === 'function') _refreshScheduleDayTimelineIfOpen();
       showToast('일정에서 뺐어');
       return;
     }
@@ -55814,6 +55815,7 @@ async function scheduleTaskToTime(taskId) {
   task.scheduledEnd = endT;
   saveState();
   renderExecute();
+  if (typeof _refreshScheduleDayTimelineIfOpen === 'function') _refreshScheduleDayTimelineIfOpen();
   showToast(`⏰ ${startT} 적용됨`);
 }
 
@@ -56080,6 +56082,14 @@ async function openV4ScheduleItem(id) {
     }
   }
 
+  // 사용자 명시 2026-05-27 ultrathink (오늘 ↔ 타임라인 연동): 그리드의 task 마감 항목 클릭 → 할 일 메뉴 (수정/완료).
+  const _tk = (state.tasks || []).find(t => t.id === id);
+  if (_tk) {
+    if (typeof _schedDayTaskMenu === 'function') return _schedDayTaskMenu(id);
+    if (typeof editTaskCard === 'function') return editTaskCard(id);
+    return;
+  }
+
   const it = (state.todaySchedule || []).find(x => x.id === id);
   if (!it) return;
 
@@ -56106,6 +56116,7 @@ async function openV4ScheduleItem(id) {
     }
     saveState();
     renderExecute();
+    if (typeof _refreshScheduleDayTimelineIfOpen === 'function') _refreshScheduleDayTimelineIfOpen();
     showToast('일정 삭제됨');
   } else if (action === 'edit') {
     const result = await showTimeRangePicker({
@@ -56122,6 +56133,7 @@ async function openV4ScheduleItem(id) {
     }
     saveState();
     renderExecute();
+    if (typeof _refreshScheduleDayTimelineIfOpen === 'function') _refreshScheduleDayTimelineIfOpen();
     showToast('수정됨 ✦');
   }
 }
@@ -56487,6 +56499,32 @@ function getTodaySchedulesDerivedView() {
   for (const it of legacy) {
     if (it.date && it.date !== todayK) continue;
     out.push(it);
+  }
+
+  // 3) 사용자 명시 2026-05-27 ultrathink (오늘 ↔ 타임라인 연동): 오늘 마감(시각 有) 할 일도 그리드에 표시 — day view 와 같은 내용.
+  const _seenTaskIds = new Set();
+  for (const it of out) { if (it.taskId) _seenTaskIds.add(it.taskId); }
+  const tasksToday = Array.isArray(state.tasks) ? state.tasks : [];
+  for (const t of tasksToday) {
+    if (t.dueDate !== todayK) continue;
+    if (!t.dueTime) continue;             // 종일 마감은 시각형 그리드에 X
+    if (_seenTaskIds.has(t.id)) continue; // 이미 시간 적용된 할 일 (todaySchedule) → 중복 방지
+    const sParts = t.dueTime.split(':');
+    const sMin = (parseInt(sParts[0]) || 0) * 60 + (parseInt(sParts[1]) || 0);
+    const eMin = Math.min(sMin + 30, 24 * 60);
+    const end = `${String(Math.floor(eMin / 60)).padStart(2, '0')}:${String(eMin % 60).padStart(2, '0')}`;
+    out.push({
+      id: t.id,
+      title: '✓ ' + (t.title || ''),
+      start: t.dueTime,
+      end,
+      date: todayK,
+      source: 'task',
+      taskId: t.id,
+      color: '#d8ac63',
+      _task: true,
+      _derived: true
+    });
   }
 
   out.sort((a, b) => (a.start || '').localeCompare(b.start || ''));
@@ -57160,6 +57198,22 @@ function openScheduleDayTimeline(dateKey) {
     timed.push({ kind: 'task', id: t.id, title: `✓ ${t.title || ''}`, startMin: sMin, endMin: Math.min(sMin + 30, 24 * 60), color: _SCHED_MOD_TASK_COLOR, sub: `${t.dueTime || ''} 마감`, done: isDone });
   }
 
+  // 사용자 명시 2026-05-27 ultrathink (오늘 ↔ 타임라인 연동): 옛 timeline 일정 (state.todaySchedule — ICS / 할 일 시간적용) 도 day view 에 표시.
+  //   kind 'legacy' = 비드래그(state.schedules/tasks 에 없어 이동 commit 불가). tap → openV4ScheduleItem (옛 편집 흐름).
+  const _shownTaskIds = new Set(tasks.map(t => t.id));
+  const _legacy = Array.isArray(state.todaySchedule) ? state.todaySchedule : [];
+  for (const it of _legacy) {
+    if (it.date && it.date !== dateKey) continue;
+    if (it.taskId && _shownTaskIds.has(it.taskId)) continue; // 이미 task 로 표시됨 → 중복 방지
+    const _taskTone = it.source === 'task' || !!it.taskId;
+    const color = _taskTone ? _SCHED_MOD_TASK_COLOR : _SCHED_MOD_SCHED_COLOR;
+    const sMin = _hhmmToMin(it.start);
+    let eMin = _hhmmToMin(it.end);
+    if (sMin == null) { allDay.push({ kind: 'legacy', id: it.id, title: it.title || '', color, done: false, _taskTone }); continue; }
+    if (eMin == null || eMin <= sMin) eMin = Math.min(sMin + 60, 24 * 60);
+    timed.push({ kind: 'legacy', id: it.id, title: it.title || '', startMin: sMin, endMin: eMin, color, sub: `${it.start || ''}–${it.end || ''}`, done: false, _taskTone });
+  }
+
   timed.sort((a, b) => (a.startMin - b.startMin) || (a.endMin - b.endMin));
   _schedDayAssignColumns(timed);
 
@@ -57177,7 +57231,7 @@ function openScheduleDayTimeline(dateKey) {
     const leftPct = (ev._col || 0) * widthPct;
     const top = (ev.startMin / 60) * HOUR_H;
     const height = Math.max(((ev.endMin - ev.startMin) / 60) * HOUR_H - 2, 20);
-    const ink = ev.kind === 'task' ? _SCHED_MOD_TASK_INK : _SCHED_MOD_SCHED_INK;
+    const ink = (ev.kind === 'task' || ev._taskTone) ? _SCHED_MOD_TASK_INK : _SCHED_MOD_SCHED_INK;
     const doneStyle = ev.done ? ' opacity:0.5;' : '';
     const titleStyle = ev.done ? ' text-decoration:line-through;' : '';
     blocksHtml += `
@@ -57208,8 +57262,8 @@ function openScheduleDayTimeline(dateKey) {
   if (allDay.length > 0) {
     allDayHtml = `<div style="display:flex; flex-wrap:wrap; gap:6px; padding:8px 14px; border-bottom:1px solid var(--border);">
       ${allDay.map(a => {
-        const act = a.kind === 'schedule' ? `openScheduleEditModal('${a.id}')` : `_schedDayTaskMenu('${a.id}')`;
-        const ink = a.kind === 'task' ? _SCHED_MOD_TASK_INK : _SCHED_MOD_SCHED_INK;
+        const act = a.kind === 'schedule' ? `openScheduleEditModal('${a.id}')` : (a.kind === 'legacy' ? `openV4ScheduleItem('${a.id}')` : `_schedDayTaskMenu('${a.id}')`);
+        const ink = (a.kind === 'task' || a._taskTone) ? _SCHED_MOD_TASK_INK : _SCHED_MOD_SCHED_INK;
         const ds = a.done ? ' opacity:0.5; text-decoration:line-through;' : '';
         return `<div onclick="${act}" style="font-size:11px; font-weight:600; padding:4px 9px; background:${a.color}; border-radius:5px; color:${ink}; cursor:pointer; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;${ds}">${escapeHtml(a.title)}</div>`;
       }).join('')}
@@ -57443,8 +57497,8 @@ function _schedDayDown(e) {
     timer: null,
     scrollEl: document.querySelector('#schedDayTimelineOverlay .sched-day-scroll'),
   };
-  // 완료된 할 일은 드래그 비활성 (tap 메뉴만).
-  if (!_schedDrag.done) {
+  // 완료된 할 일 + legacy(옛 timeline 항목)는 드래그 비활성 (tap 만).
+  if (!_schedDrag.done && _schedDrag.kind !== 'legacy') {
     _schedDrag.timer = setTimeout(() => {
       if (!_schedDrag) return;
       _schedDrag.active = true;
@@ -57532,6 +57586,8 @@ function _schedDayCleanup() {
 function _schedDayTapDispatch(kind, itemId) {
   if (kind === 'schedule') {
     if (typeof openScheduleEditModal === 'function') openScheduleEditModal(itemId);
+  } else if (kind === 'legacy') {
+    if (typeof openV4ScheduleItem === 'function') openV4ScheduleItem(itemId);
   } else {
     _schedDayTaskMenu(itemId);
   }
@@ -72866,7 +72922,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.306-cal-draft-survive-outside-tap-fix';
+const APP_VERSION = 'v4.0.307-cal-today-timeline-sync';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 

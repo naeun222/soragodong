@@ -20,6 +20,7 @@ async function scheduleTaskToTime(taskId) {
       task.scheduledEnd = null;
       saveState();
       renderExecute();
+      if (typeof _refreshScheduleDayTimelineIfOpen === 'function') _refreshScheduleDayTimelineIfOpen();
       showToast('일정에서 뺐어');
       return;
     }
@@ -58,6 +59,7 @@ async function scheduleTaskToTime(taskId) {
   task.scheduledEnd = endT;
   saveState();
   renderExecute();
+  if (typeof _refreshScheduleDayTimelineIfOpen === 'function') _refreshScheduleDayTimelineIfOpen();
   showToast(`⏰ ${startT} 적용됨`);
 }
 
