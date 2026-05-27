@@ -8817,6 +8817,8 @@
      인라인 = 억지로 늘린 tall 캘린더 (7ea5091). 월/요일 헤더 sticky + 그리드 viewport 높이 (6행 1fr). 더 아래로 스크롤해 캘린더가 화면 맨 위에 닿으면 풀스크린 오버레이 자동 open. */
   .cal-grid-wrap.sched-cal-wrap { padding: 0; background: transparent; border: none; border-radius: 0; margin: 0 0 18px; }
   .sched-cal-wrap .sched-cal-sticky { position: sticky; top: 0; z-index: 6; background: var(--bg); padding: 6px 0 4px; }
+  /* 사용자 명시 2026-05-27 ultrathink: 인라인 sticky 가 .screen padding-top(4px) 때문에 4px 떠서 헤더와 틈 → top -4px 로 상쇄해 딱 붙임. (풀스크린 sticky 는 별도 컨테이너라 제외) */
+  .sched-cal-wrap:not(.sched-cal-wrap-fs) .sched-cal-sticky { top: -4px; }
   .sched-cal-monthgrid { height: calc(100dvh - 188px); min-height: 430px; }
   /* 풀스크린 오버레이 (fixed inset:0) 안 캘린더 — flex 로 viewport 가득 (인라인 calc 높이 덮음) */
   .sched-cal-wrap-fs { display: flex; flex-direction: column; height: 100%; margin: 0; }

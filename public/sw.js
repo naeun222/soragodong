@@ -78,7 +78,8 @@
 // v58 (2026-05-27 사용자 명시 ultrathink): 인라인 캘린더 = 7ea5091 tall 복원 + 전체화면 트리거 둔하게 (48px → 화면 맨 위 닿을 때). index.html 갱신.
 // v59 (2026-05-27 사용자 명시 ultrathink): 전체화면 트리거 = '캘린더 윗변 닿음' 폐기 → 페이지 맨 밑까지 스크롤 도달 시 (다 내리고 더 밑으로 제스처). index.html 갱신.
 // v60 (2026-05-27 사용자 명시 ultrathink): 전체화면 트리거 빡빡하게 — 바닥 도달만으론 X, 바닥에서 추가로 당기는 오버스크롤(touch 70px / wheel 180) 필요. index.html 갱신.
-const CACHE_NAME = 'soragodong-v4-cache-v59';
+// v61 (2026-05-27 사용자 명시 ultrathink): 인라인 캘린더 sticky 상단 바 헤더와 틈(.screen padding-top 4px) → top -4px 로 딱 붙임. index.html 갱신.
+const CACHE_NAME = 'soragodong-v4-cache-v60';
 const PHOTO_CACHE_NAME = 'sora-photo-v1';
 const PHOTO_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
 const PHOTO_MAX_ENTRIES = 200;
