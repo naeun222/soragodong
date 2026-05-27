@@ -73,12 +73,16 @@ function openScheduleDayModal(dateKey) {
       const timeLabel = t.dueTime
         ? `<span style="font-size:12px; color:var(--text-soft);">${escapeHtml(t.dueTime)} 마감</span>`
         : '<span style="font-size:10px; padding:1px 7px; background:var(--surface2); border-radius:4px; color:var(--text-soft);">종일 마감</span>';
+      const notify = (t.notifyMinutesBefore !== null && t.notifyMinutesBefore !== undefined)
+        ? `<span style="font-size:10px; color:var(--text-soft); margin-left:6px;">🔔 ${t.notifyMinutesBefore}분 전</span>`
+        : '';
       listHtml += `
-        <div style="display:flex; align-items:center; gap:10px; padding:11px 12px; background:${_SCHED_MOD_TASK_COLOR}14; border-left:3px solid ${_SCHED_MOD_TASK_COLOR}; border-radius:8px;">
+        <div onclick="openTaskEditModal('${t.id}')" style="display:flex; align-items:center; gap:10px; padding:11px 12px; background:${_SCHED_MOD_TASK_COLOR}14; border-left:3px solid ${_SCHED_MOD_TASK_COLOR}; border-radius:8px; cursor:pointer;">
           <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:3px;">
             <div style="font-size:13px; font-weight:500; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">✓ ${escapeHtml(t.title || '')}</div>
-            ${timeLabel}
+            <div style="display:flex; align-items:center; gap:4px;">${timeLabel}${notify}</div>
           </div>
+          <span style="color:var(--text-soft); font-size:13px;">›</span>
         </div>
       `;
     }
@@ -93,7 +97,10 @@ function openScheduleDayModal(dateKey) {
           <button onclick="_closeScheduleModals()" style="background:transparent; border:none; color:var(--text-soft); font-size:22px; cursor:pointer; padding:2px 6px; line-height:1;" aria-label="닫기">×</button>
         </div>
         ${listHtml}
-        <button onclick="openScheduleEditModal(null, { date: '${dateKey}' })" style="margin-top:16px; width:100%; padding:12px; background:var(--accent2); border:none; color:#fff; border-radius:10px; font-size:14px; font-weight:500; cursor:pointer; font-family:inherit;">+ 일정 추가</button>
+        <div style="display:flex; gap:8px; margin-top:16px;">
+          <button onclick="openScheduleEditModal(null, { date: '${dateKey}' })" style="flex:1; padding:12px 8px; background:${_SCHED_MOD_SCHED_COLOR}; border:none; color:#fff; border-radius:10px; font-size:13px; font-weight:500; cursor:pointer; font-family:inherit;">+ 일정 추가</button>
+          <button onclick="openTaskEditModal(null, { dueDate: '${dateKey}' })" style="flex:1; padding:12px 8px; background:${_SCHED_MOD_TASK_COLOR}; border:none; color:#fff; border-radius:10px; font-size:13px; font-weight:500; cursor:pointer; font-family:inherit;">+ 할 일 마감</button>
+        </div>
       </div>
     </div>
   `;

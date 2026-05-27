@@ -158,7 +158,7 @@ function renderScheduleCalendarGrid() {
       <div class="cal-weekdays">
         <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
       </div>
-      <div style="display:grid; grid-template-columns: repeat(7, 1fr); grid-template-rows: repeat(6, minmax(110px, 1fr)); gap:1px; background:var(--border); border:1px solid var(--border); border-radius:8px; overflow:hidden; height: calc(100dvh - 180px); min-height: 660px;">
+      <div style="display:grid; grid-template-columns: repeat(7, 1fr); grid-template-rows: repeat(6, minmax(96px, auto)); gap:1px; background:var(--border); border:1px solid var(--border); border-radius:8px; overflow:hidden;">
   `;
 
   for (const cell of visibleCells) {
