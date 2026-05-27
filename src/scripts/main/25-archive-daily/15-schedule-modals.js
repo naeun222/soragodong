@@ -707,19 +707,15 @@ function _schedDayTaskMenuAction(taskId, action) {
     return;
   }
   if (action === 'delete') {
-    // 완전 정리 — task + 연결된 todaySchedule + 예약 알림. (deleteTask 는 이들 누락 → 직접 처리.)
-    (async () => {
-      const ok = (typeof confirmDelete === 'function') ? await confirmDelete('이 할 일') : confirm('이 할 일 삭제할까?');
-      if (!ok) return;
-      state.tasks = (Array.isArray(state.tasks) ? state.tasks : []).filter(t => t.id !== taskId);
-      state.todaySchedule = (Array.isArray(state.todaySchedule) ? state.todaySchedule : []).filter(it => it.taskId !== taskId);
-      if (typeof saveState === 'function') saveState();
-      if (typeof cancelNotificationById === 'function') cancelNotificationById(taskId).catch(() => {});
-      if (typeof showToast === 'function') showToast('🗑 삭제됨');
-      if (typeof renderExecute === 'function') renderExecute();
-      if (typeof renderScheduleCalendarGrid === 'function') renderScheduleCalendarGrid();
-      if (typeof _refreshScheduleDayTimelineIfOpen === 'function') _refreshScheduleDayTimelineIfOpen();
-    })();
+    // 사용자 명시 2026-05-27: confirm 모달 없이 바로 삭제. task + 연결된 todaySchedule + 예약 알림 완전 정리.
+    state.tasks = (Array.isArray(state.tasks) ? state.tasks : []).filter(t => t.id !== taskId);
+    state.todaySchedule = (Array.isArray(state.todaySchedule) ? state.todaySchedule : []).filter(it => it.taskId !== taskId);
+    if (typeof saveState === 'function') saveState();
+    if (typeof cancelNotificationById === 'function') cancelNotificationById(taskId).catch(() => {});
+    if (typeof showToast === 'function') showToast('🗑 삭제됨');
+    if (typeof renderExecute === 'function') renderExecute();
+    if (typeof renderScheduleCalendarGrid === 'function') renderScheduleCalendarGrid();
+    if (typeof _refreshScheduleDayTimelineIfOpen === 'function') _refreshScheduleDayTimelineIfOpen();
     return;
   }
   // done / revive — toggleQuestComplete 가 양방향 처리 (셸 보상은 ai_mission 만 → due task 무영향).

@@ -1,1 +1,1 @@
-v4.0.321-dayview-task-delete
+v4.0.322-dayview-delete-noconfirm
