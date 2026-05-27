@@ -373,6 +373,13 @@ async function _saveToCloudNowInner() {
         lastYearlyAnalyzeAt: state.lastYearlyAnalyzeAt,
         _lastSemanticDedupManualAt: state._lastSemanticDedupManualAt,
         _lastSemanticDedupAutoAt: state._lastSemanticDedupAutoAt,
+        // V4 fix (사용자 보고 2026-05-28 ultrathink — 진짜 root cause): 진행 중 batch 추적 객체가 sensitiveBody whitelist 에도 metaBody 에도 없어서
+        //   E2EE 사용자는 cloud 에 batch_id 가 절대 안 올라감 → 부팅 시 cloud 가 localStorage 덮어써 매 reload 소실 → review chain 등 매 새로고침 재제출.
+        //   batch_id / submitted_at / review_keys / diary 날짜 = 사용자 content 아닌 운영 metadata (lastChapterCleanupAt 과 동급) → 평문 metaBody 로 round-trip.
+        pendingReviewBatch: state.pendingReviewBatch,
+        pendingChapterCleanupBatch: state.pendingChapterCleanupBatch,
+        pendingForceAnalyzeBatch: state.pendingForceAnalyzeBatch,
+        pendingBatch: state.pendingBatch,
         _e2eeEnabled: true,
         _e2eeVersion: _E2EE_VERSION,
         _e2eeRecovery: recoveryInfo  // password로 암호화된 master key + salt
