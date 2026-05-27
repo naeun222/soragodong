@@ -47,6 +47,11 @@ const CHAT_STYLE_ENDPOINTS = new Set([
   'archive_summary'
 ]);
 
+// 사용자 명시 2026-05-27: brain dump = 회사 감당 — 사용자 토큰 차감 X (recordUsage 는 유지해 회사 비용 추적).
+//   남용/비용 누수 방어 = user별 30분 서버 쿨다운 (KV). admin 면제. KV 없으면 fail-open (프론트 쿨다운만).
+const COMPANY_COVERED_ENDPOINTS = new Set(['brain_dump']);
+const BRAIN_DUMP_COOLDOWN_MS = 30 * 60 * 1000;
+
 // V4 (사용자 보고 2026-05-11 ultrathink): Cloudflare HKG colo 에서 Anthropic 호출 시 forbidden (Hong Kong supported X).
 //   → Cloudflare AI Gateway native passthrough 사용. AI Gateway 가 region 처리 + observability + cache.
 //   옛: 'https://api.anthropic.com/v1/messages'
@@ -173,6 +178,9 @@ async function chargeUsage(
     cache_creation_tokens: cacheCreationTokens,
     cost_usd: cost
   }).catch(() => {}));
+
+  // 사용자 명시 2026-05-27: 회사 감당 endpoint (brain_dump) — 위 recordUsage 로 비용 추적만, 사용자 차감/일일 cap consume skip.
+  if (COMPANY_COVERED_ENDPOINTS.has(endpoint)) return;
 
   if (cost > 0.000001) {
     waitUntil(deductCost(env, userId, cost).catch(() => {}));
@@ -330,6 +338,28 @@ async function _handleChatRequest(context: {
   }
   if (!env.ANTHROPIC_API_KEY) {
     return jsonResponse({ error: 'ANTHROPIC_API_KEY 미설정 (서버)' }, 500);
+  }
+
+  // 사용자 명시 2026-05-27: brain dump 30분 서버 쿨다운 (user별, KV). 회사 감당이라 차감 게이트가 없어 남용/비용 누수 방어.
+  //   admin 면제. KV 없으면 fail-open (프론트 쿨다운만). 성공 응답 시 아래(non-stream)에서 타임스탬프 마킹.
+  const _isBrainDump = body._endpoint === 'brain_dump';
+  const _isAdminBd = !!(env.ADMIN_USER_ID && user.id === env.ADMIN_USER_ID);
+  if (_isBrainDump && !_isAdminBd && guestEnv.GUEST_KV) {
+    try {
+      const _bdLast = await guestEnv.GUEST_KV.get(`bd_cd:${user.id}`);
+      if (_bdLast) {
+        const _remainMs = BRAIN_DUMP_COOLDOWN_MS - (Date.now() - parseInt(_bdLast, 10));
+        if (_remainMs > 0) {
+          return jsonResponse({
+            error: `고동이 정리는 30분에 한 번 — ${Math.ceil(_remainMs / 60000)}분 뒤 다시 ✦`,
+            code: 'BRAIN_DUMP_COOLDOWN',
+            remain_ms: _remainMs
+          }, 429);
+        }
+      }
+    } catch (e: any) {
+      console.warn('[chat.ts] brain_dump cooldown read fail:', e?.message || e);
+    }
   }
 
   // 게스트 강제 cap — model 화이트리스트 + endpoint-aware max_tokens.
@@ -652,6 +682,11 @@ async function _handleChatRequest(context: {
   const usage = data.usage || {};
   // 사용자 명시 2026-05-02 ultrathink: chargeUsage 헬퍼 — welcome bonus 우선 소진 + overflow USD 차감.
   await chargeUsage(env, user.id, endpoint, body.model, usage, waitUntil, isGuest, guestIp);
+
+  // 사용자 명시 2026-05-27: brain dump 성공 → 30분 쿨다운 마킹 (서버 KV). 실패/throw 시 마킹 X → 재시도 가능.
+  if (_isBrainDump && !_isAdminBd && guestEnv.GUEST_KV) {
+    waitUntil(guestEnv.GUEST_KV.put(`bd_cd:${user.id}`, String(Date.now()), { expirationTtl: 1860 }).catch(() => {}));
+  }
 
   return jsonResponse(data);
 }

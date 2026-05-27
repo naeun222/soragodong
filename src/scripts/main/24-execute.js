@@ -405,6 +405,19 @@ async function processBrainDump() {
     return;
   }
 
+  // 사용자 명시 2026-05-27: 회사 감당(무료) + 30분 쿨다운. 프론트 프리체크 (서버도 KV 로 이중 가드).
+  {
+    const _last = state.preferences && state.preferences._lastBrainDumpAt;
+    if (_last) {
+      const _remain = 30 * 60 * 1000 - (Date.now() - _last);
+      if (_remain > 0) {
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '고동에게 맡기기 ✦'; }
+        showToast(`고동이 정리는 30분에 한 번 — ${Math.ceil(_remain / 60000)}분 뒤 다시 ✦`);
+        return;
+      }
+    }
+  }
+
   try {
     const traits = (state.traits || []).slice(0, 5).map(t => t.name).join(', ');
     const patterns = (state.patterns || []).slice(0, 5).map(p => p.name).join(', ');
@@ -413,10 +426,18 @@ async function processBrainDump() {
     const resp = await callAnthropic({
       _endpoint: 'brain_dump',
       _vars: { traits, patterns, activeModes, execMode: _execMode, dump },
-      model: 'claude-sonnet-4-6',
+      // 사용자 명시 2026-05-27: 회사 감당 → 저렴한 haiku 로 (단순 분류 작업).
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 1500,
       messages: [{ role: 'user', content: '' }]
     });
+    if (resp.status === 429) {
+      let _msg = '고동이 정리는 30분에 한 번 — 잠시 뒤 다시 ✦';
+      try { const _ed = await resp.json(); if (_ed && _ed.error) _msg = _ed.error; } catch {}
+      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '고동에게 맡기기 ✦'; }
+      showToast(_msg);
+      return;
+    }
     if (!resp.ok) throw new Error('API ' + resp.status);
     const data = await resp.json();
     const text = data.content[0].text;
@@ -452,6 +473,9 @@ async function processBrainDump() {
       });
     });
 
+    // 사용자 명시 2026-05-27: 쿨다운 타임스탬프 (성공 시만). 서버 KV 가 실제 가드, 이건 UX 프리체크용.
+    state.preferences = state.preferences || {};
+    state.preferences._lastBrainDumpAt = Date.now();
     saveState();
     closeBrainDump();
     if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '고동에게 맡기기 ✦'; }
