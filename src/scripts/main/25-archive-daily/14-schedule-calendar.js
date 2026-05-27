@@ -10,10 +10,10 @@
 
 let _schedCalCursorYM = null;  // 'YYYY-MM' (사용자 로컬 시간대)
 
-const _SCHED_CAL_SCHEDULE_COLOR = '#4ea8c9';  // 바다톤 일정 (var(--cal-event))
-const _SCHED_CAL_TASK_COLOR     = '#e0a93f';  // 골드 할 일 (var(--cal-task))
-const _SCHED_CAL_SCHEDULE_INK   = '#08222c';
-const _SCHED_CAL_TASK_INK       = '#2a1d05';
+const _SCHED_CAL_SCHEDULE_COLOR = '#5a9cb0';  // 바다톤 일정 (var(--cal-event))
+const _SCHED_CAL_TASK_COLOR     = '#d8ac63';  // 골드 할 일 (var(--cal-task))
+const _SCHED_CAL_SCHEDULE_INK   = '#082630';
+const _SCHED_CAL_TASK_INK       = '#2c1e04';
 const _SCHED_CAL_MAX_ITEMS      = 3;
 
 function _schedCalEnsureCursor() {

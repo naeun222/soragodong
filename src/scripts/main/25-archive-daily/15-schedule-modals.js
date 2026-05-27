@@ -2,10 +2,10 @@
 // 캘린더 날짜 클릭 → 그날의 일정 + task 모달 + 일정 추가/수정/삭제 폼.
 // 알림 옵션 (notifyMinutesBefore) UI 만 — 실제 OS 알림 trigger 는 4단계 (로컬 알림) 에서 연결.
 
-const _SCHED_MOD_SCHED_COLOR = '#4ea8c9';  // 바다톤 일정 (var(--cal-event))
-const _SCHED_MOD_TASK_COLOR  = '#e0a93f';  // 골드 할 일 (var(--cal-task))
-const _SCHED_MOD_SCHED_INK   = '#08222c';
-const _SCHED_MOD_TASK_INK    = '#2a1d05';
+const _SCHED_MOD_SCHED_COLOR = '#5a9cb0';  // 바다톤 일정 (var(--cal-event))
+const _SCHED_MOD_TASK_COLOR  = '#d8ac63';  // 골드 할 일 (var(--cal-task))
+const _SCHED_MOD_SCHED_INK   = '#082630';
+const _SCHED_MOD_TASK_INK    = '#2c1e04';
 
 function _closeScheduleModals() {
   const overlay = document.getElementById('schedModalOverlay');
