@@ -287,10 +287,6 @@ function openScheduleSheet(opts) {
       if (t) t.focus();
     }, 60);
   }
-  // 사용자 명시 2026-05-27: 서랍장 📅 버튼 등 — 열자마자 마감 날짜 달력 펼침 (할 일 타입 한정).
-  if (opts.openDueDatePicker && _schedSheetCtx && _schedSheetCtx.type === 'task') {
-    setTimeout(() => { if (typeof _schedSheetTogglePicker === 'function') _schedSheetTogglePicker('due', 'date'); }, 90);
-  }
 }
 
 // ── field ↔ 모델 매핑 ──

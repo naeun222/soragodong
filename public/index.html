@@ -5101,8 +5101,6 @@
   /* 사용자 명시 2026-05-27: 오늘 할 일 → 서랍장 (demote) 버튼 — 서랍장 ↑ 와 같은 톤의 ↓ */
   .drawer-row-action.down { color: var(--accent2); border-color: rgba(212,167,106,0.30); }
   .drawer-row-action.del:active { color: var(--danger); }
-  /* 사용자 명시 2026-05-27: 서랍장 행 마감 날짜 버튼 */
-  .drawer-row-action.date { font-size: 13px; }
   .exec-section-label {
     font-size: 11px; color: var(--accent); letter-spacing: 0.1em;
     text-transform: uppercase; margin-bottom: 12px; font-weight: 600;
@@ -54282,7 +54280,6 @@ function renderExecute() {
           <div class="drawer-row" data-task-id="${task.id}">
             <span class="drawer-row-tag">${tagEmoji}</span>
             <span class="drawer-row-title" onclick="editTaskCard('${task.id}')" title="탭해서 수정">${escapeHtml(task.title)}${dueLabel}</span>
-            <button class="drawer-row-action date" onclick="openTaskEditModal('${task.id}', { openDueDatePicker: true })" title="마감 날짜">📅</button>
             <button class="drawer-row-action up" onclick="promoteToToday('${task.id}')" title="오늘로">↑</button>
             <button class="drawer-row-action del" onclick="deleteTask('${task.id}')" title="삭제">✕</button>
           </div>
@@ -58616,10 +58613,6 @@ function openScheduleSheet(opts) {
       const t = document.getElementById('schedSheetTitle');
       if (t) t.focus();
     }, 60);
-  }
-  // 사용자 명시 2026-05-27: 서랍장 📅 버튼 등 — 열자마자 마감 날짜 달력 펼침 (할 일 타입 한정).
-  if (opts.openDueDatePicker && _schedSheetCtx && _schedSheetCtx.type === 'task') {
-    setTimeout(() => { if (typeof _schedSheetTogglePicker === 'function') _schedSheetTogglePicker('due', 'date'); }, 90);
   }
 }
 
@@ -73249,7 +73242,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.323-drawer-duedate-btn';
+const APP_VERSION = 'v4.0.324-drawer-duedate-btn-revert';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 
