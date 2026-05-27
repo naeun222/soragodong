@@ -78,6 +78,14 @@ function toggleDrawerSection() {
   if (typeof renderExecute === 'function') renderExecute();
 }
 
+// 사용자 명시 2026-05-27: '오늘'의 경계는 자정이 아니라 새벽 4시. 시각을 4시간 당겨 날짜 키를 만든다.
+//   → 00:00~03:59 는 아직 '어제'. 04:00 넘어가면 새 논리적 하루 (미완료 오늘 할 일 → 서랍장 롤오버).
+function _rolloverDayKey() {
+  const d = new Date();
+  d.setHours(d.getHours() - 4);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 function renderExecute() {
   const container = document.getElementById('executeContent');
   if (!container) return;
@@ -90,6 +98,23 @@ function renderExecute() {
   // 사용자 보고 2026-05-09 ultrathink: 옛 promoteToToday (date 갱신 안 한 버그) 로 잃어버린 task 자동 복구.
   {
     let _resaved = false;
+    // 사용자 명시 2026-05-27: 새벽 4시 롤오버 — 새 논리적 하루 진입 시 미완료 '오늘 할 일' → 서랍장 데모트.
+    //   첫 실행/기존 사용자(_lastRolloverKey 없음)는 데모트 X, 키만 세팅 (배포 직후 오늘 목록 보존).
+    //   demote 만 함 → 사용자가 그날 서랍장으로 내린 건 그대로 유지. dueDate===오늘 인 건 아래 (3) auto-promote 가 도로 올림.
+    {
+      const _rk = _rolloverDayKey();
+      if (state._lastRolloverKey !== _rk) {
+        if (state._lastRolloverKey != null) {
+          (state.tasks || []).forEach(t => {
+            if (t.slot === 'drawer' && t.isToday && t.status !== 'done') {
+              t.isToday = false;
+            }
+          });
+        }
+        state._lastRolloverKey = _rk;
+        _resaved = true;
+      }
+    }
     (state.tasks || []).forEach(t => {
       if (t.slot === 'drawer' && t.isToday && t.date && t.date !== todayKeyVal && t.status !== 'done') {
         t.date = todayKeyVal;
