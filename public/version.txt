@@ -1,1 +1,1 @@
-v4.0.292-calendar-fullscreen-smooth
+v4.0.293-schedule-cal-diary-style

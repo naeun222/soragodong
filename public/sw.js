@@ -74,7 +74,8 @@
 // v54 (2026-05-27 사용자 명시 ultrathink): 일정 알림 클릭 → day view deep link (notificationclick schedule_notif → ?schedNotif / postMessage) + day view 드래그/완료메뉴 index.html 갱신.
 // v55 (2026-05-27 사용자 명시 ultrathink): 일정 lens 캘린더 진짜 풀스크린 (스크롤 시 fixed inset:0 오버레이 자동 open) index.html 갱신.
 // v56 (2026-05-27 사용자 명시 ultrathink): 풀스크린 더 스무스 (인라인 tall 캘린더 복원 + 트리거 완화 + opacity fade) + 오버레이 제목 '일정'. index.html 갱신.
-const CACHE_NAME = 'soragodong-v4-cache-v54';
+// v57 (2026-05-27 사용자 명시 ultrathink): 일정 캘린더 = 일기 캘린더 룩(컴팩트 정사각형 셀) + 일정/할일 점으로 구별. index.html 갱신.
+const CACHE_NAME = 'soragodong-v4-cache-v55';
 const PHOTO_CACHE_NAME = 'sora-photo-v1';
 const PHOTO_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
 const PHOTO_MAX_ENTRIES = 200;
