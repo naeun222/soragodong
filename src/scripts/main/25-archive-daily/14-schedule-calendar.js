@@ -10,8 +10,10 @@
 
 let _schedCalCursorYM = null;  // 'YYYY-MM' (사용자 로컬 시간대)
 
-const _SCHED_CAL_SCHEDULE_COLOR = '#7eb8ff';
-const _SCHED_CAL_TASK_COLOR     = '#fbbf24';
+const _SCHED_CAL_SCHEDULE_COLOR = '#4ea8c9';  // 바다톤 일정 (var(--cal-event))
+const _SCHED_CAL_TASK_COLOR     = '#e0a93f';  // 골드 할 일 (var(--cal-task))
+const _SCHED_CAL_SCHEDULE_INK   = '#08222c';
+const _SCHED_CAL_TASK_INK       = '#2a1d05';
 const _SCHED_CAL_MAX_ITEMS      = 3;
 
 function _schedCalEnsureCursor() {
@@ -186,12 +188,14 @@ function renderScheduleCalendarGrid(targetId, fullscreen) {
       ...ds.map(s => ({
         kind: 'schedule',
         title: s.isAllDay ? `· ${s.title || ''}` : (s.title || ''),
-        color: _SCHED_CAL_SCHEDULE_COLOR
+        color: _SCHED_CAL_SCHEDULE_COLOR,
+        ink: _SCHED_CAL_SCHEDULE_INK
       })),
       ...dt.map(t => ({
         kind: 'task',
         title: `✓ ${t.title || ''}`,
-        color: _SCHED_CAL_TASK_COLOR
+        color: _SCHED_CAL_TASK_COLOR,
+        ink: _SCHED_CAL_TASK_INK
       }))
     ];
     const display = allItems.slice(0, _SCHED_CAL_MAX_ITEMS);
@@ -213,7 +217,7 @@ function renderScheduleCalendarGrid(targetId, fullscreen) {
       <div onclick="_schedCalDayClick('${dateKey}')" style="background:var(--surface); padding:4px 4px 5px; cursor:pointer; display:flex; flex-direction:column; gap:2px; box-sizing:border-box; overflow:hidden;">
         <div style="display:flex; justify-content:flex-end;">${dayLabelHtml}</div>
         ${display.map(it => `
-          <div style="font-size:10px; padding:1px 5px; background:${it.color}1f; border-left:2px solid ${it.color}; color:var(--text); border-radius:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.35;${itemDim}" title="${escapeHtml(it.title)}">${escapeHtml(it.title)}</div>
+          <div style="font-size:10px; font-weight:600; padding:1px 5px; background:${it.color}; color:${it.ink}; border-radius:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.4;${itemDim}" title="${escapeHtml(it.title)}">${escapeHtml(it.title)}</div>
         `).join('')}
         ${remaining > 0 ? `<div style="font-size:9px; color:var(--text-soft); padding:1px 5px; line-height:1.2;${itemDim}">+${remaining}</div>` : ''}
       </div>
@@ -229,16 +233,16 @@ function renderScheduleCalendarGrid(targetId, fullscreen) {
   if (fullscreen) {
     html += `
       <div style="margin:12px 4px 0; padding:10px 14px; font-size:12px; color:var(--text-soft); display:flex; gap:16px; flex-wrap:wrap; align-items:center;">
-        <span style="display:inline-flex; align-items:center; gap:6px;"><span style="display:inline-block; width:10px; height:10px; background:${_SCHED_CAL_SCHEDULE_COLOR}1f; border-left:2px solid ${_SCHED_CAL_SCHEDULE_COLOR}; border-radius:2px;"></span>일정</span>
-        <span style="display:inline-flex; align-items:center; gap:6px;"><span style="display:inline-block; width:10px; height:10px; background:${_SCHED_CAL_TASK_COLOR}1f; border-left:2px solid ${_SCHED_CAL_TASK_COLOR}; border-radius:2px;"></span>할 일 마감</span>
+        <span style="display:inline-flex; align-items:center; gap:6px;"><span style="display:inline-block; width:11px; height:11px; background:${_SCHED_CAL_SCHEDULE_COLOR}; border-radius:3px;"></span>일정</span>
+        <span style="display:inline-flex; align-items:center; gap:6px;"><span style="display:inline-block; width:11px; height:11px; background:${_SCHED_CAL_TASK_COLOR}; border-radius:3px;"></span>할 일 마감</span>
       </div>
     `;
   } else {
     html += `
       <div style="margin:18px 4px 0; padding:12px 14px; background:var(--surface); border:1px solid var(--border); border-radius:12px; font-size:12px; color:var(--text-soft); line-height:1.6;">
         <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:center;">
-          <span style="display:inline-flex; align-items:center; gap:6px;"><span style="display:inline-block; width:10px; height:10px; background:${_SCHED_CAL_SCHEDULE_COLOR}1f; border-left:2px solid ${_SCHED_CAL_SCHEDULE_COLOR}; border-radius:2px;"></span>일정</span>
-          <span style="display:inline-flex; align-items:center; gap:6px;"><span style="display:inline-block; width:10px; height:10px; background:${_SCHED_CAL_TASK_COLOR}1f; border-left:2px solid ${_SCHED_CAL_TASK_COLOR}; border-radius:2px;"></span>할 일 마감</span>
+          <span style="display:inline-flex; align-items:center; gap:6px;"><span style="display:inline-block; width:11px; height:11px; background:${_SCHED_CAL_SCHEDULE_COLOR}; border-radius:3px;"></span>일정</span>
+          <span style="display:inline-flex; align-items:center; gap:6px;"><span style="display:inline-block; width:11px; height:11px; background:${_SCHED_CAL_TASK_COLOR}; border-radius:3px;"></span>할 일 마감</span>
         </div>
         <div style="margin-top:8px; font-size:11px; color:var(--text-soft); opacity:0.8;">더 아래로 스크롤하면 전체화면⛶</div>
       </div>
@@ -369,7 +373,7 @@ function _schedCalDayClick(dateKey) {
 try {
   window.addEventListener('keydown', function(e) {
     if (e.key !== 'Escape') return;
-    if (document.getElementById('schedDayTimelineOverlay') || document.getElementById('schedModalOverlay') || document.getElementById('taskEditModalOverlay')) return;
+    if (document.getElementById('schedDayTimelineOverlay') || document.getElementById('schedModalOverlay') || document.getElementById('schedSheetOverlay')) return;
     if (document.getElementById('schedCalFsOverlay')) _closeScheduleCalendarFullscreen();
   });
 } catch (e) {}

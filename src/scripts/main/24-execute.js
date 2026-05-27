@@ -145,7 +145,7 @@ function renderExecute() {
       const isDone = task.status === 'done';
       const schedLabel = task.scheduledStart ? `<span class="todo-sched-label">⏰ ${task.scheduledStart}${task.scheduledEnd ? `–${task.scheduledEnd}` : ''}</span>` : '';
       // 사용자 명시 2026-05-27 ultrathink (3단계): task.dueDate 있으면 마감 라벨 표시.
-      const dueLabel = task.dueDate ? `<span style="font-size:10px; color:#fbbf24; margin-left:6px; padding:1px 5px; background:#fbbf241f; border-radius:3px; white-space:nowrap;">📅 ${escapeHtml(task.dueDate)}${task.dueTime ? ' ' + escapeHtml(task.dueTime) : ''}</span>` : '';
+      const dueLabel = task.dueDate ? `<span style="font-size:10px; color:#e0a93f; margin-left:6px; padding:1px 5px; background:#e0a93f1f; border-radius:3px; white-space:nowrap;">📅 ${escapeHtml(task.dueDate)}${task.dueTime ? ' ' + escapeHtml(task.dueTime) : ''}</span>` : '';
       html += `
         <div class="todo-item${isDone ? ' completed' : ''}" data-task-id="${task.id}">
           <button class="todo-check${isDone ? ' checked' : ''}" onclick="toggleQuestComplete('${task.id}')" aria-label="${isDone ? '되살리기' : '완료'}" title="${isDone ? '되살리기' : '완료'}">${isDone ? '✓' : ''}</button>
@@ -195,7 +195,7 @@ function renderExecute() {
         const isAIMission = task.source === 'ai_mission';
         const tagEmoji = isAIMission ? '🐚' : task.weight === 'main' ? '⚡' : task.weight === 'light' ? '🍃' : '📌';
         // 사용자 명시 2026-05-27 ultrathink (3단계): drawer row 에도 dueDate 라벨.
-        const dueLabel = task.dueDate ? `<span style="font-size:10px; color:#fbbf24; margin-left:4px; padding:1px 4px; background:#fbbf241f; border-radius:3px; white-space:nowrap;">📅 ${escapeHtml(task.dueDate)}${task.dueTime ? ' ' + escapeHtml(task.dueTime) : ''}</span>` : '';
+        const dueLabel = task.dueDate ? `<span style="font-size:10px; color:#e0a93f; margin-left:4px; padding:1px 4px; background:#e0a93f1f; border-radius:3px; white-space:nowrap;">📅 ${escapeHtml(task.dueDate)}${task.dueTime ? ' ' + escapeHtml(task.dueTime) : ''}</span>` : '';
         return `
           <div class="drawer-row" data-task-id="${task.id}">
             <span class="drawer-row-tag">${tagEmoji}</span>

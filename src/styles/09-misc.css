@@ -8828,6 +8828,71 @@
   @keyframes sched-cal-fs-in { from { opacity: 0; } to { opacity: 1; } }
   /* 일별 시간대(day view) 스크롤 영역 */
   .sched-day-scroll { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
+
+  /* 사용자 명시 2026-05-27 ultrathink — 구글식 통합 바닥 시트 (일정/할 일 생성·편집). */
+  .sched-sheet-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    z-index: 10000; display: flex; align-items: flex-end; justify-content: center;
+    animation: sched-sheet-fade 0.18s ease;
+  }
+  @keyframes sched-sheet-fade { from { opacity: 0; } to { opacity: 1; } }
+  .sched-sheet {
+    background: var(--bg);
+    border-top-left-radius: 22px; border-top-right-radius: 22px;
+    border-top: 1px solid var(--border-strong);
+    width: 100%; max-width: 520px; max-height: 92vh; overflow-y: auto;
+    padding: 6px 16px calc(20px + env(safe-area-inset-bottom, 0px));
+    box-sizing: border-box;
+    animation: sched-sheet-up 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @keyframes sched-sheet-up { from { transform: translateY(100%); } to { transform: none; } }
+  .sched-sheet-grip { width: 38px; height: 4px; border-radius: 2px; background: var(--border-strong); margin: 6px auto 8px; }
+  .sched-sheet-topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .sched-sheet-cancel { background: transparent; border: none; color: var(--text-soft); font-size: 14px; font-family: inherit; cursor: pointer; padding: 6px 4px; }
+  .sched-sheet-save { background: var(--accent2); border: none; color: var(--bg); font-size: 14px; font-weight: 700; font-family: inherit; cursor: pointer; padding: 8px 18px; border-radius: 10px; }
+  .sched-sheet-save:active { opacity: 0.85; }
+  .sched-sheet-title {
+    width: 100%; box-sizing: border-box; border: none; background: transparent;
+    color: var(--text); font-size: 21px; font-weight: 600; font-family: inherit;
+    padding: 8px 2px 12px; outline: none;
+  }
+  .sched-sheet-title::placeholder { color: var(--text-soft); font-weight: 400; }
+  .sched-sheet-seg { display: flex; gap: 5px; background: var(--surface); border-radius: 12px; padding: 4px; margin-bottom: 14px; }
+  .sched-sheet-seg button {
+    flex: 1; padding: 9px; border: none; border-radius: 9px; background: transparent;
+    color: var(--text-soft); font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .sched-sheet-fields { display: flex; flex-direction: column; gap: 12px; }
+  .sched-sheet-delete {
+    width: 100%; margin-top: 16px; padding: 12px; background: transparent;
+    border: 1px solid var(--border); color: var(--danger); border-radius: 11px;
+    font-size: 13px; font-family: inherit; cursor: pointer;
+  }
+  /* day-grid 초안에서 연 docked 시트 — 백드롭 포인터 통과(위 그리드 핸들 계속 조작), 하단 dock. */
+  .sched-sheet-overlay-docked { background: transparent; pointer-events: none; }
+  .sched-sheet-overlay-docked .sched-sheet { pointer-events: auto; max-height: 62vh; box-shadow: 0 -10px 34px rgba(0,0,0,0.55); }
+
+  /* day view 온그리드 초안 블록 + 드래그 핸들 (구글식 생성). */
+  .sched-day-block.sched-day-dragging { opacity: 0.92; box-shadow: 0 4px 14px rgba(0,0,0,0.4); z-index: 4; }
+  .sched-day-draft {
+    position: absolute; left: 0; right: 0;
+    background: var(--cal-event); opacity: 0.9;
+    border-radius: 6px; box-sizing: border-box;
+    z-index: 5; box-shadow: 0 2px 10px rgba(0,0,0,0.35);
+  }
+  .sched-day-draft-label {
+    position: absolute; left: 8px; top: 50%; transform: translateY(-50%);
+    font-size: 11px; font-weight: 700; color: var(--cal-event-on);
+    white-space: nowrap; pointer-events: none;
+  }
+  .sched-day-handle {
+    position: absolute; width: 16px; height: 16px; border-radius: 50%;
+    background: var(--bg); border: 3px solid var(--cal-event);
+    cursor: ns-resize; touch-action: none; z-index: 6;
+  }
+  .sched-day-handle-top { top: -8px; left: -7px; }
+  .sched-day-handle-bottom { bottom: -8px; right: -7px; }
   .cal-nav {
     display: flex; align-items: center; justify-content: space-between;
     margin-bottom: 10px;

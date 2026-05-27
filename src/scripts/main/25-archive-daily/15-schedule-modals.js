@@ -2,8 +2,10 @@
 // 캘린더 날짜 클릭 → 그날의 일정 + task 모달 + 일정 추가/수정/삭제 폼.
 // 알림 옵션 (notifyMinutesBefore) UI 만 — 실제 OS 알림 trigger 는 4단계 (로컬 알림) 에서 연결.
 
-const _SCHED_MOD_SCHED_COLOR = '#7eb8ff';
-const _SCHED_MOD_TASK_COLOR  = '#fbbf24';
+const _SCHED_MOD_SCHED_COLOR = '#4ea8c9';  // 바다톤 일정 (var(--cal-event))
+const _SCHED_MOD_TASK_COLOR  = '#e0a93f';  // 골드 할 일 (var(--cal-task))
+const _SCHED_MOD_SCHED_INK   = '#08222c';
+const _SCHED_MOD_TASK_INK    = '#2a1d05';
 
 function _closeScheduleModals() {
   const overlay = document.getElementById('schedModalOverlay');
@@ -107,212 +109,12 @@ function openScheduleDayModal(dateKey) {
   document.body.insertAdjacentHTML('beforeend', html);
 }
 
-// 일정 폼 모달 (create + update). opts: { date: 'YYYY-MM-DD' } (create 시 default 날짜).
+// 일정 생성/편집 — 구글식 통합 바닥 시트로 라우팅 (18-schedule-sheet.js). opts: { date }.
 function openScheduleEditModal(scheduleId, opts) {
   _closeScheduleModals();
-  opts = opts || {};
-
-  let entry = null;
-  if (scheduleId) {
-    entry = (state.schedules || []).find(s => s.id === scheduleId) || null;
+  if (typeof openScheduleSheet === 'function') {
+    openScheduleSheet({ type: 'schedule', id: scheduleId || null, date: (opts && opts.date) || null });
   }
-
-  const isEdit = !!entry;
-  const titleVal = entry ? (entry.title || '') : '';
-  const descVal  = entry ? (entry.description || '') : '';
-  const isAllDay = entry ? !!entry.isAllDay : false;
-  let notifyVal;
-  if (entry) {
-    notifyVal = (entry.notifyMinutesBefore === null || entry.notifyMinutesBefore === undefined)
-      ? ''
-      : String(entry.notifyMinutesBefore);
-  } else {
-    notifyVal = '15';
-  }
-
-  // 시작/종료 시각 — datetime-local input
-  let startVal, endVal;
-  if (entry) {
-    startVal = _schedFormatLocalDT(new Date(entry.startAt));
-    endVal   = _schedFormatLocalDT(new Date(entry.endAt));
-  } else {
-    const baseDate = opts.date || (new Date()).toLocaleDateString('sv-SE');  // 'YYYY-MM-DD' (Swedish locale 은 ISO 형식)
-    const now = new Date();
-    const startH = String(now.getHours()).padStart(2, '0');
-    const endH = String((now.getHours() + 1) % 24).padStart(2, '0');
-    startVal = `${baseDate}T${startH}:00`;
-    endVal   = `${baseDate}T${endH}:00`;
-  }
-
-  const notifyOptions = [
-    { v: '',     label: '없음' },
-    { v: '0',    label: '시작 시' },
-    { v: '5',    label: '5분 전' },
-    { v: '10',   label: '10분 전' },
-    { v: '15',   label: '15분 전 (기본)' },
-    { v: '30',   label: '30분 전' },
-    { v: '60',   label: '1시간 전' },
-    { v: '120',  label: '2시간 전' },
-    { v: '1440', label: '1일 전' }
-  ];
-  const notifyOptHtml = notifyOptions.map(o =>
-    `<option value="${o.v}"${notifyVal === o.v ? ' selected' : ''}>${o.label}</option>`
-  ).join('');
-
-  const inputStyle = 'padding:10px 12px; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:14px; font-family:inherit; width:100%; box-sizing:border-box;';
-  const dtStyle    = 'padding:10px 12px; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:13px; font-family:inherit; width:100%; box-sizing:border-box;';
-  // 사용자 보고 2026-05-27: date/time input overflow fix — appearance none + min-width 0.
-  const dateTimeStyle = dtStyle + ' -webkit-appearance:none; appearance:none; min-width:0; max-width:100%;';
-
-  const html = `
-    <div id="schedModalOverlay" onclick="if(event.target===this) _closeScheduleModals();" style="position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:9999; display:flex; align-items:center; justify-content:center; padding:20px; box-sizing:border-box;">
-      <div style="background:var(--bg); border:1px solid var(--border); border-radius:16px; width:100%; max-width:480px; max-height:85vh; overflow-y:auto; padding:18px 16px;" onclick="event.stopPropagation();">
-        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
-          <div style="font-size:16px; font-weight:600; color:var(--text);">${isEdit ? '✏️ 일정 수정' : '+ 새 일정'}</div>
-          <button onclick="_closeScheduleModals()" style="background:transparent; border:none; color:var(--text-soft); font-size:22px; cursor:pointer; padding:2px 6px; line-height:1;" aria-label="닫기">×</button>
-        </div>
-        <div style="display:flex; flex-direction:column; gap:13px;">
-          <label style="display:flex; flex-direction:column; gap:5px;">
-            <span style="font-size:12px; color:var(--text-soft);">제목</span>
-            <input type="text" id="schedFormTitle" value="${escapeHtml(titleVal)}" placeholder="일정 제목" maxlength="60" style="${inputStyle}">
-          </label>
-          <label style="display:flex; flex-direction:column; gap:5px;">
-            <span style="font-size:12px; color:var(--text-soft);">메모 (선택)</span>
-            <textarea id="schedFormDesc" rows="2" style="${inputStyle} resize:vertical; min-height:48px;">${escapeHtml(descVal)}</textarea>
-          </label>
-          <label style="display:flex; align-items:center; gap:8px; padding:4px 0; cursor:pointer;">
-            <input type="checkbox" id="schedFormAllDay" ${isAllDay ? 'checked' : ''} onchange="_schedFormToggleAllDay()" style="width:18px; height:18px; cursor:pointer; accent-color:var(--accent2);">
-            <span style="font-size:13px; color:var(--text);">종일</span>
-          </label>
-          <div id="schedFormTimeWrap" style="display:flex; flex-direction:column; gap:10px;">
-            <label style="display:flex; flex-direction:column; gap:5px;">
-              <span style="font-size:12px; color:var(--text-soft);">시작</span>
-              <input type="datetime-local" id="schedFormStart" value="${startVal}" style="${dateTimeStyle}">
-            </label>
-            <label style="display:flex; flex-direction:column; gap:5px;">
-              <span style="font-size:12px; color:var(--text-soft);">종료</span>
-              <input type="datetime-local" id="schedFormEnd" value="${endVal}" style="${dateTimeStyle}">
-            </label>
-          </div>
-          <label style="display:flex; flex-direction:column; gap:5px;">
-            <span style="font-size:12px; color:var(--text-soft);">알림</span>
-            <select id="schedFormNotify" style="${dtStyle}">${notifyOptHtml}</select>
-          </label>
-        </div>
-        <div style="display:flex; gap:8px; margin-top:18px; flex-wrap:wrap;">
-          ${isEdit ? `<button onclick="_schedFormDelete('${entry.id}')" style="padding:11px 14px; background:transparent; border:1px solid var(--border); color:#dc6c6c; border-radius:10px; font-size:13px; cursor:pointer; font-family:inherit;">🗑 삭제</button>` : ''}
-          <button onclick="_closeScheduleModals()" style="flex:1; min-width:80px; padding:11px 14px; background:transparent; border:1px solid var(--border); color:var(--text-soft); border-radius:10px; font-size:13px; cursor:pointer; font-family:inherit;">취소</button>
-          <button onclick="_schedFormSave('${entry ? entry.id : ''}', '${opts.date || ''}')" style="flex:1; min-width:80px; padding:11px 14px; background:var(--accent2); border:none; color:#fff; border-radius:10px; font-size:13px; font-weight:500; cursor:pointer; font-family:inherit;">${isEdit ? '저장' : '추가'}</button>
-        </div>
-      </div>
-    </div>
-  `;
-  document.body.insertAdjacentHTML('beforeend', html);
-  _schedFormToggleAllDay();
-  setTimeout(() => {
-    const inp = document.getElementById('schedFormTitle');
-    if (inp && !isEdit) inp.focus();
-  }, 50);
-}
-
-function _schedFormToggleAllDay() {
-  const allDayCb = document.getElementById('schedFormAllDay');
-  const timeWrap = document.getElementById('schedFormTimeWrap');
-  if (!allDayCb || !timeWrap) return;
-  if (allDayCb.checked) {
-    timeWrap.style.opacity = '0.5';
-    timeWrap.style.pointerEvents = 'none';
-  } else {
-    timeWrap.style.opacity = '';
-    timeWrap.style.pointerEvents = '';
-  }
-}
-
-function _schedFormSave(existingId, dateHint) {
-  const title = (document.getElementById('schedFormTitle')?.value || '').trim();
-  if (!title) {
-    if (typeof showToast === 'function') showToast('제목을 입력해줘');
-    return;
-  }
-  const desc = (document.getElementById('schedFormDesc')?.value || '').trim();
-  const isAllDay = !!document.getElementById('schedFormAllDay')?.checked;
-  let startStr = document.getElementById('schedFormStart')?.value || '';
-  let endStr   = document.getElementById('schedFormEnd')?.value   || '';
-  const notifyStr = document.getElementById('schedFormNotify')?.value;
-
-  if (!startStr || !endStr) {
-    if (typeof showToast === 'function') showToast('시작/종료 시간을 입력해줘');
-    return;
-  }
-
-  // 종일 — 자정-자정 정렬
-  if (isAllDay) {
-    const dKey = startStr.slice(0, 10) || dateHint || (new Date()).toLocaleDateString('sv-SE');
-    startStr = `${dKey}T00:00`;
-    endStr   = `${dKey}T23:59`;
-  }
-
-  const start = new Date(startStr);
-  const end   = new Date(endStr);
-  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-    if (typeof showToast === 'function') showToast('시간 형식이 잘못됐어');
-    return;
-  }
-  if (end.getTime() < start.getTime()) {
-    if (typeof showToast === 'function') showToast('종료가 시작보다 앞설 수 없어');
-    return;
-  }
-
-  const notify = (notifyStr === '' || notifyStr === null) ? null : parseInt(notifyStr, 10);
-
-  try {
-    if (existingId) {
-      const r = updateSchedule(existingId, {
-        title,
-        description: desc || null,
-        startAt: start,
-        endAt: end,
-        isAllDay,
-        notifyMinutesBefore: notify
-      });
-      if (!r) { if (typeof showToast === 'function') showToast('일정 없음'); return; }
-      if (typeof showToast === 'function') showToast('✏️ 수정됨');
-    } else {
-      createSchedule({
-        title,
-        description: desc || null,
-        startAt: start,
-        endAt: end,
-        isAllDay,
-        notifyMinutesBefore: notify
-      });
-      if (typeof showToast === 'function') showToast('📅 추가됨');
-    }
-  } catch (e) {
-    console.warn('[schedule save]', e);
-    if (typeof showToast === 'function') showToast(`저장 실패: ${e.message || e}`);
-    return;
-  }
-
-  _closeScheduleModals();
-  if (typeof renderScheduleCalendarGrid === 'function') renderScheduleCalendarGrid();
-  if (typeof _refreshScheduleDayTimelineIfOpen === 'function') _refreshScheduleDayTimelineIfOpen();
-}
-
-function _schedFormDelete(id) {
-  if (!id) return;
-  if (!confirm('이 일정 삭제할까?')) return;
-  try {
-    deleteSchedule(id);
-    if (typeof showToast === 'function') showToast('🗑 삭제됨');
-  } catch (e) {
-    console.warn('[schedule delete]', e);
-    if (typeof showToast === 'function') showToast(`삭제 실패: ${e.message || e}`);
-    return;
-  }
-  _closeScheduleModals();
-  if (typeof renderScheduleCalendarGrid === 'function') renderScheduleCalendarGrid();
-  if (typeof _refreshScheduleDayTimelineIfOpen === 'function') _refreshScheduleDayTimelineIfOpen();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -358,6 +160,8 @@ function _schedDayAssignColumns(events) {
 }
 
 function _closeScheduleDayTimeline() {
+  // docked 생성 시트가 떠 있으면 같이 정리 (고아 방지).
+  if (document.getElementById('schedSheetOverlay') && typeof _closeSchedSheet === 'function') _closeSchedSheet();
   const ov = document.getElementById('schedDayTimelineOverlay');
   if (ov) ov.remove();
   _schedDayTimelineDate = null;
@@ -427,12 +231,13 @@ function openScheduleDayTimeline(dateKey) {
     const leftPct = (ev._col || 0) * widthPct;
     const top = (ev.startMin / 60) * HOUR_H;
     const height = Math.max(((ev.endMin - ev.startMin) / 60) * HOUR_H - 2, 20);
-    const doneStyle = ev.done ? ' opacity:0.55;' : '';
+    const ink = ev.kind === 'task' ? _SCHED_MOD_TASK_INK : _SCHED_MOD_SCHED_INK;
+    const doneStyle = ev.done ? ' opacity:0.5;' : '';
     const titleStyle = ev.done ? ' text-decoration:line-through;' : '';
     blocksHtml += `
-      <div class="sched-day-block" data-item-id="${ev.id}" data-kind="${ev.kind}" data-start="${ev.startMin}" data-end="${ev.endMin}" data-done="${ev.done ? 1 : 0}" style="position:absolute; top:${top}px; height:${height}px; left:calc(${leftPct}% + 2px); width:calc(${widthPct}% - 4px); background:${ev.color}26; border-left:3px solid ${ev.color}; border-radius:5px; padding:3px 6px; box-sizing:border-box; overflow:hidden; cursor:pointer; touch-action:pan-y;${doneStyle}">
-        <div style="font-size:11px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.3;${titleStyle}">${escapeHtml(ev.title)}</div>
-        ${height > 30 ? `<div style="font-size:9px; color:var(--text-soft); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(ev.sub || '')}</div>` : ''}
+      <div class="sched-day-block" data-item-id="${ev.id}" data-kind="${ev.kind}" data-start="${ev.startMin}" data-end="${ev.endMin}" data-done="${ev.done ? 1 : 0}" style="position:absolute; top:${top}px; height:${height}px; left:calc(${leftPct}% + 2px); width:calc(${widthPct}% - 4px); background:${ev.color}; border-radius:6px; padding:3px 7px; box-sizing:border-box; overflow:hidden; cursor:pointer; touch-action:pan-y;${doneStyle}">
+        <div style="font-size:11px; font-weight:700; color:${ink}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.3;${titleStyle}">${escapeHtml(ev.title)}</div>
+        ${height > 30 ? `<div style="font-size:9px; color:${ink}; opacity:0.72; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(ev.sub || '')}</div>` : ''}
       </div>
     `;
   }
@@ -458,8 +263,9 @@ function openScheduleDayTimeline(dateKey) {
     allDayHtml = `<div style="display:flex; flex-wrap:wrap; gap:6px; padding:8px 14px; border-bottom:1px solid var(--border);">
       ${allDay.map(a => {
         const act = a.kind === 'schedule' ? `openScheduleEditModal('${a.id}')` : `_schedDayTaskMenu('${a.id}')`;
-        const ds = a.done ? ' opacity:0.55; text-decoration:line-through;' : '';
-        return `<div onclick="${act}" style="font-size:11px; padding:4px 9px; background:${a.color}26; border-left:3px solid ${a.color}; border-radius:5px; color:var(--text); cursor:pointer; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;${ds}">${escapeHtml(a.title)}</div>`;
+        const ink = a.kind === 'task' ? _SCHED_MOD_TASK_INK : _SCHED_MOD_SCHED_INK;
+        const ds = a.done ? ' opacity:0.5; text-decoration:line-through;' : '';
+        return `<div onclick="${act}" style="font-size:11px; font-weight:600; padding:4px 9px; background:${a.color}; border-radius:5px; color:${ink}; cursor:pointer; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;${ds}">${escapeHtml(a.title)}</div>`;
       }).join('')}
     </div>`;
   }
@@ -478,7 +284,7 @@ function openScheduleDayTimeline(dateKey) {
       <div class="sched-day-scroll">
         <div style="position:relative; height:${24 * HOUR_H + 8}px; padding:4px 12px 0 0;">
           ${hoursHtml}
-          <div style="position:absolute; left:42px; right:8px; top:0; bottom:0;">
+          <div id="schedDayBlocksLayer" style="position:absolute; left:42px; right:8px; top:0; bottom:0;">
             ${blocksHtml}
           </div>
           ${nowLineHtml}
@@ -515,6 +321,139 @@ function _schedDaySetupInteractions() {
     el.addEventListener('touchstart', _schedDayDown, { passive: true });
     el.addEventListener('mousedown', _schedDayDown);
   });
+  // 빈 시간대 탭 → 온그리드 초안 + 핸들 (구글식 생성).
+  const layer = document.getElementById('schedDayBlocksLayer');
+  if (layer) layer.addEventListener('click', _schedDayEmptyTap);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 사용자 명시 2026-05-27 ultrathink (구글 풀카피): 빈 시간대 탭 → 초안 블록 + 위/아래 드래그 핸들.
+//   탭 = 그 시간(30분 칸)에 1시간 초안 + 통합 시트(docked) 슬라이드. 핸들 끌면 시작/종료 조정(5분 snap) + 시트 시간 라이브 반영.
+//   시트 백드롭은 docked = 포인터 통과 → 위쪽 그리드 핸들 계속 조작 가능. 저장/취소로 초안 정리.
+// ─────────────────────────────────────────────────────────────────────────────
+let _schedDayDraft = null;        // { startMin, endMin }
+let _schedDayHandleDrag = null;
+const _SCHED_DAY_DRAFT_MIN_LEN = 15;
+const _SCHED_DAY_DRAFT_SNAP = 5;
+
+function _schedDayMinLabel(m) {
+  return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+}
+
+function _schedDayMinuteFromClientY(clientY) {
+  const layer = document.getElementById('schedDayBlocksLayer');
+  if (!layer) return null;
+  const rect = layer.getBoundingClientRect();
+  const min = Math.round(((clientY - rect.top) / _SCHED_DAY_HOUR_H) * 60);
+  return Math.max(0, Math.min(min, 24 * 60));
+}
+
+function _schedDayEmptyTap(e) {
+  if (e.target.closest('.sched-day-block') || e.target.closest('.sched-day-draft')) return;
+  const clientY = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0].clientY : e.clientY;
+  const tapped = _schedDayMinuteFromClientY(clientY);
+  if (tapped == null) return;
+  let start = Math.floor(tapped / 30) * 30;  // 30분 칸 시작으로 snap
+  let end = start + 60;                        // 기본 1시간
+  if (end > 24 * 60) { end = 24 * 60; start = Math.max(0, end - 60); }
+  if (!_schedDayTimelineDate) return;
+  _schedDayClearDraft();
+  _schedDayDraft = { startMin: start, endMin: end };
+  _schedDayRenderDraft();
+  // 초안이 docked 시트 위쪽(보이는 영역)에 오도록 스크롤 — 시트가 하단을 덮으므로.
+  const scrollEl = document.querySelector('#schedDayTimelineOverlay .sched-day-scroll');
+  if (scrollEl) scrollEl.scrollTop = Math.max(0, (start / 60) * _SCHED_DAY_HOUR_H - _SCHED_DAY_HOUR_H);
+  if (typeof openScheduleSheet === 'function') {
+    openScheduleSheet({ type: 'schedule', date: _schedDayTimelineDate, startMin: start, endMin: end, docked: true });
+  }
+}
+
+function _schedDayRenderDraft() {
+  const layer = document.getElementById('schedDayBlocksLayer');
+  if (!layer || !_schedDayDraft) return;
+  let el = document.getElementById('schedDayDraftBlock');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'schedDayDraftBlock';
+    el.className = 'sched-day-draft';
+    el.innerHTML =
+      '<span class="sched-day-handle sched-day-handle-top" data-edge="start"></span>' +
+      '<span class="sched-day-draft-label"></span>' +
+      '<span class="sched-day-handle sched-day-handle-bottom" data-edge="end"></span>';
+    layer.appendChild(el);
+    el.querySelectorAll('.sched-day-handle').forEach(h => {
+      h.addEventListener('touchstart', _schedDayHandleDown, { passive: false });
+      h.addEventListener('mousedown', _schedDayHandleDown);
+    });
+  }
+  const { startMin, endMin } = _schedDayDraft;
+  el.style.top = ((startMin / 60) * _SCHED_DAY_HOUR_H) + 'px';
+  el.style.height = Math.max(((endMin - startMin) / 60) * _SCHED_DAY_HOUR_H, 18) + 'px';
+  const lab = el.querySelector('.sched-day-draft-label');
+  if (lab) lab.textContent = `${_schedDayMinLabel(startMin)} – ${_schedDayMinLabel(endMin)}`;
+}
+
+function _schedDayClearDraft() {
+  _schedDayDraft = null;
+  const el = document.getElementById('schedDayDraftBlock');
+  if (el) el.remove();
+}
+
+function _schedDayHandleDown(e) {
+  if (!_schedDayDraft) return;
+  if (e.type === 'mousedown' && e.button !== 0) return;
+  if (e.cancelable) e.preventDefault();
+  e.stopPropagation();
+  const isTouch = e.type === 'touchstart';
+  _schedDayHandleDrag = {
+    edge: e.currentTarget.dataset.edge,
+    isTouch,
+    startY: _schedDayPointY(e),
+    origStart: _schedDayDraft.startMin,
+    origEnd: _schedDayDraft.endMin,
+    scrollEl: document.querySelector('#schedDayTimelineOverlay .sched-day-scroll')
+  };
+  if (_schedDayHandleDrag.scrollEl) _schedDayHandleDrag.scrollEl.style.overflow = 'hidden';
+  if (isTouch) {
+    document.addEventListener('touchmove', _schedDayHandleMove, { passive: false });
+    document.addEventListener('touchend', _schedDayHandleUp);
+    document.addEventListener('touchcancel', _schedDayHandleUp);
+  } else {
+    document.addEventListener('mousemove', _schedDayHandleMove);
+    document.addEventListener('mouseup', _schedDayHandleUp);
+  }
+}
+
+function _schedDayHandleMove(e) {
+  const d = _schedDayHandleDrag;
+  if (!d || !_schedDayDraft) return;
+  if (e.cancelable) e.preventDefault();
+  const dy = _schedDayPointY(e) - d.startY;
+  const deltaMin = Math.round((dy / _SCHED_DAY_HOUR_H) * 60 / _SCHED_DAY_DRAFT_SNAP) * _SCHED_DAY_DRAFT_SNAP;
+  if (d.edge === 'start') {
+    _schedDayDraft.startMin = Math.max(0, Math.min(d.origStart + deltaMin, d.origEnd - _SCHED_DAY_DRAFT_MIN_LEN));
+  } else {
+    _schedDayDraft.endMin = Math.min(24 * 60, Math.max(d.origEnd + deltaMin, d.origStart + _SCHED_DAY_DRAFT_MIN_LEN));
+  }
+  _schedDayRenderDraft();
+  if (typeof _schedSheetSetTimeRange === 'function') {
+    _schedSheetSetTimeRange(_schedDayTimelineDate, _schedDayDraft.startMin, _schedDayDraft.endMin);
+  }
+}
+
+function _schedDayHandleUp() {
+  const d = _schedDayHandleDrag;
+  _schedDayHandleDrag = null;
+  if (!d) return;
+  if (d.scrollEl) d.scrollEl.style.overflow = '';
+  if (d.isTouch) {
+    document.removeEventListener('touchmove', _schedDayHandleMove, { passive: false });
+    document.removeEventListener('touchend', _schedDayHandleUp);
+    document.removeEventListener('touchcancel', _schedDayHandleUp);
+  } else {
+    document.removeEventListener('mousemove', _schedDayHandleMove);
+    document.removeEventListener('mouseup', _schedDayHandleUp);
+  }
 }
 
 function _schedDayDown(e) {
@@ -765,7 +704,7 @@ try {
   // day view — 수정 모달이 위에 없을 때만 닫기.
   window.addEventListener('keydown', function(e) {
     if (e.key !== 'Escape') return;
-    if (document.getElementById('schedModalOverlay') || document.getElementById('taskEditModalOverlay')) return;
+    if (document.getElementById('schedModalOverlay') || document.getElementById('schedSheetOverlay')) return;
     if (document.getElementById('schedDayTimelineOverlay')) _closeScheduleDayTimeline();
   });
 } catch (e) {}
@@ -774,9 +713,6 @@ try {
   window.openScheduleDayModal = openScheduleDayModal;
   window.openScheduleEditModal = openScheduleEditModal;
   window._closeScheduleModals = _closeScheduleModals;
-  window._schedFormSave = _schedFormSave;
-  window._schedFormDelete = _schedFormDelete;
-  window._schedFormToggleAllDay = _schedFormToggleAllDay;
   window.openScheduleDayTimeline = openScheduleDayTimeline;
   window._closeScheduleDayTimeline = _closeScheduleDayTimeline;
   window._schedDayShift = _schedDayShift;
@@ -784,4 +720,5 @@ try {
   window._schedDayTaskMenu = _schedDayTaskMenu;
   window._schedDayTaskMenuAction = _schedDayTaskMenuAction;
   window._openScheduleFromNotif = _openScheduleFromNotif;
+  window._schedDayClearDraft = _schedDayClearDraft;
 } catch (e) {}
