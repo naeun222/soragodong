@@ -16,13 +16,14 @@ let _execMode = 'balance';
 // V4 (사용자 명시 2026-05-04 ultrathink): 실행 탭 redesign 상태
 let _timetableExpanded = false;          // 타임테이블 strip 펼침 (세션 한정)
 
-// 사용자 명시 2026-05-06 (정정): 실행탭 일정 = 자정 (00:00) cutoff. todayKey() 의 4AM cutoff X — 일반 자정 기준.
+// 사용자 명시 2026-05-28: 실행탭/타임라인 일정 리셋 기준 자정 → 새벽 4시 (todayKey 와 동일 cutoff).
+//   getDayKey(서버시간 + DAY_CUTOFF_HOUR=4) 위임 → 오늘 할 일 리스트·4시 롤오버와 완전 일관.
 function _scheduleDateKey() {
+  if (typeof getDayKey === 'function') return getDayKey();
+  // 폴백 — getDayKey 미정의 시 로컬 4시 cutoff.
   const d = new Date();
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}`;
+  d.setHours(d.getHours() - 4);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 function _renderTimetableStripHTML() {

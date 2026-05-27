@@ -240,7 +240,6 @@ function renderScheduleCalendarGrid(targetId, fullscreen) {
     html += `
       <div onclick="_schedCalDayClick('${dateKey}')" style="background:var(--surface); padding:3px 2px 4px; cursor:pointer; display:flex; flex-direction:column; gap:2px; box-sizing:border-box; overflow:hidden;">
         <div style="display:flex; justify-content:flex-end;">${dayLabelHtml}</div>
-        ${holiday ? `<div style="font-size:9px; font-weight:600; color:${_KR_HOLIDAY_GREEN}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.3;${itemDim}">${escapeHtml(holiday)}</div>` : ''}
         ${display.map(it => `
           <div style="font-size:10px; font-weight:600; padding:1px 4px; background:${it.color}; color:${it.ink}; border-radius:3px; white-space:nowrap; overflow:hidden; line-height:1.4;${itemDim}" title="${escapeHtml(it.title)}">${escapeHtml(it.title)}</div>
         `).join('')}
