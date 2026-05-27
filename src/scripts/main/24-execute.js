@@ -146,13 +146,14 @@ function renderExecute() {
       // 사용자 명시 2026-05-27 ultrathink (3단계): task.dueDate 있으면 마감 라벨 표시.
       const dueLabel = task.dueDate ? `<span style="font-size:10px; color:#d8ac63; margin-left:6px; padding:1px 5px; background:#d8ac631f; border-radius:3px; white-space:nowrap;">📅 ${escapeHtml(task.dueDate)}${task.dueTime ? ' ' + escapeHtml(task.dueTime) : ''}</span>` : '';
       // 사용자 명시 2026-05-27: ⏰(일정 적용) 버튼 제거. demote 버튼 ↩ → ↓ (서랍장 ↑ 와 같은 css).
+      // 사용자 명시 2026-05-27: 체크 동그라미 맨 오른쪽 / 삭제는 클러스터 맨 왼쪽 (체크와 멀리 → 오타 방지). 순서: 제목 · 삭제 · 편집 · 서랍장 · 체크.
       html += `
         <div class="todo-item${isDone ? ' completed' : ''}" data-task-id="${task.id}">
-          <button class="todo-check${isDone ? ' checked' : ''}" onclick="toggleQuestComplete('${task.id}')" aria-label="${isDone ? '되살리기' : '완료'}" title="${isDone ? '되살리기' : '완료'}">${isDone ? '✓' : ''}</button>
           <span class="todo-title">${escapeHtml(task.title)}${schedLabel}${dueLabel}</span>
+          <button class="todo-action danger" onclick="deleteTask('${task.id}')" title="삭제" aria-label="삭제">✕</button>
           ${isDone ? '' : `<button class="todo-action" onclick="editTaskCard('${task.id}')" title="수정" aria-label="수정">✎</button>`}
           ${isDone ? '' : `<button class="drawer-row-action down" onclick="demoteFromToday('${task.id}')" title="서랍장으로" aria-label="서랍장으로">↓</button>`}
-          <button class="todo-action" onclick="deleteTask('${task.id}')" title="삭제" aria-label="삭제">✕</button>
+          <button class="todo-check${isDone ? ' checked' : ''}" onclick="toggleQuestComplete('${task.id}')" aria-label="${isDone ? '되살리기' : '완료'}" title="${isDone ? '되살리기' : '완료'}">${isDone ? '✓' : ''}</button>
         </div>
       `;
     });
@@ -432,7 +433,7 @@ async function processBrainDump() {
 async function addManualTask() {
   const title = await showInputModal({
     title: '할 일 추가 ✦',
-    placeholder: '예: 카톡 답장',
+    placeholder: '',
     okLabel: '추가'
   });
   if (!title || !title.trim()) return;

@@ -41,8 +41,7 @@ async function addV4ScheduleItem() {
 async function addTodayTask() {
   const title = await showInputModal({
     title: '오늘 할 일 추가',
-    message: '한 줄로 적어.',
-    placeholder: '예: 메일 답장 / 빨래 돌리기',
+    placeholder: '',
     maxLength: 60,
     okLabel: '추가'
   });
