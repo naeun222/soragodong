@@ -83,9 +83,10 @@ async function scheduleNotificationForSchedule(schedule) {
     await cancelNotificationById(schedule.id);
     return false;
   }
+  // 사용자 명시 2026-05-27: 알림은 시작 N분 '전'에 울리지만, 받는 사람 입장 문구는 'N분 뒤 시작'.
   const body = notify === 0
     ? '지금 시작'
-    : (notify >= 1440 ? `${Math.round(notify / 1440)}일 전` : (notify >= 60 ? `${Math.round(notify / 60)}시간 전` : `${notify}분 전`));
+    : (notify >= 1440 ? `${Math.round(notify / 1440)}일 뒤 시작` : (notify >= 60 ? `${Math.round(notify / 60)}시간 뒤 시작` : `${notify}분 뒤 시작`));
   return _scheduleNative(schedule.id, schedule.title || '일정', body, new Date(triggerMs));
 }
 
@@ -116,9 +117,10 @@ async function scheduleNotificationForTask(task) {
     await cancelNotificationById(task.id);
     return false;
   }
+  // 사용자 명시 2026-05-27: 알림은 마감 N분 '전'에 울리지만, 받는 사람 입장 문구는 'N분 뒤 마감'.
   const body = notify === 0
     ? '지금 마감'
-    : (notify >= 1440 ? `${Math.round(notify / 1440)}일 전 마감` : (notify >= 60 ? `${Math.round(notify / 60)}시간 전 마감` : `${notify}분 전 마감`));
+    : (notify >= 1440 ? `${Math.round(notify / 1440)}일 뒤 마감` : (notify >= 60 ? `${Math.round(notify / 60)}시간 뒤 마감` : `${notify}분 뒤 마감`));
   return _scheduleNative(task.id, `✓ ${task.title || '할 일'}`, body, new Date(triggerMs));
 }
 
