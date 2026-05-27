@@ -681,6 +681,7 @@ function _schedDayTaskMenu(taskId) {
   const doneBtn = isDone
     ? `${btn}`
     : `${btn} background:var(--accent2); color:#fff; border-color:var(--accent2);`;
+  const dangerBtn = `${btn} color:var(--danger);`;
   const html = `
     <div id="schedDayTaskMenuOverlay" onclick="if(event.target===this) this.remove();" style="position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:10001; display:flex; align-items:flex-end; justify-content:center;">
       <div onclick="event.stopPropagation();" style="background:var(--bg); border-top-left-radius:18px; border-top-right-radius:18px; width:100%; max-width:520px; padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px)); box-sizing:border-box;">
@@ -689,6 +690,7 @@ function _schedDayTaskMenu(taskId) {
         <div style="display:flex; flex-direction:column; gap:8px;">
           <button onclick="_schedDayTaskMenuAction('${taskId}','edit')" style="${btn}">✎ 수정</button>
           <button onclick="_schedDayTaskMenuAction('${taskId}','${isDone ? 'revive' : 'done'}')" style="${doneBtn}">${isDone ? '↩ 되살리기' : '✓ 완료'}</button>
+          <button onclick="_schedDayTaskMenuAction('${taskId}','delete')" style="${dangerBtn}">🗑 삭제</button>
           <button onclick="document.getElementById('schedDayTaskMenuOverlay').remove()" style="${btn} color:var(--text-soft);">닫기</button>
         </div>
       </div>
@@ -702,6 +704,22 @@ function _schedDayTaskMenuAction(taskId, action) {
   if (ov) ov.remove();
   if (action === 'edit') {
     if (typeof openTaskEditModal === 'function') openTaskEditModal(taskId);
+    return;
+  }
+  if (action === 'delete') {
+    // 완전 정리 — task + 연결된 todaySchedule + 예약 알림. (deleteTask 는 이들 누락 → 직접 처리.)
+    (async () => {
+      const ok = (typeof confirmDelete === 'function') ? await confirmDelete('이 할 일') : confirm('이 할 일 삭제할까?');
+      if (!ok) return;
+      state.tasks = (Array.isArray(state.tasks) ? state.tasks : []).filter(t => t.id !== taskId);
+      state.todaySchedule = (Array.isArray(state.todaySchedule) ? state.todaySchedule : []).filter(it => it.taskId !== taskId);
+      if (typeof saveState === 'function') saveState();
+      if (typeof cancelNotificationById === 'function') cancelNotificationById(taskId).catch(() => {});
+      if (typeof showToast === 'function') showToast('🗑 삭제됨');
+      if (typeof renderExecute === 'function') renderExecute();
+      if (typeof renderScheduleCalendarGrid === 'function') renderScheduleCalendarGrid();
+      if (typeof _refreshScheduleDayTimelineIfOpen === 'function') _refreshScheduleDayTimelineIfOpen();
+    })();
     return;
   }
   // done / revive — toggleQuestComplete 가 양방향 처리 (셸 보상은 ai_mission 만 → due task 무영향).
