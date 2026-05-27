@@ -9027,7 +9027,8 @@
     animation: sched-sheet-up 0.26s cubic-bezier(0.22, 1, 0.36, 1);
   }
   @keyframes sched-sheet-up { from { transform: translateY(100%); } to { transform: none; } }
-  .sched-sheet-grab { display: flex; justify-content: center; padding: 4px 0 6px; cursor: grab; touch-action: none; -webkit-user-select: none; user-select: none; }
+  /* 맨위(full) 스크롤 중에도 핸들로 내릴 수 있게 그립을 상단에 고정. */
+  .sched-sheet-grab { display: flex; justify-content: center; padding: 4px 0 6px; cursor: grab; touch-action: none; -webkit-user-select: none; user-select: none; position: sticky; top: 0; z-index: 2; background: var(--bg); }
   .sched-sheet-grab:active { cursor: grabbing; }
   .sched-sheet-grip { width: 38px; height: 4px; border-radius: 2px; background: var(--border-strong); margin: 6px auto 8px; pointer-events: none; }
   .sched-sheet-topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
@@ -58583,10 +58584,9 @@ function openScheduleSheet(opts) {
   // 드래그 시트 — 열 때 half 디텐트. grip 으로 위로 끌면 full, 내리면 half/닫기.
   const sheetEl = document.querySelector('#schedSheetOverlay .sched-sheet');
   if (sheetEl) {
-    sheetEl.style.height = Math.round(window.innerHeight * 0.52) + 'px';
     sheetEl.style.maxHeight = '92vh';
-    // 사용자 명시 2026-05-27: grip 뿐 아니라 시트 본문 어디서 위/아래로 끌어도 시트가 따라 리사이즈.
-    //   입력/버튼/시간휠 위 시작은 제외(정상 동작). 본문은 6px 이상 끌 때만 드래그로 잡아 탭 보존.
+    // 사용자 명시 2026-05-27: 3단 디텐트 — 최소/중간(기본)/맨위. 열 때 중간(half), 본문 스크롤 OFF.
+    _schedSheetApplyDetent('half', false);
     sheetEl.addEventListener('touchstart', _schedSheetDragDown, { passive: false });
     sheetEl.addEventListener('mousedown', _schedSheetDragDown);
   }
@@ -58949,10 +58949,35 @@ function _schedSheetDelete() {
   if (typeof _refreshScheduleDayTimelineIfOpen === 'function') _refreshScheduleDayTimelineIfOpen();
 }
 
-// ── 드래그 시트 — 위로 끌면 full, 내리면 half / half 에서 더 내리면 닫기(확인) ──
-//   사용자 명시 2026-05-27: grip 뿐 아니라 시트 본문 어디서 끌어도 동작.
-//   본문은 입력/버튼/시간휠 제외 + 6px 임계 후 활성(탭 보존). grip 은 즉시 활성.
+// ── 드래그 시트 — 3단 디텐트: 최소(min) ↔ 중간(half) ↔ 맨위(full) ──
+//   사용자 명시 2026-05-27:
+//     · 중간: 본문 스크롤 X. 위로 끌면 맨위 / 아래로 끌면 최소.
+//     · 맨위: 본문 스크롤 O. 내리려면 그립(핸들) 잡고 아래로(→중간) 또는 시트 밖 탭(→삭제 모달). 본문 드래그는 스크롤.
+//     · 최소: 아래로 한 번 더 끌면 삭제(취소) 모달. 위로 끌면 중간.
+//   본문 드래그는 입력/버튼/시간휠 제외 + 6px 임계 후 활성(탭 보존). 그립은 즉시 활성.
 let _schedSheetDrag = null;
+
+function _schedSheetDetentHeights() {
+  const vh = window.innerHeight;
+  return { min: 150, half: Math.round(vh * 0.52), full: Math.round(vh * 0.92) };
+}
+
+// 디텐트 적용 — 높이 + 본문 스크롤 토글 (맨위만 ON). detent: 'min'|'half'|'full'.
+function _schedSheetApplyDetent(detent, animate) {
+  const sheet = document.querySelector('#schedSheetOverlay .sched-sheet');
+  if (!sheet) return;
+  const H = _schedSheetDetentHeights();
+  const h = H[detent] || H.half;
+  sheet.style.transition = animate ? 'height 0.24s cubic-bezier(0.22, 1, 0.36, 1)' : 'none';
+  sheet.style.height = h + 'px';
+  sheet.dataset.detent = detent;
+  if (detent === 'full') {
+    sheet.style.overflowY = 'auto';   // 맨위 = 본문 스크롤 ON
+  } else {
+    sheet.style.overflowY = 'hidden';  // 중간/최소 = 스크롤 OFF + 맨 위로
+    sheet.scrollTop = 0;
+  }
+}
 
 function _schedSheetPointY(e) {
   if (e.touches && e.touches[0]) return e.touches[0].clientY;
@@ -58967,6 +58992,9 @@ function _schedSheetDragDown(e) {
   if (!sheet) return;
   const tgt = e.target;
   const onGrab = !!(tgt && tgt.closest && tgt.closest('.sched-sheet-grab'));
+  const detent = sheet.dataset.detent || 'half';
+  // 맨위(full): 본문 드래그 = 스크롤. 그립으로만 리사이즈 (그립 아니면 드래그 안 잡고 native 스크롤에 양보).
+  if (detent === 'full' && !onGrab) return;
   // 본문: 입력/선택/버튼/시간휠 위에서 시작하면 드래그 X (정상 동작 우선).
   if (!onGrab && tgt && tgt.closest && tgt.closest('input, textarea, select, button, .dtw')) return;
   _schedSheetDrag = {
@@ -59023,18 +59051,20 @@ function _schedSheetDragUp() {
     document.removeEventListener('mouseup', _schedSheetDragUp);
   }
   if (!d.active) return;   // 임계 못 넘음 = 탭 → 동작 없음 (네이티브 click 진행)
-  const sheet = d.sheet;
-  const vh = window.innerHeight;
-  const HALF = Math.round(vh * 0.52), FULL = Math.round(vh * 0.92);
-  const det = sheet.dataset.detent || 'half';
-  sheet.style.transition = 'height 0.24s cubic-bezier(0.22, 1, 0.36, 1)';
-  if (d.lastDy < -50) {                       // 위로 → 펼침
-    sheet.style.height = FULL + 'px'; sheet.dataset.detent = 'full';
-  } else if (d.lastDy > 50) {                 // 아래로
-    sheet.style.height = HALF + 'px'; sheet.dataset.detent = 'half';
-    if (det !== 'full') _schedSheetTryDiscard();  // 이미 half 였으면 닫기(확인)
+  const det = d.sheet.dataset.detent || 'half';
+  if (d.lastDy < -50) {                       // 위로 한 단계: 최소→중간, 중간→맨위
+    _schedSheetApplyDetent(det === 'min' ? 'half' : 'full', true);
+  } else if (d.lastDy > 50) {                 // 아래로 한 단계
+    if (det === 'full') {
+      _schedSheetApplyDetent('half', true);   // 맨위 → 중간
+    } else if (det === 'half') {
+      _schedSheetApplyDetent('min', true);    // 중간 → 최소 (바로 삭제 아님)
+    } else {
+      _schedSheetApplyDetent('min', true);    // 최소에서 더 내림 → 삭제(취소) 모달 (제자리 유지)
+      _schedSheetTryDiscard();
+    }
   } else {
-    sheet.style.height = (det === 'full' ? FULL : HALF) + 'px';
+    _schedSheetApplyDetent(det, true);        // 제자리 스냅
   }
 }
 
@@ -73198,7 +73228,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.319-4am-rollover-demote';
+const APP_VERSION = 'v4.0.320-sheet-3detent';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 
