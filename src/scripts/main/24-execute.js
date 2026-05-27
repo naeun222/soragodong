@@ -125,11 +125,14 @@ function renderExecute() {
   // 오늘 할 일 (drawer 중 isToday=true) — 헤더에 + 추가 버튼
   const todayListAll = (state.tasks || [])
     .filter(t => t.slot === 'drawer' && t.isToday && t.date === todayKeyVal)
-    // 사용자 명시 2026-05-27: 꾹 눌러 드래그한 수동 순서(todayOrder) 우선, 없으면 생성순.
-    .sort((a, b) =>
-      ((a.todayOrder ?? Infinity) - (b.todayOrder ?? Infinity)) ||
-      (new Date(a.createdAt || 0) - new Date(b.createdAt || 0))
-    );
+    // 사용자 명시 2026-05-27: 완료된 할 일은 항상 아래로. 그 안에서 수동 순서(todayOrder) 우선, 없으면 생성순.
+    .sort((a, b) => {
+      const ad = a.status === 'done' ? 1 : 0;
+      const bd = b.status === 'done' ? 1 : 0;
+      if (ad !== bd) return ad - bd;
+      return ((a.todayOrder ?? Infinity) - (b.todayOrder ?? Infinity)) ||
+             (new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+    });
   const todayList = todayListAll.filter(t => t.status !== 'done');
   html += `<div class="exec-now-section">
     <div class="exec-section-label" style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
