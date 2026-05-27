@@ -1,6 +1,5 @@
-async function openImmerseStart() {
-  _quickStart({ taskId: null, taskTitle: null });
-}
+// 사용자 명시 2026-05-27: openImmerseStart (🌧 시작 버튼 핸들러) 제거 — 백업: _emergency_backup/immerse-start-button-2026-05-27/.
+//   _quickStart 는 startQuest(28-project-tracking) 가 직접 호출하므로 유지.
 
 // 공통 헬퍼 — 즉시 단축어 trigger + state.starts 기록 + localStorage active ritual + active bar
 function _quickStart({ taskId, taskTitle }) {

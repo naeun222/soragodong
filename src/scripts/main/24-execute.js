@@ -7,7 +7,7 @@
 //     · promoteFromDrawer setTimeout 자동 trigger 폐기 ('오늘의 카드 다 깼어 / 다음 3장 꺼낼까?' 모달).
 //     · rerollQuest / toggleExecCardExpand / _expandedExecCards / previewShellForTask 폐기 — 옛 now3 카드 surface 전용.
 //     · brain dump 모달 sub-text 에 'AI 호출 = 본인 plan 토큰 차감' 한 줄 추가 (사용자 명시: API 토큰 = 사용자 부담).
-//   '시작' 버튼은 유지 (사용자 명시: '시작 버튼은 냅둬'). 일정 lens 상단 큰 🌧 시작 (openImmerseStart) + addManualTask 후 '바로 시작?' 확인 모달 모두 그대로.
+//   '🌧 시작' 버튼 제거 (사용자 명시 2026-05-27 — 백업: _emergency_backup/immerse-start-button-2026-05-27/). addManualTask 후 '바로 시작?' 확인 모달(→startQuest)은 별개 기능이라 유지.
 //   shell helper (SHELL_POOLS / pickShellForTask / completeQuest 의 dedup + anti-recency + typeof guard) 유지.
 // ═══════════════════════════════════════════════════════════════
 
@@ -118,12 +118,7 @@ function renderExecute() {
     }
   }
 
-  html += `
-    <button class="exec-immerse-btn" onclick="openImmerseStart()">
-      🌧 시작
-      <div class="sub">빗소리·방해금지·집중 모드 ON</div>
-    </button>
-  `;
+  // 사용자 명시 2026-05-27: '🌧 시작' 버튼 제거 (백업: _emergency_backup/immerse-start-button-2026-05-27/).
 
   // 사용자 명시 2026-05-27 ultrathink (re-iter): '오늘의 카드' (now3 slot) 섹션 폐기. 옛 큰 카드 + 셸 미리보기 + [시작][✓] surface 모두 제거 — brain dump / 직접 추가 결과는 모두 아래 '오늘 할 일' 로 합류.
 
@@ -428,7 +423,7 @@ async function processBrainDump() {
 
 // === ADD MANUAL TASK ===
 // 사용자 명시 2026-05-27 ultrathink (re-iter): now3 / drawer 분기 폐기. 항상 '오늘 할 일' (drawer + isToday=true) 로 추가.
-//   '바로 시작?' 확인 모달은 유지 (사용자 명시: 시작 버튼 냅둬).
+//   '바로 시작?' 확인 모달(→startQuest)은 유지 — 🌧 시작 버튼 제거(2026-05-27)와 별개 기능.
 async function addManualTask() {
   const title = await showInputModal({
     title: '할 일 추가 ✦',

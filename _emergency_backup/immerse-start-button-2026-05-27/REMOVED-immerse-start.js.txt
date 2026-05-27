@@ -1,0 +1,26 @@
+// 백업 — 2026-05-27 제거된 "🌧 시작" 버튼 (몰입/집중 시작) 기능.
+// 사용자 명시 2026-05-27: '시작' 버튼 없애자 (백업으로 옮기고 기능 삭제).
+//
+// 복원 방법:
+//   1) 아래 openImmerseStart() 를 src/scripts/main/25-archive-daily/11-immerse-quickstart.js 맨 위에 다시 추가.
+//      (_quickStart 는 startQuest 와 공유돼 삭제 안 했으므로 그대로 있음.)
+//   2) 아래 버튼 HTML 을 src/scripts/main/24-execute.js renderExecute() 의
+//      `html += _renderTimetableStripHTML();` ~ timetable 블록 다음, '오늘 할 일' 섹션 앞에 다시 삽입.
+//   3) npm run build && npm run verify.
+//
+// 제거 시점 기준: 일정 lens timeline (renderExecute) 상단, 펼친 타임테이블 바로 아래에 있던 큰 버튼.
+
+// ─── src/scripts/main/25-archive-daily/11-immerse-quickstart.js 에서 제거된 함수 ───
+async function openImmerseStart() {
+  _quickStart({ taskId: null, taskTitle: null });
+}
+
+// ─── src/scripts/main/24-execute.js renderExecute() 에서 제거된 버튼 HTML ───
+//   html += `
+//     <button class="exec-immerse-btn" onclick="openImmerseStart()">
+//       🌧 시작
+//       <div class="sub">빗소리·방해금지·집중 모드 ON</div>
+//     </button>
+//   `;
+//
+// 관련 CSS (.exec-immerse-btn) 는 src/styles/09-misc.css 에 그대로 둠 (다른 곳 미사용이면 후속 정리).
