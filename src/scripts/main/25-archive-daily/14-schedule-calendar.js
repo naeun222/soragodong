@@ -192,9 +192,9 @@ function renderScheduleCalendarGrid(targetId, fullscreen) {
         ink: _SCHED_CAL_SCHEDULE_INK
       })),
       ...dt.map(t => ({
-        // 사용자 명시 2026-05-27: 월간 셀 가독성 — ✓ 프리픽스 제거(골드 색으로 할 일 구분). 제목 글자 수 확보.
+        // 사용자 명시 2026-05-27: 전체화면만 가독성 우선 — ✓ 프리픽스 제거(골드 색으로 구분). 인라인은 기존대로 ✓.
         kind: 'task',
-        title: `${t.title || ''}`,
+        title: fullscreen ? `${t.title || ''}` : `✓ ${t.title || ''}`,
         color: _SCHED_CAL_TASK_COLOR,
         ink: _SCHED_CAL_TASK_INK
       }))
@@ -215,10 +215,10 @@ function renderScheduleCalendarGrid(targetId, fullscreen) {
     const itemDim = isOtherMonth ? ' opacity:0.6;' : '';
 
     html += `
-      <div onclick="_schedCalDayClick('${dateKey}')" style="background:var(--surface); padding:3px 2px 4px; cursor:pointer; display:flex; flex-direction:column; gap:2px; box-sizing:border-box; overflow:hidden;">
+      <div onclick="_schedCalDayClick('${dateKey}')" style="background:var(--surface); padding:${fullscreen ? '3px 2px 4px' : '4px 4px 5px'}; cursor:pointer; display:flex; flex-direction:column; gap:2px; box-sizing:border-box; overflow:hidden;">
         <div style="display:flex; justify-content:flex-end;">${dayLabelHtml}</div>
         ${display.map(it => `
-          <div style="font-size:10px; font-weight:600; padding:1px 4px; background:${it.color}; color:${it.ink}; border-radius:3px; white-space:nowrap; overflow:hidden; line-height:1.4;${itemDim}" title="${escapeHtml(it.title)}">${escapeHtml(it.title)}</div>
+          <div style="font-size:10px; font-weight:600; padding:${fullscreen ? '1px 4px' : '1px 5px'}; background:${it.color}; color:${it.ink}; border-radius:3px; white-space:nowrap; overflow:hidden;${fullscreen ? '' : ' text-overflow:ellipsis;'} line-height:1.4;${itemDim}" title="${escapeHtml(it.title)}">${escapeHtml(it.title)}</div>
         `).join('')}
         ${remaining > 0 ? `<div style="font-size:9px; color:var(--text-soft); padding:1px 5px; line-height:1.2;${itemDim}">+${remaining}</div>` : ''}
       </div>
