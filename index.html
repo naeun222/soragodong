@@ -66271,7 +66271,9 @@ async function forceAnalyze(opts) {
       submitted_at: Date.now(),
       isAuto
     };
-    saveState();
+    // V4 fix (사용자 보고 2026-05-28 ultrathink): batch_id 즉시 영속화 (review chain 과 동일 race — 디바운스 안 하드리프레시 시 유실 → 재제출).
+    saveState(true);
+    try { if (typeof saveToCloudNow === 'function') await saveToCloudNow(); } catch (e) { console.warn('[force analyze batch] batch_id cloud flush:', e); }
     setSyncStatus('online');
     if (!isAuto) {
       showToast('🔍 분석 제출됨 — 결과 준비되면 토스트로 알려줄게 (보통 5-30분).');
@@ -67433,7 +67435,7 @@ async function submitChapterCleanupBatch(unprocessed) {
 
   if (requests.length === 0) {
     state.lastChapterCleanupAt = new Date().toISOString();
-    saveState();
+    saveState(true);  // V4 fix 2026-05-28: 일일 게이트 스탬프 즉시 로컬 flush (디바운스 race 시 불필요 재실행 방지). batch 없어 cloud 즉시 PATCH 까진 불필요.
     return;
   }
 
@@ -67457,7 +67459,10 @@ async function submitChapterCleanupBatch(unprocessed) {
     };
     unprocessed.forEach(b => { b._batchSubmittedAt = Date.now(); });
     state.lastChapterCleanupAt = new Date().toISOString();
-    saveState();
+    // V4 fix (사용자 보고 2026-05-28 ultrathink): batch_id + 스탬프 즉시 영속화 (review chain 과 동일 race).
+    //   review 만큼 자주 안 터지는 건 lastChapterCleanupAt 일일 게이트 + _batchSubmittedAt 12h 쿨다운 덕 — 단 race 자체는 동일하므로 같이 닫음.
+    saveState(true);
+    try { if (typeof saveToCloudNow === 'function') await saveToCloudNow(); } catch (e) { console.warn('[cleanup batch] batch_id cloud flush:', e); }
     console.log(`[cleanup batch] submitted: ${data.id}`);
     if (typeof renderChatArchiveModal === 'function') renderChatArchiveModal();
   } catch (e) {
@@ -67790,7 +67795,11 @@ async function submitReviewChainBatch(missingReviews) {
       review_keys: missingReviews.map(m => ({ cycle: m.cycle, key: m.key })),
       has_insight: hasWeekly
     };
-    saveState();
+    // V4 fix (사용자 보고 2026-05-28 ultrathink): batch_id 즉시 영속화 — 비-force saveState() 는 로컬 400ms 디바운스 + 클라우드 500ms 디바운스.
+    //   그 창 안에 강제 새로고침하면 batch_id 유실 → 다음 진입 시 가드 통과 → 매 새로고침마다 재제출 (비용 낭비 + 결과 영영 미수신).
+    //   부팅 시 클라우드가 로컬을 덮어쓰므로 saveToCloudNow() 로 클라우드까지 즉시 PATCH 해야 안전.
+    saveState(true);
+    try { if (typeof saveToCloudNow === 'function') await saveToCloudNow(); } catch (e) { console.warn('[review chain batch] batch_id cloud flush:', e); }
     console.log(`[review chain batch] submitted: ${data.id} — ${missingReviews.length} reviews + ${hasWeekly ? 1 : 0} insight`);
     if (typeof renderReviewPrompts === 'function') renderReviewPrompts();
   } catch (e) {
@@ -73494,7 +73503,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.336-holiday-name-fs-only';
+const APP_VERSION = 'v4.0.337-batch-id-flush-fix';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 
