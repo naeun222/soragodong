@@ -156,10 +156,10 @@ function renderScheduleCalendarGrid(targetId, fullscreen) {
   }
 
   // 외곽 + 헤더 + 요일
-  // 사용자 명시 2026-05-27 ultrathink (진짜 풀스크린):
-  //   인라인 = 평범한 월간 그리드 (rows minmax 자연 높이). 아래로 스크롤해 캘린더가 화면 상단에 닿으면 _schedCalOnScroll 가 풀스크린 오버레이를 엶.
-  //   fullscreen = fixed inset:0 레이어 안에서 flex 로 viewport 가득 (6행 1fr).
-  const gridRows = fullscreen ? 'repeat(6, 1fr)' : 'repeat(6, minmax(58px, auto))';
+  // 사용자 명시 2026-05-27 ultrathink (진짜 풀스크린 + 인라인 tall 유지):
+  //   인라인 = 억지로 늘린 tall 캘린더 (사용자 선호 UI — viewport 높이, 6행 1fr, 월/요일 sticky). 화면 가득 차게 스크롤하면 _schedCalOnScroll 가 풀스크린 오버레이를 엶.
+  //   fullscreen = fixed inset:0 레이어 안에서 flex 로 viewport 전체 (앱 헤더·하단탭까지 덮음).
+  const gridRows = 'repeat(6, 1fr)';
   const gridCls  = fullscreen ? 'sched-cal-monthgrid sched-cal-monthgrid-fs' : 'sched-cal-monthgrid';
   let html = `
     <div class="cal-grid-wrap sched-cal-wrap${fullscreen ? ' sched-cal-wrap-fs' : ''}">
@@ -277,10 +277,11 @@ function _schedCalOnScroll() {
   const grid = document.getElementById('libExecuteGrid');
   const screen = document.getElementById('screen-archive');
   if (!grid || !screen) return;
-  if (screen.scrollTop <= 40) return;                                 // 실제 스크롤 down 했을 때만
+  if (screen.scrollTop <= 30) return;                                 // 실제 스크롤 down 했을 때만
   const gTop = grid.getBoundingClientRect().top;
   const sTop = screen.getBoundingClientRect().top;
-  if (gTop - sTop <= 6) openScheduleCalendarFullscreen();             // 캘린더가 화면 상단에 닿음
+  // 사용자 명시 2026-05-27 ultrathink (더 쉽게): 캘린더가 화면 상단 근처(48px) 오면 바로 풀스크린 — 정확히 끝까지 안 내려도 됨.
+  if (gTop - sTop <= 48) openScheduleCalendarFullscreen();
 }
 
 function openScheduleCalendarFullscreen() {
@@ -288,7 +289,7 @@ function openScheduleCalendarFullscreen() {
   const html = `
     <div id="schedCalFsOverlay" class="sched-cal-fs-overlay" style="position:fixed; inset:0; background:var(--bg); z-index:9997; display:flex; flex-direction:column;">
       <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding:calc(10px + env(safe-area-inset-top,0px)) 14px 6px; flex-shrink:0;">
-        <div style="font-size:15px; font-weight:600; color:var(--text);">📅 캘린더</div>
+        <div style="font-size:15px; font-weight:600; color:var(--text);">📅 일정</div>
         <button onclick="_closeScheduleCalendarFullscreen()" aria-label="닫기" style="background:var(--surface); border:1px solid var(--border); color:var(--text); width:34px; height:34px; border-radius:9px; cursor:pointer; font-size:18px; line-height:1; flex-shrink:0;">×</button>
       </div>
       <div id="schedCalFsGrid" style="flex:1; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:0 12px calc(12px + env(safe-area-inset-bottom,0px));"></div>

@@ -8975,14 +8975,17 @@
   .cal-grid-wrap.cal-month-slide-next { animation: cal-slide-next 0.32s ease; }
 
   /* 사용자 명시 2026-05-27 ultrathink — 일정 lens 캘린더.
-     인라인 = 평범한 월간 그리드 (자연 높이). 아래로 스크롤해 캘린더가 화면 상단에 닿으면 풀스크린 오버레이 자동 open. */
+     인라인 = 억지로 늘린 tall 캘린더 (사용자 선호 UI). 월/요일 헤더 sticky + 그리드 viewport 높이 (6행 1fr).
+     스크롤해 캘린더가 화면 상단 근처 오면 풀스크린 오버레이 자동 open. */
   .cal-grid-wrap.sched-cal-wrap { padding: 0; background: transparent; border: none; border-radius: 0; margin: 0 0 18px; }
-  /* 풀스크린 오버레이 (fixed inset:0) 안 캘린더 — flex 로 viewport 가득 (6행 1fr) */
+  .sched-cal-wrap .sched-cal-sticky { position: sticky; top: 0; z-index: 6; background: var(--bg); padding: 6px 0 4px; }
+  .sched-cal-monthgrid { height: calc(100dvh - 188px); min-height: 430px; }
+  /* 풀스크린 오버레이 (fixed inset:0) 안 캘린더 — flex 로 viewport 가득 (인라인 calc 높이 덮음) */
   .sched-cal-wrap-fs { display: flex; flex-direction: column; height: 100%; margin: 0; }
-  .sched-cal-wrap-fs .sched-cal-sticky { position: sticky; top: 0; z-index: 6; background: var(--bg); padding: 2px 0 4px; }
-  .sched-cal-monthgrid-fs { flex: 1; min-height: 0; }
-  .sched-cal-fs-overlay { animation: sched-cal-fs-in 0.22s ease; }
-  @keyframes sched-cal-fs-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+  .sched-cal-wrap-fs .sched-cal-sticky { padding: 2px 0 4px; }
+  .sched-cal-monthgrid-fs { height: auto; flex: 1; min-height: 0; }
+  .sched-cal-fs-overlay { animation: sched-cal-fs-in 0.16s ease; }
+  @keyframes sched-cal-fs-in { from { opacity: 0; } to { opacity: 1; } }
   /* 일별 시간대(day view) 스크롤 영역 */
   .sched-day-scroll { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
   .cal-nav {
@@ -56511,10 +56514,10 @@ function renderScheduleCalendarGrid(targetId, fullscreen) {
   }
 
   // 외곽 + 헤더 + 요일
-  // 사용자 명시 2026-05-27 ultrathink (진짜 풀스크린):
-  //   인라인 = 평범한 월간 그리드 (rows minmax 자연 높이). 아래로 스크롤해 캘린더가 화면 상단에 닿으면 _schedCalOnScroll 가 풀스크린 오버레이를 엶.
-  //   fullscreen = fixed inset:0 레이어 안에서 flex 로 viewport 가득 (6행 1fr).
-  const gridRows = fullscreen ? 'repeat(6, 1fr)' : 'repeat(6, minmax(58px, auto))';
+  // 사용자 명시 2026-05-27 ultrathink (진짜 풀스크린 + 인라인 tall 유지):
+  //   인라인 = 억지로 늘린 tall 캘린더 (사용자 선호 UI — viewport 높이, 6행 1fr, 월/요일 sticky). 화면 가득 차게 스크롤하면 _schedCalOnScroll 가 풀스크린 오버레이를 엶.
+  //   fullscreen = fixed inset:0 레이어 안에서 flex 로 viewport 전체 (앱 헤더·하단탭까지 덮음).
+  const gridRows = 'repeat(6, 1fr)';
   const gridCls  = fullscreen ? 'sched-cal-monthgrid sched-cal-monthgrid-fs' : 'sched-cal-monthgrid';
   let html = `
     <div class="cal-grid-wrap sched-cal-wrap${fullscreen ? ' sched-cal-wrap-fs' : ''}">
@@ -56632,10 +56635,11 @@ function _schedCalOnScroll() {
   const grid = document.getElementById('libExecuteGrid');
   const screen = document.getElementById('screen-archive');
   if (!grid || !screen) return;
-  if (screen.scrollTop <= 40) return;                                 // 실제 스크롤 down 했을 때만
+  if (screen.scrollTop <= 30) return;                                 // 실제 스크롤 down 했을 때만
   const gTop = grid.getBoundingClientRect().top;
   const sTop = screen.getBoundingClientRect().top;
-  if (gTop - sTop <= 6) openScheduleCalendarFullscreen();             // 캘린더가 화면 상단에 닿음
+  // 사용자 명시 2026-05-27 ultrathink (더 쉽게): 캘린더가 화면 상단 근처(48px) 오면 바로 풀스크린 — 정확히 끝까지 안 내려도 됨.
+  if (gTop - sTop <= 48) openScheduleCalendarFullscreen();
 }
 
 function openScheduleCalendarFullscreen() {
@@ -56643,7 +56647,7 @@ function openScheduleCalendarFullscreen() {
   const html = `
     <div id="schedCalFsOverlay" class="sched-cal-fs-overlay" style="position:fixed; inset:0; background:var(--bg); z-index:9997; display:flex; flex-direction:column;">
       <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding:calc(10px + env(safe-area-inset-top,0px)) 14px 6px; flex-shrink:0;">
-        <div style="font-size:15px; font-weight:600; color:var(--text);">📅 캘린더</div>
+        <div style="font-size:15px; font-weight:600; color:var(--text);">📅 일정</div>
         <button onclick="_closeScheduleCalendarFullscreen()" aria-label="닫기" style="background:var(--surface); border:1px solid var(--border); color:var(--text); width:34px; height:34px; border-radius:9px; cursor:pointer; font-size:18px; line-height:1; flex-shrink:0;">×</button>
       </div>
       <div id="schedCalFsGrid" style="flex:1; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:0 12px calc(12px + env(safe-area-inset-bottom,0px));"></div>
@@ -72140,7 +72144,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.291-calendar-true-fullscreen';
+const APP_VERSION = 'v4.0.292-calendar-fullscreen-smooth';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 
