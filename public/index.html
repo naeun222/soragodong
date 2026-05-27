@@ -66791,25 +66791,6 @@ function _shouldRunSchedule(lastAt, cutoff) {
   return new Date(lastAt) < cutoff;
 }
 
-// V4 (사용자 명시 2026-05-26 ultrathink): 가장 최근 일요일 KST 04:00 cutoff.
-//   forceAnalyze 주 1회 자동 trigger 용 — maybeRunChapterCleanup step D 에서 사용.
-//   지금이 이번 주 일요일 04:00 이전이면 저번 주 일요일 04:00 반환.
-function _lastSunday4amCutoff() {
-  const now = new Date();
-  // KST 시간을 UTC 객체에 박는 trick: now + 9h
-  const kstAsUtc = new Date(now.getTime() + 9 * 3600000);
-  const day = kstAsUtc.getUTCDay();  // 0=Sun (KST 기준)
-  const sundayKstAsUtc = new Date(kstAsUtc);
-  sundayKstAsUtc.setUTCDate(kstAsUtc.getUTCDate() - day);
-  sundayKstAsUtc.setUTCHours(4, 0, 0, 0);
-  // KST → 진짜 UTC: -9h
-  const sundayUtc = new Date(sundayKstAsUtc.getTime() - 9 * 3600000);
-  if (sundayUtc.getTime() > now.getTime()) {
-    return new Date(sundayUtc.getTime() - 7 * 86400000);
-  }
-  return sundayUtc;
-}
-
 // 매일 챕터 추출 — 어제 누적된 챕터들 1번 통합 추출.
 // 사용자 명시 2026-05-02 ultrathink: 4AM extract = Anthropic Batch API 50% 할인 (사용자 자고 있어 latency 안 중요).
 // 흐름: pending archive 모음 → batch submit + state.pendingBatch 넣음 + UI 인디케이터.
@@ -68313,10 +68294,10 @@ async function maybeRunChapterCleanup() {
 
   // ─── step D: forceAnalyze 일요일 자동 trigger ────────────────────────
   // V4 (사용자 명시 2026-05-26 ultrathink): 주 1회 통합 분석 (Opus, trait/value/pattern + 회전 카드 '새로 본 너').
-  //   일요일 04:00 KST cutoff. lastForceAnalyzeAt 이 cutoff 이전이면 trigger.
+  //   직전 일요일 04:00 (디바이스 로컬) cutoff. lastForceAnalyzeAt 이 cutoff 이전이면 trigger.
   //   fire-and-forget — Opus max_tokens 2500 시간 길어서 await X. silent toast (auto:true).
   if (!isGuest && typeof forceAnalyze === 'function'
-      && _shouldRunSchedule(state.lastForceAnalyzeAt, _lastSunday4amCutoff())) {
+      && _shouldRunSchedule(state.lastForceAnalyzeAt, _lastWeekly4amCutoff())) {
     forceAnalyze({ auto: true }).catch(e => console.warn('[forceAnalyze auto sunday]', e));
   }
 
@@ -73573,7 +73554,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.343-dayview-holiday-chip';
+const APP_VERSION = 'v4.0.344-force-analyze-local-tz';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 
