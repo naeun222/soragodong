@@ -28960,8 +28960,20 @@ scenes 는 정확히 3개. 다른 field (strengths / quotes / emotions / pattern
 JSON 객체 하나만 반환. markdown code fence X. 다른 글 X. 모든 필수 필드 다 채워서 출력.`;
 
   // ─── VOLATILE (매번 다른 데이터) ───
+  // V4 fix (사용자 보고 2026-05-28 ultrathink): 리뷰 scenes 요일 -1 오차 — AI 가 date 문자열로 요일을 직접 계산하면 틀림 (일→토 등).
+  //   KST 기준 요일을 코드에서 계산해 각 항목에 '요일' 필드로 주입 + prompt 에서 그대로 쓰라 지시. new Date(y,mo-1,d) = TZ 무관 그 달력 날짜 요일.
+  const _krDow = ['일', '월', '화', '수', '목', '금', '토'];
+  const _dowLabel = (ds) => {
+    if (!ds || typeof ds !== 'string') return '';
+    const mm = ds.slice(0, 10).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!mm) return '';
+    const dt = new Date(+mm[1], +mm[2] - 1, +mm[3]);
+    return isNaN(dt.getTime()) ? '' : _krDow[dt.getDay()] + '요일';
+  };
+  const _entriesForPrompt = entriesInRange.map(e => ({ 요일: _dowLabel(e.date), ...e }));
   const volatile = `[기간 데이터]
-체크인: ${JSON.stringify(entriesInRange, null, 2).slice(0, 4000)}
+[중요 — 요일] 아래 각 체크인/챕터의 '요일' 필드를 그대로 써. date 문자열로 요일을 직접 계산하지 마 (요일 계산은 틀리기 쉬움). 장면·패턴에서 요일을 언급할 땐 반드시 '요일' 필드 기준.
+체크인: ${JSON.stringify(_entriesForPrompt, null, 2).slice(0, 4000)}
 미션: ${JSON.stringify(missionsInRange.map(m => ({title: m.title, status: m.status, attemptStatus: m.attemptStatus, strategyId: m.strategyId})), null, 2).slice(0, 1500)}
 대화 발췌 (사용자): ${chatInRange.map(m => {
   const c = m && m.content;
@@ -28971,7 +28983,7 @@ JSON 객체 하나만 반환. markdown code fence X. 다른 글 X. 모든 필수
   return s.slice(0, 200);
 }).join('\n---\n').slice(0, 3000)}
 결정 + 예측: ${JSON.stringify(decisionsInRange.map(d => ({title: d.title, status: d.status, finalDecision: d.finalDecision, predictions: d.predictions})), null, 2).slice(0, 1500)}
-챕터: ${JSON.stringify(chaptersInRange.map(c => ({date: c.date, messageCount: c.messageCount})), null, 0).slice(0, 1500)}
+챕터: ${JSON.stringify(chaptersInRange.map(c => ({date: c.date, 요일: _dowLabel(c.date), messageCount: c.messageCount})), null, 0).slice(0, 1500)}
 가닥(topicCards): ${JSON.stringify(topicCardsInRange.map(t => ({title: t.title, summary: t.summary, category: t.category})), null, 0).slice(0, 1500)}
 진주: ${JSON.stringify(pearlsInRange.map(p => ({content: p.content, note: p.note})), null, 0).slice(0, 1000)}
 스크랩(archive): ${JSON.stringify(archiveInRange.map(a => ({headline: a.headline, body: (a.body || '').slice(0, 200), tags: a.tags, starred: a.starred})), null, 0).slice(0, 1200)}
@@ -73510,7 +73522,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.338-batch-cloud-roundtrip-fix';
+const APP_VERSION = 'v4.0.339-review-weekday-kst-fix';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 
