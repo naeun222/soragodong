@@ -237,6 +237,7 @@ function renderExecute() {
           <div class="drawer-row" data-task-id="${task.id}">
             <span class="drawer-row-tag">${tagEmoji}</span>
             <span class="drawer-row-title" onclick="editTaskCard('${task.id}')" title="탭해서 수정">${escapeHtml(task.title)}${dueLabel}</span>
+            <button class="drawer-row-action date" onclick="openTaskEditModal('${task.id}', { openDueDatePicker: true })" title="마감 날짜">📅</button>
             <button class="drawer-row-action up" onclick="promoteToToday('${task.id}')" title="오늘로">↑</button>
             <button class="drawer-row-action del" onclick="deleteTask('${task.id}')" title="삭제">✕</button>
           </div>

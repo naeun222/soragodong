@@ -4934,6 +4934,8 @@
   /* 사용자 명시 2026-05-27: 오늘 할 일 → 서랍장 (demote) 버튼 — 서랍장 ↑ 와 같은 톤의 ↓ */
   .drawer-row-action.down { color: var(--accent2); border-color: rgba(212,167,106,0.30); }
   .drawer-row-action.del:active { color: var(--danger); }
+  /* 사용자 명시 2026-05-27: 서랍장 행 마감 날짜 버튼 */
+  .drawer-row-action.date { font-size: 13px; }
   .exec-section-label {
     font-size: 11px; color: var(--accent); letter-spacing: 0.1em;
     text-transform: uppercase; margin-bottom: 12px; font-weight: 600;
