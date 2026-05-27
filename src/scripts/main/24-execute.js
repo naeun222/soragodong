@@ -484,6 +484,7 @@ function _todayDragDown(e) {
   if (!list) return;
   _todayDrag = {
     el, list,
+    taskId: el.dataset.taskId,
     isTouch: e.type === 'touchstart',
     startY: _todayDragPointY(e),
     active: false,
@@ -544,7 +545,11 @@ function _todayDragUp() {
   clearTimeout(d.timer);
   _todayDragDetach(d);
   _todayDrag = null;
-  if (!d.active) return;  // 탭 — 동작 X
+  if (!d.active) {
+    // 꾹(드래그) 아닌 그냥 탭 → 더보기 메뉴 (사용자 명시 2026-05-27).
+    if (!d.moved && typeof _todayTaskMenu === 'function') _todayTaskMenu(d.taskId);
+    return;
+  }
   d.el.classList.remove('dragging');
   const ids = [...d.list.querySelectorAll('.todo-item')].map(el => el.dataset.taskId);
   ids.forEach((id, i) => {

@@ -5355,13 +5355,21 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    transition: all 0.15s ease;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
     cursor: grab;
     position: relative;
+    /* 사용자 명시 2026-05-27: 꾹 누를 때 글자 선택/콜아웃 방지 */
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
   }
+  /* 사용자 명시 2026-05-27: 꾹 누르면 살짝 들어올린(앞으로 나온) 느낌 */
   .todo-item.dragging {
-    opacity: 0.5;
     cursor: grabbing;
+    transform: scale(1.03);
+    background: var(--surface2);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.30);
+    z-index: 5;
   }
   .todo-item.drop-above::before {
     content: '';
@@ -54504,6 +54512,7 @@ function _todayDragDown(e) {
   if (!list) return;
   _todayDrag = {
     el, list,
+    taskId: el.dataset.taskId,
     isTouch: e.type === 'touchstart',
     startY: _todayDragPointY(e),
     active: false,
@@ -54564,7 +54573,11 @@ function _todayDragUp() {
   clearTimeout(d.timer);
   _todayDragDetach(d);
   _todayDrag = null;
-  if (!d.active) return;  // 탭 — 동작 X
+  if (!d.active) {
+    // 꾹(드래그) 아닌 그냥 탭 → 더보기 메뉴 (사용자 명시 2026-05-27).
+    if (!d.moved && typeof _todayTaskMenu === 'function') _todayTaskMenu(d.taskId);
+    return;
+  }
   d.el.classList.remove('dragging');
   const ids = [...d.list.querySelectorAll('.todo-item')].map(el => el.dataset.taskId);
   ids.forEach((id, i) => {
@@ -73069,7 +73082,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.311-today-row-more-menu';
+const APP_VERSION = 'v4.0.312-today-row-lift-tap-menu';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 
