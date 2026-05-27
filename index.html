@@ -56446,7 +56446,7 @@ function renderScheduleCalendarGrid() {
       <div class="cal-weekdays">
         <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
       </div>
-      <div style="display:grid; grid-template-columns: repeat(7, 1fr); grid-template-rows: repeat(6, minmax(96px, 1fr)); gap:1px; background:var(--border); border:1px solid var(--border); border-radius:8px; overflow:hidden; height: calc(100vh - 220px); min-height: 580px;">
+      <div style="display:grid; grid-template-columns: repeat(7, 1fr); grid-template-rows: repeat(6, minmax(110px, 1fr)); gap:1px; background:var(--border); border:1px solid var(--border); border-radius:8px; overflow:hidden; height: calc(100dvh - 180px); min-height: 660px;">
   `;
 
   for (const cell of visibleCells) {
@@ -71117,7 +71117,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.283-cal-fullscreen-othermonths';
+const APP_VERSION = 'v4.0.284-cal-fullscreen-dvh';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 
