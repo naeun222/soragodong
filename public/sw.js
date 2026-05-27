@@ -76,7 +76,8 @@
 // v56 (2026-05-27 사용자 명시 ultrathink): 풀스크린 더 스무스 (인라인 tall 캘린더 복원 + 트리거 완화 + opacity fade) + 오버레이 제목 '일정'. index.html 갱신.
 // v57 (2026-05-27 사용자 명시 ultrathink): 일정 캘린더 롤백 — diary-style dot 폐기, 인라인만 컴팩트 (풀스크린/day view 는 직전 유지) + 힌트 문구 수정. index.html 갱신.
 // v58 (2026-05-27 사용자 명시 ultrathink): 인라인 캘린더 = 7ea5091 tall 복원 + 전체화면 트리거 둔하게 (48px → 화면 맨 위 닿을 때). index.html 갱신.
-const CACHE_NAME = 'soragodong-v4-cache-v57';
+// v59 (2026-05-27 사용자 명시 ultrathink): 전체화면 트리거 = '캘린더 윗변 닿음' 폐기 → 페이지 맨 밑까지 스크롤 도달 시 (다 내리고 더 밑으로 제스처). index.html 갱신.
+const CACHE_NAME = 'soragodong-v4-cache-v58';
 const PHOTO_CACHE_NAME = 'sora-photo-v1';
 const PHOTO_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
 const PHOTO_MAX_ENTRIES = 200;

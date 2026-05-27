@@ -274,14 +274,15 @@ function _schedCalOnScroll() {
   if (document.getElementById('schedCalFsOverlay')) return;          // 이미 열림
   if (typeof _currentLens === 'undefined' || _currentLens !== 'execute') return;
   if (typeof _libView === 'undefined' || _libView !== 'grid') return;
-  const grid = document.getElementById('libExecuteGrid');
   const screen = document.getElementById('screen-archive');
-  if (!grid || !screen) return;
-  if (screen.scrollTop <= 30) return;                                 // 실제 스크롤 down 했을 때만
-  const gTop = grid.getBoundingClientRect().top;
-  const sTop = screen.getBoundingClientRect().top;
-  // 사용자 명시 2026-05-27 ultrathink (살짝 더 둔하게): 캘린더가 화면 맨 위에 완전히 닿아야(<=0) 풀스크린 — 48px 일찍 뜨던 거 폐기.
-  if (gTop - sTop <= 0) openScheduleCalendarFullscreen();
+  if (!screen || !document.getElementById('libExecuteGrid')) return;
+  // 스크롤 여지가 충분해야 (짧은 페이지 insta-trigger 방지)
+  if (screen.scrollHeight - screen.clientHeight < 120) return;
+  // 사용자 명시 2026-05-27 ultrathink: '캘린더 윗변 닿음' 기준 폐기 (캘린더가 커서 아랫부분이 안 보임).
+  //   캘린더 전체 + 범례 + 하단 여백까지 다 지나 페이지 맨 밑에 닿으면 풀스크린 → '다 내리고 더 밑으로' 제스처.
+  if (screen.scrollTop + screen.clientHeight >= screen.scrollHeight - 8) {
+    openScheduleCalendarFullscreen();
+  }
 }
 
 function openScheduleCalendarFullscreen() {
