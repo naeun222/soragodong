@@ -1,1 +1,1 @@
-v4.0.298-schedule-cal-sticky-flush
+v4.0.299-schedule-notif-click-nav

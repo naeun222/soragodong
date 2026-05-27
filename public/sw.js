@@ -79,7 +79,8 @@
 // v59 (2026-05-27 사용자 명시 ultrathink): 전체화면 트리거 = '캘린더 윗변 닿음' 폐기 → 페이지 맨 밑까지 스크롤 도달 시 (다 내리고 더 밑으로 제스처). index.html 갱신.
 // v60 (2026-05-27 사용자 명시 ultrathink): 전체화면 트리거 빡빡하게 — 바닥 도달만으론 X, 바닥에서 추가로 당기는 오버스크롤(touch 70px / wheel 180) 필요. index.html 갱신.
 // v61 (2026-05-27 사용자 명시 ultrathink): 인라인 캘린더 sticky 상단 바 헤더와 틈(.screen padding-top 4px) → top -4px 로 딱 붙임. index.html 갱신.
-const CACHE_NAME = 'soragodong-v4-cache-v60';
+// v62 (2026-05-27 사용자 보고 ultrathink): 일정/할 일 알림 클릭 → 해당 day view 이동 안 됨 fix. 로컬 알림 data id→item_id 통일 + SW notificationclick item_id||id + Capacitor extra/탭 리스너.
+const CACHE_NAME = 'soragodong-v4-cache-v62';
 const PHOTO_CACHE_NAME = 'sora-photo-v1';
 const PHOTO_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
 const PHOTO_MAX_ENTRIES = 200;
@@ -305,7 +306,7 @@ self.addEventListener('notificationclick', (event) => {
   const _ndata = event.notification.data || {};
   const hookId = _ndata.hookId || '';
   // 사용자 명시 2026-05-27 ultrathink: 일정 알림 클릭 → 그 일정 날짜의 day view 로 deep link.
-  const schedItemId = (_ndata.kind === 'schedule_notif' && _ndata.item_id) ? _ndata.item_id : '';
+  const schedItemId = (_ndata.kind === 'schedule_notif') ? (_ndata.item_id || _ndata.id || '') : '';
   let url = '/';
   if (hookId) url = `/?hookTrigger=${encodeURIComponent(hookId)}`;
   else if (schedItemId) url = `/?schedNotif=${encodeURIComponent(schedItemId)}`;

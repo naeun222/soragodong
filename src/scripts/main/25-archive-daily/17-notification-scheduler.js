@@ -183,7 +183,8 @@ async function _scheduleNative(id, title, body, at) {
           id: notifId,
           title: title,
           body: body,
-          schedule: { at: at, allowWhileIdle: true }
+          schedule: { at: at, allowWhileIdle: true },
+          extra: { kind: 'schedule_notif', item_id: id }
         }]
       });
       return true;
@@ -226,7 +227,7 @@ async function _scheduleNative(id, title, body, at) {
           icon: '/icon-192.png',
           badge: '/icon-192.png',
           showTrigger: new TimestampTrigger(at.getTime()),
-          data: { kind: 'schedule_notif', id }
+          data: { kind: 'schedule_notif', item_id: id }
         });
         return true;
       }
@@ -243,12 +244,12 @@ async function _scheduleNative(id, title, body, at) {
     // sw.registration.showNotification 우선 (앱 아이콘 표시), 미지원 시 new Notification
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.ready.then(reg => {
-        return reg.showNotification(title, { body, tag: id, icon: '/icon-192.png', badge: '/icon-192.png' });
+        return reg.showNotification(title, { body, tag: id, icon: '/icon-192.png', badge: '/icon-192.png', data: { kind: 'schedule_notif', item_id: id } });
       }).catch(() => {
-        try { new Notification(title, { body, tag: id }); } catch (e) {}
+        try { new Notification(title, { body, tag: id, data: { kind: 'schedule_notif', item_id: id } }); } catch (e) {}
       });
     } else {
-      try { new Notification(title, { body, tag: id }); } catch (e) {}
+      try { new Notification(title, { body, tag: id, data: { kind: 'schedule_notif', item_id: id } }); } catch (e) {}
     }
     delete window._pwaNotifTimers[id];
   }, delayMs);
@@ -347,3 +348,21 @@ try {
 } catch (e) {
   console.warn(_NOTIF_LOG, 'self-init 실패', e);
 }
+
+// 사용자 보고 2026-05-27 ultrathink: Capacitor 네이티브 알림 클릭 → 해당 일정/할 일 day view 이동.
+//   localNotificationActionPerformed 이벤트의 notification.extra.item_id 로 _openScheduleFromNotif 호출.
+try {
+  const _LN = _getLocalNotifications();
+  if (_LN && _LN.addListener && !window._schedNotifTapBound) {
+    window._schedNotifTapBound = true;
+    _LN.addListener('localNotificationActionPerformed', (ev) => {
+      try {
+        const extra = (ev && ev.notification && ev.notification.extra) || {};
+        if (extra.kind === 'schedule_notif' && extra.item_id && typeof _openScheduleFromNotif === 'function') {
+          // state 로드 대기 — cold start 대비 약간 지연.
+          setTimeout(() => { try { _openScheduleFromNotif(extra.item_id); } catch (e) {} }, 600);
+        }
+      } catch (e) { console.warn(_NOTIF_LOG, 'notif tap 처리 실패', e); }
+    });
+  }
+} catch (e) { console.warn(_NOTIF_LOG, 'notif tap listener 실패', e); }
