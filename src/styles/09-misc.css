@@ -8846,7 +8846,9 @@
     animation: sched-sheet-up 0.26s cubic-bezier(0.22, 1, 0.36, 1);
   }
   @keyframes sched-sheet-up { from { transform: translateY(100%); } to { transform: none; } }
-  .sched-sheet-grip { width: 38px; height: 4px; border-radius: 2px; background: var(--border-strong); margin: 6px auto 8px; }
+  .sched-sheet-grab { display: flex; justify-content: center; padding: 4px 0 6px; cursor: grab; touch-action: none; -webkit-user-select: none; user-select: none; }
+  .sched-sheet-grab:active { cursor: grabbing; }
+  .sched-sheet-grip { width: 38px; height: 4px; border-radius: 2px; background: var(--border-strong); margin: 6px auto 8px; pointer-events: none; }
   .sched-sheet-topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
   .sched-sheet-cancel { background: transparent; border: none; color: var(--text-soft); font-size: 14px; font-family: inherit; cursor: pointer; padding: 6px 4px; }
   .sched-sheet-save { background: var(--accent2); border: none; color: var(--bg); font-size: 14px; font-weight: 700; font-family: inherit; cursor: pointer; padding: 8px 18px; border-radius: 10px; }
@@ -8868,6 +8870,30 @@
     width: 100%; margin-top: 16px; padding: 12px; background: transparent;
     border: 1px solid var(--border); color: var(--danger); border-radius: 11px;
     font-size: 13px; font-family: inherit; cursor: pointer;
+  }
+  /* 다른 데 클릭 / 아래로 내려 닫기 → 삭제(취소) 확인 (iOS 액션시트 풍). */
+  .sched-discard-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 10020;
+    display: flex; flex-direction: column; justify-content: flex-end;
+    padding: 10px; box-sizing: border-box; animation: sched-sheet-fade 0.15s ease;
+  }
+  .sched-discard-sheet {
+    width: 100%; max-width: 500px; margin: 0 auto;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    animation: sched-sheet-up 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .sched-discard-msg {
+    background: var(--surface); color: var(--text-soft); text-align: center;
+    font-size: 13px; padding: 16px; border-radius: 14px 14px 0 0; border-bottom: 1px solid var(--border);
+  }
+  .sched-discard-del {
+    width: 100%; background: var(--surface); color: var(--danger); border: none;
+    font-size: 17px; font-weight: 600; padding: 16px; cursor: pointer; font-family: inherit;
+    border-radius: 0 0 14px 14px; margin-bottom: 8px;
+  }
+  .sched-discard-cancel {
+    width: 100%; background: var(--surface); color: var(--accent2); border: none;
+    font-size: 17px; font-weight: 700; padding: 16px; cursor: pointer; font-family: inherit; border-radius: 14px;
   }
   /* day-grid 초안에서 연 docked 시트 — 백드롭 포인터 통과(위 그리드 핸들 계속 조작), 하단 dock. */
   .sched-sheet-overlay-docked { background: transparent; pointer-events: none; }

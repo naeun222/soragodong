@@ -95,9 +95,12 @@ function openScheduleSheet(opts) {
   }
 
   // ── 할 일 prefill ──
+  // 그리드 빈 시간대 탭으로 열면(startMin) 할 일 마감도 그 날짜·시각으로 맞춤(종일 OFF). 일정/할일 토글 전환해도 유지.
+  const fromGridTime = (typeof opts.startMin === 'number');
+  const gridTimeHM = fromGridTime ? `${_schedPad2(Math.floor(opts.startMin / 60))}:${_schedPad2(opts.startMin % 60)}` : null;
   const tkDueDate = task ? (task.dueDate || '') : (opts.dueDate || opts.date || (new Date()).toLocaleDateString('sv-SE'));
-  const tkAllDay  = task ? !task.dueTime : true;   // 종일 마감 = dueTime 없음. create 기본 종일.
-  const tkDueTime = task ? (task.dueTime || '09:00') : '09:00';
+  const tkAllDay  = task ? !task.dueTime : !fromGridTime;   // 종일 마감 = dueTime 없음. create 기본 종일(그리드 탭이면 OFF).
+  const tkDueTime = task ? (task.dueTime || '09:00') : (gridTimeHM || '09:00');
 
   _schedSheetCtx = {
     mode: isEdit ? 'edit' : 'create',
@@ -143,9 +146,9 @@ function openScheduleSheet(opts) {
     <div class="dt-slot" id="dtSlot-${field}"></div>`;
 
   const html = `
-    <div id="schedSheetOverlay" class="sched-sheet-overlay${docked ? ' sched-sheet-overlay-docked' : ''}" onclick="if(event.target===this) _closeSchedSheet();">
-      <div class="sched-sheet${docked ? ' sched-sheet-docked' : ''}" onclick="event.stopPropagation();">
-        <div class="sched-sheet-grip"></div>
+    <div id="schedSheetOverlay" class="sched-sheet-overlay${docked ? ' sched-sheet-overlay-docked' : ''}" onclick="if(event.target===this) _schedSheetTryDiscard();">
+      <div class="sched-sheet${docked ? ' sched-sheet-docked' : ''}" data-detent="half" onclick="event.stopPropagation();">
+        <div class="sched-sheet-grab"><div class="sched-sheet-grip"></div></div>
         <div class="sched-sheet-topbar">
           <button type="button" onclick="_closeSchedSheet()" class="sched-sheet-cancel">취소</button>
           <button type="button" onclick="_schedSheetSave()" class="sched-sheet-save">${isEdit ? '저장' : '추가'}</button>
@@ -192,6 +195,17 @@ function openScheduleSheet(opts) {
     </div>
   `;
   document.body.insertAdjacentHTML('beforeend', html);
+  // 드래그 시트 — 열 때 half 디텐트. grip 으로 위로 끌면 full, 내리면 half/닫기.
+  const sheetEl = document.querySelector('#schedSheetOverlay .sched-sheet');
+  if (sheetEl) {
+    sheetEl.style.height = Math.round(window.innerHeight * 0.52) + 'px';
+    sheetEl.style.maxHeight = '92vh';
+    const grab = sheetEl.querySelector('.sched-sheet-grab');
+    if (grab) {
+      grab.addEventListener('touchstart', _schedSheetGripDown, { passive: false });
+      grab.addEventListener('mousedown', _schedSheetGripDown);
+    }
+  }
   _schedSheetSetType(type0);
   _schedSheetRenderLabels();
   _schedSheetToggleAllDay();
@@ -384,10 +398,17 @@ function _schedSheetRenderTimePicker(slot, field) {
 
   const cols = slot.querySelectorAll('.dtw-col');
   const initIdx = [ampmIdx, hourIdx, minIdx];
+  const maxIdx = [1, 11, 11];
   cols.forEach((col, i) => {
     requestAnimationFrame(() => { col.scrollTop = initIdx[i] * _SCHED_WHEEL_ITEM_H; });
+    col.dataset.lastIdx = String(initIdx[i]);
     let timer = null;
     col.addEventListener('scroll', () => {
+      const idx = Math.max(0, Math.min(Math.round(col.scrollTop / _SCHED_WHEEL_ITEM_H), maxIdx[i]));
+      if (String(idx) !== col.dataset.lastIdx) {
+        col.dataset.lastIdx = String(idx);
+        if (typeof _calHaptic === 'function') _calHaptic('tick');  // iOS 피커식 디텐트 진동
+      }
       if (timer) clearTimeout(timer);
       timer = setTimeout(() => _schedSheetTimeWheelSettle(field, slot), 110);
     }, { passive: true });
@@ -544,10 +565,100 @@ function _schedSheetDelete() {
   if (typeof _refreshScheduleDayTimelineIfOpen === 'function') _refreshScheduleDayTimelineIfOpen();
 }
 
+// ── 드래그 시트 (grip) — 위로 끌면 full, 내리면 half / half 에서 더 내리면 닫기(확인) ──
+let _schedSheetDrag = null;
+
+function _schedSheetPointY(e) {
+  if (e.touches && e.touches[0]) return e.touches[0].clientY;
+  if (e.changedTouches && e.changedTouches[0]) return e.changedTouches[0].clientY;
+  return e.clientY;
+}
+
+function _schedSheetGripDown(e) {
+  if (e.type === 'mousedown' && e.button !== 0) return;
+  const sheet = document.querySelector('#schedSheetOverlay .sched-sheet');
+  if (!sheet) return;
+  if (e.cancelable) e.preventDefault();
+  _schedSheetDrag = { sheet, startY: _schedSheetPointY(e), startH: sheet.offsetHeight, lastDy: 0, curH: sheet.offsetHeight, isTouch: e.type === 'touchstart' };
+  sheet.style.transition = 'none';
+  if (_schedSheetDrag.isTouch) {
+    document.addEventListener('touchmove', _schedSheetGripMove, { passive: false });
+    document.addEventListener('touchend', _schedSheetGripUp);
+    document.addEventListener('touchcancel', _schedSheetGripUp);
+  } else {
+    document.addEventListener('mousemove', _schedSheetGripMove);
+    document.addEventListener('mouseup', _schedSheetGripUp);
+  }
+}
+
+function _schedSheetGripMove(e) {
+  const d = _schedSheetDrag;
+  if (!d) return;
+  if (e.cancelable) e.preventDefault();
+  d.lastDy = _schedSheetPointY(e) - d.startY;
+  let h = d.startH - d.lastDy;
+  h = Math.max(110, Math.min(h, window.innerHeight * 0.92));
+  d.sheet.style.height = h + 'px';
+  d.curH = h;
+}
+
+function _schedSheetGripUp() {
+  const d = _schedSheetDrag;
+  _schedSheetDrag = null;
+  if (!d) return;
+  if (d.isTouch) {
+    document.removeEventListener('touchmove', _schedSheetGripMove, { passive: false });
+    document.removeEventListener('touchend', _schedSheetGripUp);
+    document.removeEventListener('touchcancel', _schedSheetGripUp);
+  } else {
+    document.removeEventListener('mousemove', _schedSheetGripMove);
+    document.removeEventListener('mouseup', _schedSheetGripUp);
+  }
+  const sheet = d.sheet;
+  const vh = window.innerHeight;
+  const HALF = Math.round(vh * 0.52), FULL = Math.round(vh * 0.92);
+  const det = sheet.dataset.detent || 'half';
+  sheet.style.transition = 'height 0.24s cubic-bezier(0.22, 1, 0.36, 1)';
+  if (d.lastDy < -50) {                       // 위로 → 펼침
+    sheet.style.height = FULL + 'px'; sheet.dataset.detent = 'full';
+  } else if (d.lastDy > 50) {                 // 아래로
+    sheet.style.height = HALF + 'px'; sheet.dataset.detent = 'half';
+    if (det !== 'full') _schedSheetTryDiscard();  // 이미 half 였으면 닫기(확인)
+  } else {
+    sheet.style.height = (det === 'full' ? FULL : HALF) + 'px';
+  }
+}
+
+// ── 다른 데 클릭 / 아래로 더 내림 → 삭제(취소) 확인 (create 모드만). edit 는 바로 닫기. ──
+function _schedSheetTryDiscard() {
+  const ctx = _schedSheetCtx;
+  if (!ctx) return;
+  if (ctx.mode !== 'create') { _closeSchedSheet(); return; }
+  if (document.getElementById('schedDiscardConfirm')) return;
+  const label = ctx.type === 'task' ? '이 할 일을 삭제하시겠습니까?' : '이 일정을 삭제하시겠습니까?';
+  const html = `
+    <div id="schedDiscardConfirm" class="sched-discard-overlay" onclick="if(event.target===this) this.remove();">
+      <div class="sched-discard-sheet" onclick="event.stopPropagation();">
+        <div class="sched-discard-msg">${label}</div>
+        <button type="button" class="sched-discard-del" onclick="_schedSheetConfirmDiscard()">삭제</button>
+        <button type="button" class="sched-discard-cancel" onclick="var c=document.getElementById('schedDiscardConfirm'); if(c) c.remove();">취소</button>
+      </div>
+    </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function _schedSheetConfirmDiscard() {
+  const c = document.getElementById('schedDiscardConfirm');
+  if (c) c.remove();
+  _closeSchedSheet();
+}
+
 // esc → 시트 닫기 (시트가 맨 위일 때).
 try {
   window.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && document.getElementById('schedSheetOverlay')) _closeSchedSheet();
+    if (e.key !== 'Escape') return;
+    if (document.getElementById('schedDiscardConfirm')) { document.getElementById('schedDiscardConfirm').remove(); return; }
+    if (document.getElementById('schedSheetOverlay')) _schedSheetTryDiscard();
   });
 } catch (e) {}
 
@@ -563,4 +674,6 @@ try {
   window._schedSheetSetTimeRange = _schedSheetSetTimeRange;
   window._schedSheetSave = _schedSheetSave;
   window._schedSheetDelete = _schedSheetDelete;
+  window._schedSheetTryDiscard = _schedSheetTryDiscard;
+  window._schedSheetConfirmDiscard = _schedSheetConfirmDiscard;
 } catch (e) {}

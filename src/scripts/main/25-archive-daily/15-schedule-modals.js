@@ -7,6 +7,20 @@ const _SCHED_MOD_TASK_COLOR  = '#d8ac63';  // 골드 할 일 (var(--cal-task))
 const _SCHED_MOD_SCHED_INK   = '#082630';
 const _SCHED_MOD_TASK_INK    = '#2c1e04';
 
+// 햅틱 — Capacitor Haptics(iOS/Android 네이티브) 우선, 없으면 navigator.vibrate(Android 웹) 폴백, 둘 다 없으면 무음.
+//   kind: 'tick'(휠/스냅 디텐트) | 'impact'(드래그 시작·이동). iOS 진동은 @capacitor/haptics 설치 시 동작.
+function _calHaptic(kind) {
+  try {
+    const H = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Haptics;
+    if (H && typeof H.impact === 'function') {
+      const p = H.impact({ style: kind === 'tick' ? 'LIGHT' : 'MEDIUM' });
+      if (p && typeof p.catch === 'function') p.catch(() => {});
+      return;
+    }
+  } catch (e) {}
+  try { if (navigator.vibrate) navigator.vibrate(kind === 'tick' ? 7 : 14); } catch (e) {}
+}
+
 function _closeScheduleModals() {
   const overlay = document.getElementById('schedModalOverlay');
   if (overlay) overlay.remove();
@@ -350,6 +364,11 @@ function _schedDayMinuteFromClientY(clientY) {
 
 function _schedDayEmptyTap(e) {
   if (e.target.closest('.sched-day-block') || e.target.closest('.sched-day-draft')) return;
+  // 이미 초안+시트 떠 있는데 다른 곳 탭 → 삭제(취소) 확인 (구글 패턴).
+  if (_schedDayDraft && document.getElementById('schedSheetOverlay')) {
+    if (typeof _schedSheetTryDiscard === 'function') _schedSheetTryDiscard();
+    return;
+  }
   const clientY = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0].clientY : e.clientY;
   const tapped = _schedDayMinuteFromClientY(clientY);
   if (tapped == null) return;
@@ -430,11 +449,13 @@ function _schedDayHandleMove(e) {
   if (e.cancelable) e.preventDefault();
   const dy = _schedDayPointY(e) - d.startY;
   const deltaMin = Math.round((dy / _SCHED_DAY_HOUR_H) * 60 / _SCHED_DAY_DRAFT_SNAP) * _SCHED_DAY_DRAFT_SNAP;
+  const prevS = _schedDayDraft.startMin, prevE = _schedDayDraft.endMin;
   if (d.edge === 'start') {
     _schedDayDraft.startMin = Math.max(0, Math.min(d.origStart + deltaMin, d.origEnd - _SCHED_DAY_DRAFT_MIN_LEN));
   } else {
     _schedDayDraft.endMin = Math.min(24 * 60, Math.max(d.origEnd + deltaMin, d.origStart + _SCHED_DAY_DRAFT_MIN_LEN));
   }
+  if (_schedDayDraft.startMin !== prevS || _schedDayDraft.endMin !== prevE) _calHaptic('tick');
   _schedDayRenderDraft();
   if (typeof _schedSheetSetTimeRange === 'function') {
     _schedSheetSetTimeRange(_schedDayTimelineDate, _schedDayDraft.startMin, _schedDayDraft.endMin);
@@ -484,7 +505,7 @@ function _schedDayDown(e) {
       el.classList.add('sched-day-dragging');
       // 드래그 중 스크롤 잠금 (preventDefault 안 먹는 엔진 안전장치).
       if (_schedDrag.scrollEl) _schedDrag.scrollEl.style.overflow = 'hidden';
-      try { if (navigator.vibrate) navigator.vibrate(15); } catch (e2) {}
+      _calHaptic('impact');
       _schedDayShowDragLabel();
     }, 320);
   }
@@ -516,6 +537,7 @@ function _schedDayMove(e) {
   let newStart = _schedDrag.origStart + Math.round(dy / HOUR_H * 60);
   newStart = Math.round(newStart / 5) * 5;  // 5분 snap
   newStart = Math.max(0, Math.min(newStart, 24 * 60 - Math.max(dur, 5)));
+  if (newStart !== _schedDrag.curStart) _calHaptic('tick');  // 5분 snap 넘어갈 때 디텐트 진동
   _schedDrag.curStart = newStart;
   _schedDrag.el.style.top = (newStart / 60 * HOUR_H) + 'px';
   _schedDayUpdateDragLabel(newStart);
@@ -721,4 +743,5 @@ try {
   window._schedDayTaskMenuAction = _schedDayTaskMenuAction;
   window._openScheduleFromNotif = _openScheduleFromNotif;
   window._schedDayClearDraft = _schedDayClearDraft;
+  window._calHaptic = _calHaptic;
 } catch (e) {}
