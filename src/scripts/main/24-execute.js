@@ -125,7 +125,11 @@ function renderExecute() {
   // 오늘 할 일 (drawer 중 isToday=true) — 헤더에 + 추가 버튼
   const todayListAll = (state.tasks || [])
     .filter(t => t.slot === 'drawer' && t.isToday && t.date === todayKeyVal)
-    .sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+    // 사용자 명시 2026-05-27: 꾹 눌러 드래그한 수동 순서(todayOrder) 우선, 없으면 생성순.
+    .sort((a, b) =>
+      ((a.todayOrder ?? Infinity) - (b.todayOrder ?? Infinity)) ||
+      (new Date(a.createdAt || 0) - new Date(b.createdAt || 0))
+    );
   const todayList = todayListAll.filter(t => t.status !== 'done');
   html += `<div class="exec-now-section">
     <div class="exec-section-label" style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
@@ -135,20 +139,20 @@ function renderExecute() {
   if (todayListAll.length === 0) {
     html += `<div style="font-size:11px; color:var(--text-soft); padding:8px 4px 6px;">비어있어. + 추가로 시작.</div></div>`;
   } else {
-    html += `<div class="todo-list">`;
+    html += `<div class="todo-list" id="todayTodoList">`;
     todayListAll.forEach(task => {
       const isDone = task.status === 'done';
       const schedLabel = task.scheduledStart ? `<span class="todo-sched-label">⏰ ${task.scheduledStart}${task.scheduledEnd ? `–${task.scheduledEnd}` : ''}</span>` : '';
       // 사용자 명시 2026-05-27 ultrathink (3단계): task.dueDate 있으면 마감 라벨 표시.
       const dueLabel = task.dueDate ? `<span style="font-size:10px; color:#d8ac63; margin-left:6px; padding:1px 5px; background:#d8ac631f; border-radius:3px; white-space:nowrap;">📅 ${escapeHtml(task.dueDate)}${task.dueTime ? ' ' + escapeHtml(task.dueTime) : ''}</span>` : '';
+      // 사용자 명시 2026-05-27: ⏰(일정 적용) 버튼 제거. demote 버튼 ↩ → ↓ (서랍장 ↑ 와 같은 css).
       html += `
         <div class="todo-item${isDone ? ' completed' : ''}" data-task-id="${task.id}">
           <button class="todo-check${isDone ? ' checked' : ''}" onclick="toggleQuestComplete('${task.id}')" aria-label="${isDone ? '되살리기' : '완료'}" title="${isDone ? '되살리기' : '완료'}">${isDone ? '✓' : ''}</button>
           <span class="todo-title">${escapeHtml(task.title)}${schedLabel}${dueLabel}</span>
-          ${isDone ? '' : `<button class="todo-action" onclick="scheduleTaskToTime('${task.id}')" title="일정 적용하기">⏰</button>`}
-          ${isDone ? '' : `<button class="todo-action" onclick="editTaskCard('${task.id}')" title="수정">✎</button>`}
-          ${isDone ? '' : `<button class="todo-action" onclick="demoteFromToday('${task.id}')" title="서랍장으로">↩</button>`}
-          <button class="todo-action" onclick="deleteTask('${task.id}')" title="삭제">✕</button>
+          ${isDone ? '' : `<button class="todo-action" onclick="editTaskCard('${task.id}')" title="수정" aria-label="수정">✎</button>`}
+          ${isDone ? '' : `<button class="drawer-row-action down" onclick="demoteFromToday('${task.id}')" title="서랍장으로" aria-label="서랍장으로">↓</button>`}
+          <button class="todo-action" onclick="deleteTask('${task.id}')" title="삭제" aria-label="삭제">✕</button>
         </div>
       `;
     });
@@ -269,6 +273,7 @@ function renderExecute() {
 
   // 사용자 명시 2026-05-27 ultrathink: 일정 lens 에서 트래커 (projectsSection / renderProjects) 제외.
   container.innerHTML = html;
+  if (typeof _setupTodayReorder === 'function') _setupTodayReorder();
 }
 
 // === BRAIN DUMP ===
@@ -422,8 +427,8 @@ async function processBrainDump() {
 }
 
 // === ADD MANUAL TASK ===
-// 사용자 명시 2026-05-27 ultrathink (re-iter): now3 / drawer 분기 폐기. 항상 '오늘 할 일' (drawer + isToday=true) 로 추가.
-//   '바로 시작?' 확인 모달(→startQuest)은 유지 — 🌧 시작 버튼 제거(2026-05-27)와 별개 기능.
+// 사용자 명시 2026-05-27: '직접 추가' 버튼 → 서랍장 (drawer, isToday=false) 으로 추가.
+//   ('오늘 할 일' 직접 추가는 그 섹션 헤더의 '+ 추가' = addTodayTask.) '바로 시작?' 확인 모달 제거.
 async function addManualTask() {
   const title = await showInputModal({
     title: '할 일 추가 ✦',
@@ -431,14 +436,13 @@ async function addManualTask() {
     okLabel: '추가'
   });
   if (!title || !title.trim()) return;
-  const todayKeyVal = todayKey();
   const newTask = {
     id: 'task_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
     title: title.trim(),
     status: 'drawer',
     slot: 'drawer',
-    isToday: true,
-    date: todayKeyVal,
+    isToday: false,
+    date: todayKey(),
     weight: 'daily',
     energy: 'medium',
     priority: (typeof nextPriority === 'function') ? nextPriority() : 0,
@@ -448,18 +452,126 @@ async function addManualTask() {
   state.tasks.push(newTask);
   saveState();
   renderExecute();
+  showToast('서랍장에 추가됨 📂');
+}
 
-  const start = await showConfirmModal({
-    title: `"${title.trim()}" 추가됐어 ✦`,
-    message: '바로 시작할래?\n(시작 약속 만들기)',
-    okLabel: '시작',
-    cancelLabel: '나중에'
+// === 오늘 할 일 long-press 드래그 순서변경 (사용자 명시 2026-05-27) ===
+// 320ms 꾹 누르면 드래그 모드. 그 전에 5px 이상 움직이면 스크롤로 간주(드래그 취소). 완료 항목·버튼은 제외.
+// 놓으면 새 DOM 순서를 todayOrder 에 저장 → 정렬 키.
+let _todayDrag = null;
+
+function _todayDragPointY(e) {
+  if (e.touches && e.touches.length) return e.touches[0].clientY;
+  if (e.changedTouches && e.changedTouches.length) return e.changedTouches[0].clientY;
+  return e.clientY;
+}
+
+function _setupTodayReorder() {
+  const list = document.getElementById('todayTodoList');
+  if (!list) return;
+  list.querySelectorAll('.todo-item').forEach(el => {
+    if (el.classList.contains('completed')) return;
+    el.addEventListener('touchstart', _todayDragDown, { passive: true });
+    el.addEventListener('mousedown', _todayDragDown);
   });
-  if (start) {
-    startQuest(newTask.id);
+}
+
+function _todayDragDown(e) {
+  if (_todayDrag) return;
+  if (e.type === 'mousedown' && e.button !== 0) return;
+  if (e.target.closest('button')) return;  // 버튼 위 시작 → 버튼 동작 우선
+  const el = e.currentTarget;
+  const list = document.getElementById('todayTodoList');
+  if (!list) return;
+  _todayDrag = {
+    el, list,
+    isTouch: e.type === 'touchstart',
+    startY: _todayDragPointY(e),
+    active: false,
+    moved: false,
+    timer: null
+  };
+  _todayDrag.timer = setTimeout(() => {
+    if (!_todayDrag) return;
+    _todayDrag.active = true;
+    el.classList.add('dragging');
+    if (typeof _calHaptic === 'function') _calHaptic('impact');
+  }, 320);
+  if (_todayDrag.isTouch) {
+    document.addEventListener('touchmove', _todayDragMove, { passive: false });
+    document.addEventListener('touchend', _todayDragUp);
+    document.addEventListener('touchcancel', _todayDragUp);
   } else {
-    showToast('오늘 할 일에 추가됨');
+    document.addEventListener('mousemove', _todayDragMove);
+    document.addEventListener('mouseup', _todayDragUp);
   }
+}
+
+function _todayDragMove(e) {
+  const d = _todayDrag;
+  if (!d) return;
+  const y = _todayDragPointY(e);
+  if (!d.active) {
+    if (Math.abs(y - d.startY) > 5) {  // 움직임 = 스크롤 → 드래그 취소
+      d.moved = true;
+      clearTimeout(d.timer);
+      _todayDragCleanup();
+    }
+    return;
+  }
+  if (e.cancelable) e.preventDefault();  // 드래그 중 스크롤 차단
+  const siblings = [...d.list.querySelectorAll('.todo-item')].filter(x => x !== d.el);
+  let inserted = false;
+  for (const sib of siblings) {
+    const r = sib.getBoundingClientRect();
+    if (y < r.top + r.height / 2) {
+      if (sib.previousElementSibling !== d.el) {
+        d.list.insertBefore(d.el, sib);
+        if (typeof _calHaptic === 'function') _calHaptic('tick');
+      }
+      inserted = true;
+      break;
+    }
+  }
+  if (!inserted && d.list.lastElementChild !== d.el) {
+    d.list.appendChild(d.el);
+    if (typeof _calHaptic === 'function') _calHaptic('tick');
+  }
+}
+
+function _todayDragUp() {
+  const d = _todayDrag;
+  if (!d) return;
+  clearTimeout(d.timer);
+  _todayDragDetach(d);
+  _todayDrag = null;
+  if (!d.active) return;  // 탭 — 동작 X
+  d.el.classList.remove('dragging');
+  const ids = [...d.list.querySelectorAll('.todo-item')].map(el => el.dataset.taskId);
+  ids.forEach((id, i) => {
+    const t = (state.tasks || []).find(x => x.id === id);
+    if (t) t.todayOrder = i;
+  });
+  saveState();
+  if (typeof renderExecute === 'function') renderExecute();
+}
+
+function _todayDragDetach(d) {
+  if (!d) return;
+  if (d.isTouch) {
+    document.removeEventListener('touchmove', _todayDragMove);
+    document.removeEventListener('touchend', _todayDragUp);
+    document.removeEventListener('touchcancel', _todayDragUp);
+  } else {
+    document.removeEventListener('mousemove', _todayDragMove);
+    document.removeEventListener('mouseup', _todayDragUp);
+  }
+}
+
+function _todayDragCleanup() {
+  const d = _todayDrag;
+  _todayDrag = null;
+  _todayDragDetach(d);
 }
 
 // === SHELL REWARD SYSTEM (V3.1) ===
