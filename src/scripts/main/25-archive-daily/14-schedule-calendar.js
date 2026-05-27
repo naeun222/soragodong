@@ -27,7 +27,13 @@ function _schedCalMonthShift(delta) {
   const [y, m] = ym.split('-').map(Number);
   const d = new Date(y, m - 1 + delta, 1);
   _schedCalCursorYM = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-  if (typeof renderScheduleCalendarGrid === 'function') renderScheduleCalendarGrid();
+  // 풀스크린 오버레이 열려 있으면 그쪽을 갱신 (인라인 갱신도 함수 내부에서 함께).
+  if (document.getElementById('schedCalFsOverlay')) {
+    if (typeof renderScheduleCalendarGrid === 'function') renderScheduleCalendarGrid('schedCalFsGrid', true);
+    if (typeof renderScheduleCalendarGrid === 'function') renderScheduleCalendarGrid();
+  } else if (typeof renderScheduleCalendarGrid === 'function') {
+    renderScheduleCalendarGrid();
+  }
 }
 
 // 정렬 키 — schedule.startAt (ISO) / todaySchedule.start (HH:MM) / isAllDay (맨 위).
@@ -45,8 +51,10 @@ function _schedYMD(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-function renderScheduleCalendarGrid() {
-  const container = document.getElementById('libExecuteGrid');
+function renderScheduleCalendarGrid(targetId, fullscreen) {
+  targetId = targetId || 'libExecuteGrid';
+  fullscreen = !!fullscreen;
+  const container = document.getElementById(targetId);
   if (!container) return;
 
   const ym = _schedCalEnsureCursor();
@@ -148,10 +156,13 @@ function renderScheduleCalendarGrid() {
   }
 
   // 외곽 + 헤더 + 요일
-  // 사용자 명시 2026-05-27 ultrathink (풀스크린): 월/요일 헤더 = .sched-cal-sticky 로 top 고정.
-  //   그리드는 .sched-cal-monthgrid (viewport 높이 + 6행 1fr) — 아래로 스크롤하면 위 chrome 가 사라지고 캘린더가 화면 가득 (구글 캘린더 패턴).
+  // 사용자 명시 2026-05-27 ultrathink (진짜 풀스크린):
+  //   인라인 = 평범한 월간 그리드 (rows minmax 자연 높이). 아래로 스크롤해 캘린더가 화면 상단에 닿으면 _schedCalOnScroll 가 풀스크린 오버레이를 엶.
+  //   fullscreen = fixed inset:0 레이어 안에서 flex 로 viewport 가득 (6행 1fr).
+  const gridRows = fullscreen ? 'repeat(6, 1fr)' : 'repeat(6, minmax(58px, auto))';
+  const gridCls  = fullscreen ? 'sched-cal-monthgrid sched-cal-monthgrid-fs' : 'sched-cal-monthgrid';
   let html = `
-    <div class="cal-grid-wrap sched-cal-wrap">
+    <div class="cal-grid-wrap sched-cal-wrap${fullscreen ? ' sched-cal-wrap-fs' : ''}">
       <div class="sched-cal-sticky">
         <div class="cal-nav">
           <button class="cal-nav-btn" onclick="_schedCalMonthShift(-1)" aria-label="지난 달">←</button>
@@ -162,7 +173,7 @@ function renderScheduleCalendarGrid() {
           <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
         </div>
       </div>
-      <div class="sched-cal-monthgrid" style="display:grid; grid-template-columns: repeat(7, 1fr); grid-template-rows: repeat(6, 1fr); gap:1px; background:var(--border); border:1px solid var(--border); border-radius:8px; overflow:hidden;">
+      <div class="${gridCls}" style="display:grid; grid-template-columns: repeat(7, 1fr); grid-template-rows: ${gridRows}; gap:1px; background:var(--border); border:1px solid var(--border); border-radius:8px; overflow:hidden;">
   `;
 
   for (const cell of visibleCells) {
@@ -214,17 +225,87 @@ function renderScheduleCalendarGrid() {
     </div>
   `;
 
-  // 범례
-  html += `
-    <div style="margin:18px 4px 0; padding:12px 14px; background:var(--surface); border:1px solid var(--border); border-radius:12px; font-size:12px; color:var(--text-soft); line-height:1.6;">
-      <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:center;">
+  // 범례 (인라인은 풀스크린 힌트 포함, 풀스크린은 컴팩트)
+  if (fullscreen) {
+    html += `
+      <div style="margin:12px 4px 0; padding:10px 14px; font-size:12px; color:var(--text-soft); display:flex; gap:16px; flex-wrap:wrap; align-items:center;">
         <span style="display:inline-flex; align-items:center; gap:6px;"><span style="display:inline-block; width:10px; height:10px; background:${_SCHED_CAL_SCHEDULE_COLOR}1f; border-left:2px solid ${_SCHED_CAL_SCHEDULE_COLOR}; border-radius:2px;"></span>일정</span>
         <span style="display:inline-flex; align-items:center; gap:6px;"><span style="display:inline-block; width:10px; height:10px; background:${_SCHED_CAL_TASK_COLOR}1f; border-left:2px solid ${_SCHED_CAL_TASK_COLOR}; border-radius:2px;"></span>할 일 마감</span>
       </div>
-    </div>
-  `;
+    `;
+  } else {
+    html += `
+      <div style="margin:18px 4px 0; padding:12px 14px; background:var(--surface); border:1px solid var(--border); border-radius:12px; font-size:12px; color:var(--text-soft); line-height:1.6;">
+        <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:center;">
+          <span style="display:inline-flex; align-items:center; gap:6px;"><span style="display:inline-block; width:10px; height:10px; background:${_SCHED_CAL_SCHEDULE_COLOR}1f; border-left:2px solid ${_SCHED_CAL_SCHEDULE_COLOR}; border-radius:2px;"></span>일정</span>
+          <span style="display:inline-flex; align-items:center; gap:6px;"><span style="display:inline-block; width:10px; height:10px; background:${_SCHED_CAL_TASK_COLOR}1f; border-left:2px solid ${_SCHED_CAL_TASK_COLOR}; border-radius:2px;"></span>할 일 마감</span>
+        </div>
+        <div style="margin-top:8px; font-size:11px; color:var(--text-soft); opacity:0.8;">⛶ 아래로 스크롤하면 전체화면</div>
+      </div>
+    `;
+  }
 
   container.innerHTML = html;
+
+  if (!fullscreen) {
+    // 인라인 갱신 시 풀스크린 오버레이 열려 있으면 같이 갱신.
+    if (document.getElementById('schedCalFsOverlay')) renderScheduleCalendarGrid('schedCalFsGrid', true);
+    // 스크롤 트리거 1회 bind.
+    _schedCalBindScrollTrigger();
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 사용자 명시 2026-05-27 ultrathink (진짜 풀스크린): 일정 lens 에서 아래로 스크롤해 캘린더가 화면 상단에 닿으면 풀스크린 오버레이 자동 open.
+//   오버레이 = fixed inset:0 (앱 헤더·하단탭·상태바 다 덮음, safe-area). ✕ 로 닫으면 lens scrollTop=0 리셋 (재open 루프 방지) + cooldown.
+// ─────────────────────────────────────────────────────────────────────────────
+let _schedCalFsCooldown = false;
+
+function _schedCalBindScrollTrigger() {
+  if (window._schedCalScrollBound) return;
+  const screen = document.getElementById('screen-archive');
+  if (!screen) return;
+  screen.addEventListener('scroll', _schedCalOnScroll, { passive: true });
+  window._schedCalScrollBound = true;
+}
+
+function _schedCalOnScroll() {
+  if (_schedCalFsCooldown) return;
+  if (document.getElementById('schedCalFsOverlay')) return;          // 이미 열림
+  if (typeof _currentLens === 'undefined' || _currentLens !== 'execute') return;
+  if (typeof _libView === 'undefined' || _libView !== 'grid') return;
+  const grid = document.getElementById('libExecuteGrid');
+  const screen = document.getElementById('screen-archive');
+  if (!grid || !screen) return;
+  if (screen.scrollTop <= 40) return;                                 // 실제 스크롤 down 했을 때만
+  const gTop = grid.getBoundingClientRect().top;
+  const sTop = screen.getBoundingClientRect().top;
+  if (gTop - sTop <= 6) openScheduleCalendarFullscreen();             // 캘린더가 화면 상단에 닿음
+}
+
+function openScheduleCalendarFullscreen() {
+  if (document.getElementById('schedCalFsOverlay')) return;
+  const html = `
+    <div id="schedCalFsOverlay" class="sched-cal-fs-overlay" style="position:fixed; inset:0; background:var(--bg); z-index:9997; display:flex; flex-direction:column;">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding:calc(10px + env(safe-area-inset-top,0px)) 14px 6px; flex-shrink:0;">
+        <div style="font-size:15px; font-weight:600; color:var(--text);">📅 캘린더</div>
+        <button onclick="_closeScheduleCalendarFullscreen()" aria-label="닫기" style="background:var(--surface); border:1px solid var(--border); color:var(--text); width:34px; height:34px; border-radius:9px; cursor:pointer; font-size:18px; line-height:1; flex-shrink:0;">×</button>
+      </div>
+      <div id="schedCalFsGrid" style="flex:1; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:0 12px calc(12px + env(safe-area-inset-bottom,0px));"></div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', html);
+  renderScheduleCalendarGrid('schedCalFsGrid', true);
+}
+
+function _closeScheduleCalendarFullscreen() {
+  const ov = document.getElementById('schedCalFsOverlay');
+  if (ov) ov.remove();
+  // 재open 루프 방지: lens 를 맨 위로 + 잠깐 cooldown.
+  const screen = document.getElementById('screen-archive');
+  if (screen) screen.scrollTop = 0;
+  _schedCalFsCooldown = true;
+  setTimeout(() => { _schedCalFsCooldown = false; }, 500);
 }
 
 function _schedCalDayClick(dateKey) {
@@ -238,8 +319,19 @@ function _schedCalDayClick(dateKey) {
   }
 }
 
+// esc → 풀스크린 캘린더 닫기 (단, day view / 수정 모달이 위에 없을 때만).
+try {
+  window.addEventListener('keydown', function(e) {
+    if (e.key !== 'Escape') return;
+    if (document.getElementById('schedDayTimelineOverlay') || document.getElementById('schedModalOverlay') || document.getElementById('taskEditModalOverlay')) return;
+    if (document.getElementById('schedCalFsOverlay')) _closeScheduleCalendarFullscreen();
+  });
+} catch (e) {}
+
 try {
   window.renderScheduleCalendarGrid = renderScheduleCalendarGrid;
   window._schedCalMonthShift = _schedCalMonthShift;
   window._schedCalDayClick = _schedCalDayClick;
+  window.openScheduleCalendarFullscreen = openScheduleCalendarFullscreen;
+  window._closeScheduleCalendarFullscreen = _closeScheduleCalendarFullscreen;
 } catch (e) {}
