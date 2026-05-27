@@ -266,8 +266,8 @@ function openScheduleDayTimeline(dateKey) {
     const titleStyle = ev.done ? ' text-decoration:line-through;' : '';
     blocksHtml += `
       <div class="sched-day-block" data-item-id="${ev.id}" data-kind="${ev.kind}" data-start="${ev.startMin}" data-end="${ev.endMin}" data-done="${ev.done ? 1 : 0}" style="position:absolute; top:${top}px; height:${height}px; left:calc(${leftPct}% + 2px); width:calc(${widthPct}% - 4px); background:${ev.color}; border-radius:6px; padding:3px 7px; box-sizing:border-box; overflow:hidden; cursor:pointer; touch-action:pan-y;${doneStyle}">
-        <div style="font-size:11px; font-weight:700; color:${ink}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.3;${titleStyle}">${escapeHtml(ev.title)}</div>
-        ${height > 30 ? `<div style="font-size:9px; color:${ink}; opacity:0.72; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(ev.sub || '')}</div>` : ''}
+        <div style="font-size:13px; font-weight:700; color:${ink}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.3;${titleStyle}">${escapeHtml(ev.title)}</div>
+        ${height > 30 ? `<div style="font-size:11px; color:${ink}; opacity:0.72; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(ev.sub || '')}</div>` : ''}
       </div>
     `;
   }
@@ -295,7 +295,7 @@ function openScheduleDayTimeline(dateKey) {
         const act = a.kind === 'schedule' ? `openScheduleEditModal('${a.id}')` : (a.kind === 'legacy' ? `openV4ScheduleItem('${a.id}')` : `_schedDayTaskMenu('${a.id}')`);
         const ink = (a.kind === 'task' || a._taskTone) ? _SCHED_MOD_TASK_INK : _SCHED_MOD_SCHED_INK;
         const ds = a.done ? ' opacity:0.5; text-decoration:line-through;' : '';
-        return `<div onclick="${act}" style="font-size:11px; font-weight:600; padding:4px 9px; background:${a.color}; border-radius:5px; color:${ink}; cursor:pointer; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;${ds}">${escapeHtml(a.title)}</div>`;
+        return `<div onclick="${act}" style="font-size:13px; font-weight:600; padding:5px 10px; background:${a.color}; border-radius:5px; color:${ink}; cursor:pointer; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;${ds}">${escapeHtml(a.title)}</div>`;
       }).join('')}
     </div>`;
   }
