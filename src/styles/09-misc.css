@@ -8913,17 +8913,61 @@
   .sw-toggle.sw-task input:checked ~ .sw-track { background: var(--cal-task); }
   .sw-toggle input:checked ~ .sw-knob { transform: translateX(18px); }
 
-  .sched-sheet-dt-rows { display: flex; flex-direction: column; gap: 9px; }
-  .sched-sheet-dt { display: flex; align-items: center; gap: 8px; }
-  .sched-sheet-dt-lead { font-size: 13px; color: var(--text-soft); width: 36px; flex-shrink: 0; }
-  .sched-sheet-dt-date, .sched-sheet-dt-time {
-    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
-    color: var(--text); font-size: 14px; font-family: inherit; padding: 10px 12px;
-    -webkit-appearance: none; appearance: none; min-width: 0; box-sizing: border-box;
+  /* 구글식 인라인 펼침 날짜·시간 — 줄 탭 → 그 자리에 달력/휠 펼침. */
+  .dt-rows { display: flex; flex-direction: column; }
+  .dt-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 11px 2px; border-top: 1px solid var(--border);
   }
-  .sched-sheet-dt-date { flex: 1; }
-  .sched-sheet-dt-time { width: 112px; flex-shrink: 0; text-align: center; }
-  .sched-sheet-dt-date:focus, .sched-sheet-dt-time:focus { border-color: var(--cal-event); outline: none; }
+  .dt-cell {
+    font-size: 16px; color: var(--text); cursor: pointer;
+    padding: 4px 8px; border-radius: 8px; transition: color 0.15s, background 0.15s;
+  }
+  .dt-cell-time { font-variant-numeric: tabular-nums; }
+  .dt-slot:empty { display: none; }
+  .dt-slot { overflow: hidden; }
+
+  /* 인라인 월간 달력 (날짜 피커) */
+  .dtc { padding: 6px 2px 10px; animation: dt-slot-in 0.18s ease; }
+  @keyframes dt-slot-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+  .dtc-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .dtc-nav-btn {
+    background: transparent; border: none; color: var(--text-dim);
+    width: 34px; height: 34px; border-radius: 8px; font-size: 18px; cursor: pointer; font-family: inherit;
+  }
+  .dtc-nav-btn:active { background: var(--surface2); }
+  .dtc-month { font-size: 14px; font-weight: 600; color: var(--text); }
+  .dtc-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); margin-bottom: 4px; }
+  .dtc-weekdays span { text-align: center; font-size: 11px; color: var(--text-soft); }
+  .dtc-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+  .dtc-cell {
+    aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+    font-size: 14px; color: var(--text); border-radius: 50%; cursor: pointer;
+  }
+  .dtc-cell.dtc-empty { cursor: default; }
+  .dtc-cell:not(.dtc-empty):not(.sel):active { background: var(--surface2); }
+
+  /* 인라인 시간 휠 (오전·오후 / 시 / 분) */
+  .dtw { position: relative; display: flex; height: 200px; margin: 6px 0 4px; overflow: hidden; }
+  .dtw-band {
+    position: absolute; left: 4px; right: 4px; top: 80px; height: 40px;
+    background: var(--surface2); border-radius: 11px; z-index: 0; pointer-events: none;
+  }
+  .dtw-col {
+    flex: 1; height: 100%; overflow-y: scroll; scroll-snap-type: y mandatory;
+    text-align: center; -webkit-overflow-scrolling: touch; scrollbar-width: none; position: relative; z-index: 1;
+  }
+  .dtw-col::-webkit-scrollbar { display: none; }
+  .dtw-pad { height: 80px; }
+  .dtw-item {
+    height: 40px; line-height: 40px; scroll-snap-align: center;
+    font-size: 19px; color: var(--text-soft); font-variant-numeric: tabular-nums;
+    transition: color 0.12s, font-weight 0.12s;
+  }
+  .dtw-item.sel { color: var(--text); font-weight: 700; }
+  .dtw-fade { position: absolute; left: 0; right: 0; height: 80px; z-index: 2; pointer-events: none; }
+  .dtw-fade-top { top: 0; background: linear-gradient(var(--bg), transparent); }
+  .dtw-fade-bottom { bottom: 0; background: linear-gradient(transparent, var(--bg)); }
   .cal-nav {
     display: flex; align-items: center; justify-content: space-between;
     margin-bottom: 10px;
