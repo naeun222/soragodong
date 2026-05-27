@@ -156,13 +156,14 @@ function renderScheduleCalendarGrid(targetId, fullscreen) {
   }
 
   // 외곽 + 헤더 + 요일
-  // 사용자 명시 2026-05-27 ultrathink (일기 캘린더 룩 + 구별):
-  //   일기 캘린더와 같은 .cal-grid-wrap / .cal-days / .cal-day 정사각형 셀 구조 (컴팩트).
-  //   구별: 무드색 채움 대신 일정(파랑)·할 일(노랑) 점 + 6주 grid(다른 달 흐리게) + 하단 범례.
-  //   fullscreen = 같은 셀이 늘어나 viewport 가득 (.sched-cal-fs).
+  // 사용자 명시 2026-05-27 ultrathink (인라인 컴팩트 + 풀스크린):
+  //   인라인 = 컴팩트 캘린더 (minmax 자연 높이, sticky X). 더 아래로 스크롤해 캘린더가 화면 상단 근처 오면 _schedCalOnScroll 가 풀스크린 오버레이를 엶.
+  //   fullscreen = fixed inset:0 레이어 안에서 flex 로 viewport 전체 (6행 1fr, 앱 헤더·하단탭까지 덮음).
+  const gridRows = fullscreen ? 'repeat(6, 1fr)' : 'repeat(6, minmax(58px, auto))';
+  const gridCls  = fullscreen ? 'sched-cal-monthgrid sched-cal-monthgrid-fs' : 'sched-cal-monthgrid';
   let html = `
-    <div class="cal-grid-wrap sched-cal${fullscreen ? ' sched-cal-fs' : ''}">
-      <div class="sched-cal-head">
+    <div class="cal-grid-wrap sched-cal-wrap${fullscreen ? ' sched-cal-wrap-fs' : ''}">
+      <div class="sched-cal-sticky">
         <div class="cal-nav">
           <button class="cal-nav-btn" onclick="_schedCalMonthShift(-1)" aria-label="지난 달">←</button>
           <div class="cal-month-label">${monthLabel}</div>
@@ -172,41 +173,77 @@ function renderScheduleCalendarGrid(targetId, fullscreen) {
           <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
         </div>
       </div>
-      <div class="cal-days sched-cal-days">
+      <div class="${gridCls}" style="display:grid; grid-template-columns: repeat(7, 1fr); grid-template-rows: ${gridRows}; gap:1px; background:var(--border); border:1px solid var(--border); border-radius:8px; overflow:hidden;">
   `;
 
   for (const cell of visibleCells) {
     const { day, dateKey, isOtherMonth } = cell;
     const isToday = dateKey === todayK;
-    const hasSched = (schedulesByDate[dateKey] || []).length > 0;
-    const hasTask = (tasksByDate[dateKey] || []).length > 0;
+    const ds = schedulesByDate[dateKey] || [];
+    const dt = tasksByDate[dateKey] || [];
 
-    let dots = '';
-    if (hasSched || hasTask) {
-      dots = `<span class="sched-cal-dots">`
-        + (hasSched ? `<span class="sched-cal-dot" style="background:${_SCHED_CAL_SCHEDULE_COLOR};"></span>` : '')
-        + (hasTask ? `<span class="sched-cal-dot" style="background:${_SCHED_CAL_TASK_COLOR};"></span>` : '')
-        + `</span>`;
+    const allItems = [
+      ...ds.map(s => ({
+        kind: 'schedule',
+        title: s.isAllDay ? `· ${s.title || ''}` : (s.title || ''),
+        color: _SCHED_CAL_SCHEDULE_COLOR
+      })),
+      ...dt.map(t => ({
+        kind: 'task',
+        title: `✓ ${t.title || ''}`,
+        color: _SCHED_CAL_TASK_COLOR
+      }))
+    ];
+    const display = allItems.slice(0, _SCHED_CAL_MAX_ITEMS);
+    const remaining = allItems.length - display.length;
+
+    // 날짜 라벨 — 오늘 = 둥근 강조 박스. 다른 달 = 숫자 색 흐리게 (구글 캘린더 패턴).
+    let dayLabelHtml;
+    if (isToday) {
+      dayLabelHtml = `<span style="font-size:11px; font-weight:600; color:#fff; background:var(--accent2); padding:2px 6px; border-radius:10px; line-height:1.2;">${day}</span>`;
+    } else if (isOtherMonth) {
+      dayLabelHtml = `<span style="font-size:11px; font-weight:400; color:var(--text-soft); opacity:0.55; padding:2px 4px; line-height:1.2;">${day}</span>`;
+    } else {
+      dayLabelHtml = `<span style="font-size:11px; font-weight:400; color:var(--text); padding:2px 4px; line-height:1.2;">${day}</span>`;
     }
 
-    const cls = 'cal-day sched-cal-day'
-      + (isToday ? ' today' : '')
-      + (isOtherMonth ? ' sched-other' : '');
-    html += `<div class="${cls}" data-date="${dateKey}" onclick="_schedCalDayClick('${dateKey}')">
-      <span class="cal-day-num">${day}</span>
-      ${dots}
-    </div>`;
+    const itemDim = isOtherMonth ? ' opacity:0.6;' : '';
+
+    html += `
+      <div onclick="_schedCalDayClick('${dateKey}')" style="background:var(--surface); padding:4px 4px 5px; cursor:pointer; display:flex; flex-direction:column; gap:2px; box-sizing:border-box; overflow:hidden;">
+        <div style="display:flex; justify-content:flex-end;">${dayLabelHtml}</div>
+        ${display.map(it => `
+          <div style="font-size:10px; padding:1px 5px; background:${it.color}1f; border-left:2px solid ${it.color}; color:var(--text); border-radius:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.35;${itemDim}" title="${escapeHtml(it.title)}">${escapeHtml(it.title)}</div>
+        `).join('')}
+        ${remaining > 0 ? `<div style="font-size:9px; color:var(--text-soft); padding:1px 5px; line-height:1.2;${itemDim}">+${remaining}</div>` : ''}
+      </div>
+    `;
   }
 
   html += `
       </div>
-      <div class="sched-cal-legend">
-        <span class="sched-cal-leg-item"><span class="sched-cal-dot" style="background:${_SCHED_CAL_SCHEDULE_COLOR};"></span>일정</span>
-        <span class="sched-cal-leg-item"><span class="sched-cal-dot" style="background:${_SCHED_CAL_TASK_COLOR};"></span>할 일 마감</span>
-        ${fullscreen ? '' : `<span class="sched-cal-hint">⛶ 아래로 스크롤하면 전체화면</span>`}
-      </div>
     </div>
   `;
+
+  // 범례 (인라인은 풀스크린 힌트 포함, 풀스크린은 컴팩트)
+  if (fullscreen) {
+    html += `
+      <div style="margin:12px 4px 0; padding:10px 14px; font-size:12px; color:var(--text-soft); display:flex; gap:16px; flex-wrap:wrap; align-items:center;">
+        <span style="display:inline-flex; align-items:center; gap:6px;"><span style="display:inline-block; width:10px; height:10px; background:${_SCHED_CAL_SCHEDULE_COLOR}1f; border-left:2px solid ${_SCHED_CAL_SCHEDULE_COLOR}; border-radius:2px;"></span>일정</span>
+        <span style="display:inline-flex; align-items:center; gap:6px;"><span style="display:inline-block; width:10px; height:10px; background:${_SCHED_CAL_TASK_COLOR}1f; border-left:2px solid ${_SCHED_CAL_TASK_COLOR}; border-radius:2px;"></span>할 일 마감</span>
+      </div>
+    `;
+  } else {
+    html += `
+      <div style="margin:18px 4px 0; padding:12px 14px; background:var(--surface); border:1px solid var(--border); border-radius:12px; font-size:12px; color:var(--text-soft); line-height:1.6;">
+        <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:center;">
+          <span style="display:inline-flex; align-items:center; gap:6px;"><span style="display:inline-block; width:10px; height:10px; background:${_SCHED_CAL_SCHEDULE_COLOR}1f; border-left:2px solid ${_SCHED_CAL_SCHEDULE_COLOR}; border-radius:2px;"></span>일정</span>
+          <span style="display:inline-flex; align-items:center; gap:6px;"><span style="display:inline-block; width:10px; height:10px; background:${_SCHED_CAL_TASK_COLOR}1f; border-left:2px solid ${_SCHED_CAL_TASK_COLOR}; border-radius:2px;"></span>할 일 마감</span>
+        </div>
+        <div style="margin-top:8px; font-size:11px; color:var(--text-soft); opacity:0.8;">더 아래로 스크롤하면 전체화면⛶</div>
+      </div>
+    `;
+  }
 
   container.innerHTML = html;
 

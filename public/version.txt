@@ -1,1 +1,1 @@
-v4.0.293-schedule-cal-diary-style
+v4.0.294-schedule-cal-inline-compact
