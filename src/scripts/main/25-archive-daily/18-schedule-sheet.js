@@ -78,7 +78,6 @@ function _schedSheetBuildPickerHtml(sheetDate) {
   if (!groups) return '';  // 가져올 할 일 없으면 picker 섹션 자체 숨김
   return `
     <div class="sched-sheet-picker">
-      <span class="sched-sheet-picker-label">여기에 기존 할 일 놓기</span>
       ${groups}
     </div>`;
 }

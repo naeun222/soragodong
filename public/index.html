@@ -9052,7 +9052,6 @@
   .sched-sheet-fields { display: flex; flex-direction: column; gap: 12px; }
   /* 알림 밑 picker — 오늘 할 일 / 서랍장에서 골라 이 시각에 놓기. */
   .sched-sheet-picker { display: flex; flex-direction: column; gap: 7px; margin-top: 2px; padding-top: 12px; border-top: 1px solid var(--border); }
-  .sched-sheet-picker-label { font-size: 12px; color: var(--text-soft); }
   .ssp-group-title { font-size: 11px; font-weight: 700; color: var(--text-soft); margin-top: 4px; letter-spacing: 0.02em; }
   .ssp-chips { display: flex; flex-wrap: wrap; gap: 6px; }
   .ssp-chip {
@@ -57833,8 +57832,8 @@ function _schedDayTaskMenu(taskId) {
         <div style="font-size:14px; font-weight:600; color:var(--text); margin-bottom:2px;${isDone ? ' text-decoration:line-through; opacity:0.6;' : ''}">✓ ${escapeHtml(task.title || '')}</div>
         <div style="font-size:11px; color:var(--text-soft); margin-bottom:14px;">${isDone ? '완료됨' : '할 일'}</div>
         <div style="display:flex; flex-direction:column; gap:8px;">
-          <button onclick="_schedDayTaskMenuAction('${taskId}','edit')" style="${btn}">✎ 수정</button>
           <button onclick="_schedDayTaskMenuAction('${taskId}','${isDone ? 'revive' : 'done'}')" style="${doneBtn}">${isDone ? '↩ 되살리기' : '✓ 완료'}</button>
+          <button onclick="_schedDayTaskMenuAction('${taskId}','edit')" style="${btn}">✎ 수정</button>
           <button onclick="_schedDayTaskMenuAction('${taskId}','delete')" style="${dangerBtn}">🗑 삭제</button>
           <button onclick="document.getElementById('schedDayTaskMenuOverlay').remove()" style="${btn} color:var(--text-soft);">닫기</button>
         </div>
@@ -58405,7 +58404,6 @@ function _schedSheetBuildPickerHtml(sheetDate) {
   if (!groups) return '';  // 가져올 할 일 없으면 picker 섹션 자체 숨김
   return `
     <div class="sched-sheet-picker">
-      <span class="sched-sheet-picker-label">여기에 기존 할 일 놓기</span>
       ${groups}
     </div>`;
 }
@@ -73242,7 +73240,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.324-drawer-duedate-btn-revert';
+const APP_VERSION = 'v4.0.325-picker-label-done-top';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 

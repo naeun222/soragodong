@@ -688,8 +688,8 @@ function _schedDayTaskMenu(taskId) {
         <div style="font-size:14px; font-weight:600; color:var(--text); margin-bottom:2px;${isDone ? ' text-decoration:line-through; opacity:0.6;' : ''}">✓ ${escapeHtml(task.title || '')}</div>
         <div style="font-size:11px; color:var(--text-soft); margin-bottom:14px;">${isDone ? '완료됨' : '할 일'}</div>
         <div style="display:flex; flex-direction:column; gap:8px;">
-          <button onclick="_schedDayTaskMenuAction('${taskId}','edit')" style="${btn}">✎ 수정</button>
           <button onclick="_schedDayTaskMenuAction('${taskId}','${isDone ? 'revive' : 'done'}')" style="${doneBtn}">${isDone ? '↩ 되살리기' : '✓ 완료'}</button>
+          <button onclick="_schedDayTaskMenuAction('${taskId}','edit')" style="${btn}">✎ 수정</button>
           <button onclick="_schedDayTaskMenuAction('${taskId}','delete')" style="${dangerBtn}">🗑 삭제</button>
           <button onclick="document.getElementById('schedDayTaskMenuOverlay').remove()" style="${btn} color:var(--text-soft);">닫기</button>
         </div>
