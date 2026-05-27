@@ -211,3 +211,36 @@ try {
   window.rescheduleAllNotifications = rescheduleAllNotifications;
   window._ensureNotifPermissionForSchedule = _ensureNotifPermissionForSchedule;
 } catch (e) {}
+
+// 사용자 명시 2026-05-27 ultrathink (4단계 PWA 후속): self-init — 앱 첫 진입 / 탭 복귀 시 알림 자동 재예약.
+//   PWA setTimeout 가 탭 hide 시 슬립 / 페이지 reload 후 사라짐 → 매번 알림 reset 보장.
+//   Capacitor LocalNotifications 는 OS 가 관리 (재부팅 후 plugin 의 BOOT_COMPLETED receiver 자동 복원) — 그래도 idempotent 재예약 안전.
+
+let _notifRescheduleTimer = null;
+function _scheduleRescheduleAll(delayMs) {
+  if (_notifRescheduleTimer) clearTimeout(_notifRescheduleTimer);
+  _notifRescheduleTimer = setTimeout(() => {
+    _notifRescheduleTimer = null;
+    if (typeof state === 'undefined' || !state) return;
+    if (!Array.isArray(state.schedules) && !Array.isArray(state.tasks)) return;
+    rescheduleAllNotifications().catch(e => console.warn(_NOTIF_LOG, 'reschedule 실패', e));
+  }, delayMs || 2000);
+}
+
+try {
+  // 첫 진입 — state 로드 대기 2초 후 재예약
+  if (document.readyState === 'complete') {
+    _scheduleRescheduleAll(2000);
+  } else {
+    window.addEventListener('load', () => _scheduleRescheduleAll(2000), { once: true });
+  }
+
+  // 탭 visible 복귀 시 재예약 — 백그라운드 중 슬립 timer 복구
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      _scheduleRescheduleAll(500);
+    }
+  });
+} catch (e) {
+  console.warn(_NOTIF_LOG, 'self-init 실패', e);
+}
