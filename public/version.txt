@@ -1,1 +1,1 @@
-v4.0.305-cal-create-outside-tap-discard
+v4.0.306-cal-draft-survive-outside-tap-fix

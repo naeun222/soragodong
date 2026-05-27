@@ -57308,7 +57308,11 @@ function _schedDayEmptyTap(e) {
   let end = start + 60;                        // 기본 1시간
   if (end > 24 * 60) { end = 24 * 60; start = Math.max(0, end - 60); }
   if (!_schedDayTimelineDate) return;
-  _schedDayClearDraft();
+  // 시트 먼저 연다 — openScheduleSheet 가 내부에서 _closeSchedSheet→_schedDayClearDraft 로
+  // 기존 draft/리스너를 지우므로, draft·리스너 세팅은 반드시 그 뒤에 해야 살아남는다.
+  if (typeof openScheduleSheet === 'function') {
+    openScheduleSheet({ type: 'schedule', date: _schedDayTimelineDate, startMin: start, endMin: end, docked: true });
+  }
   _schedDayDraft = { startMin: start, endMin: end };
   _schedDayRenderDraft();
   // 초안이 docked 시트 위쪽(보이는 영역)에 오도록 스크롤 — 시트가 하단을 덮으므로.
@@ -57316,9 +57320,6 @@ function _schedDayEmptyTap(e) {
   if (scrollEl) scrollEl.scrollTop = Math.max(0, (start / 60) * _SCHED_DAY_HOUR_H - _SCHED_DAY_HOUR_H);
   // 시트 떠 있는 동안 시트·초안·확인창 밖 어디를 탭해도 → 삭제(취소) 확인 (구글 패턴).
   document.addEventListener('click', _schedDayDraftOutsideTap, true);
-  if (typeof openScheduleSheet === 'function') {
-    openScheduleSheet({ type: 'schedule', date: _schedDayTimelineDate, startMin: start, endMin: end, docked: true });
-  }
 }
 
 // 작성 시트가 떠 있을 때 시트/초안/확인창 밖 탭 가로채기 → 삭제 확인.
@@ -72865,7 +72866,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.305-cal-create-outside-tap-discard';
+const APP_VERSION = 'v4.0.306-cal-draft-survive-outside-tap-fix';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 
