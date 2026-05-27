@@ -54138,6 +54138,17 @@ function renderExecute() {
         _resaved = true;
       }
     });
+    // 사용자 명시 2026-05-27: dueDate 가 오늘인 서랍장 task → '오늘 할 일' 자동 승격 (하루 1회, _promotedFor 마킹).
+    //   재승격 가드 — 승격 후 사용자가 서랍장으로 내리면 demoteFromToday 가 _promotedFor=오늘 박아서 그날은 다시 안 올라옴.
+    (state.tasks || []).forEach(t => {
+      if (t.slot === 'drawer' && !t.isToday && t.status !== 'done' &&
+          t.dueDate === todayKeyVal && t._promotedFor !== todayKeyVal) {
+        t.isToday = true;
+        t.date = todayKeyVal;
+        t._promotedFor = todayKeyVal;
+        _resaved = true;
+      }
+    });
     if (_resaved) { try { saveState(); } catch {} }
   }
 
@@ -62438,6 +62449,8 @@ function demoteFromToday(taskId) {
   const task = (state.tasks || []).find(t => t.id === taskId);
   if (!task) return;
   task.isToday = false;
+  // 사용자 명시 2026-05-27: 같은 날 자동 재승격 방지 — dueDate 가 오늘이어도 내린 건 존중.
+  if (typeof todayKey === 'function') task._promotedFor = todayKey();
   saveState();
   if (typeof renderExecute === 'function') renderExecute();
   showToast('📂 서랍장으로');
@@ -73160,7 +73173,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.317-timeline-sheet-picker';
+const APP_VERSION = 'v4.0.318-due-today-auto-promote';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 

@@ -96,6 +96,17 @@ function renderExecute() {
         _resaved = true;
       }
     });
+    // 사용자 명시 2026-05-27: dueDate 가 오늘인 서랍장 task → '오늘 할 일' 자동 승격 (하루 1회, _promotedFor 마킹).
+    //   재승격 가드 — 승격 후 사용자가 서랍장으로 내리면 demoteFromToday 가 _promotedFor=오늘 박아서 그날은 다시 안 올라옴.
+    (state.tasks || []).forEach(t => {
+      if (t.slot === 'drawer' && !t.isToday && t.status !== 'done' &&
+          t.dueDate === todayKeyVal && t._promotedFor !== todayKeyVal) {
+        t.isToday = true;
+        t.date = todayKeyVal;
+        t._promotedFor = todayKeyVal;
+        _resaved = true;
+      }
+    });
     if (_resaved) { try { saveState(); } catch {} }
   }
 

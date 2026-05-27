@@ -141,6 +141,8 @@ function demoteFromToday(taskId) {
   const task = (state.tasks || []).find(t => t.id === taskId);
   if (!task) return;
   task.isToday = false;
+  // 사용자 명시 2026-05-27: 같은 날 자동 재승격 방지 — dueDate 가 오늘이어도 내린 건 존중.
+  if (typeof todayKey === 'function') task._promotedFor = todayKey();
   saveState();
   if (typeof renderExecute === 'function') renderExecute();
   showToast('📂 서랍장으로');
