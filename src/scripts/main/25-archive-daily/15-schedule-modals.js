@@ -363,6 +363,7 @@ function _schedDaySetupInteractions() {
 // ─────────────────────────────────────────────────────────────────────────────
 let _schedDayDraft = null;        // { startMin, endMin }
 let _schedDayHandleDrag = null;
+let _schedDayDraftMove = null;    // 초안 몸통 드래그(통째로 이동)
 const _SCHED_DAY_DRAFT_MIN_LEN = 15;
 const _SCHED_DAY_DRAFT_SNAP = 5;
 
@@ -380,9 +381,10 @@ function _schedDayMinuteFromClientY(clientY) {
 
 function _schedDayEmptyTap(e) {
   if (e.target.closest('.sched-day-block') || e.target.closest('.sched-day-draft')) return;
-  // 이미 초안+시트 떠 있는데 다른 곳 탭 → 삭제(취소) 확인 (구글 패턴).
+  // 사용자 명시 2026-05-27: 초안+시트 떠 있는데 그리드 빈 칸 탭 → 삭제 X, 초안을 그 시각으로 이동 (구글 캘린더식).
   if (_schedDayDraft && document.getElementById('schedSheetOverlay')) {
-    if (typeof _schedSheetTryDiscard === 'function') _schedSheetTryDiscard();
+    const cy = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0].clientY : e.clientY;
+    _schedDayMoveDraftToClientY(cy);
     return;
   }
   const clientY = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0].clientY : e.clientY;
@@ -411,6 +413,15 @@ function _schedDayDraftOutsideTap(e) {
   if (!_schedDayDraft || !document.getElementById('schedSheetOverlay')) return;
   const t = e.target;
   if (t && t.closest && (t.closest('#schedSheetOverlay') || t.closest('.sched-day-draft') || t.closest('#schedDiscardConfirm'))) return;
+  // 사용자 명시 2026-05-27: 그리드(빈 시간대) 탭 → 초안 그 시각으로 이동 (삭제 X). 그리드 밖(헤더 등) 탭만 삭제 모달.
+  const layer = document.getElementById('schedDayBlocksLayer');
+  if (layer && t && t.closest && layer.contains(t) && !t.closest('.sched-day-block')) {
+    e.stopPropagation();
+    if (e.cancelable) e.preventDefault();
+    const cy = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0].clientY : e.clientY;
+    _schedDayMoveDraftToClientY(cy);
+    return;
+  }
   e.stopPropagation();
   if (e.cancelable) e.preventDefault();
   if (typeof _schedSheetTryDiscard === 'function') _schedSheetTryDiscard();
@@ -433,6 +444,9 @@ function _schedDayRenderDraft() {
       h.addEventListener('touchstart', _schedDayHandleDown, { passive: false });
       h.addEventListener('mousedown', _schedDayHandleDown);
     });
+    // 사용자 명시 2026-05-27: 초안 몸통 드래그 → 통째로 이동 (핸들은 리사이즈, 위 분기에서 제외).
+    el.addEventListener('touchstart', _schedDayDraftMoveDown, { passive: false });
+    el.addEventListener('mousedown', _schedDayDraftMoveDown);
   }
   const { startMin, endMin } = _schedDayDraft;
   el.style.top = ((startMin / 60) * _SCHED_DAY_HOUR_H) + 'px';
@@ -446,6 +460,81 @@ function _schedDayClearDraft() {
   const el = document.getElementById('schedDayDraftBlock');
   if (el) el.remove();
   document.removeEventListener('click', _schedDayDraftOutsideTap, true);
+}
+
+// 탭한 시각으로 초안 이동 — 탭한 30분 칸이 시작, 기존 길이 유지. (할 일도 시각=시작만 이동.)
+function _schedDayMoveDraftToClientY(clientY) {
+  if (!_schedDayDraft) return;
+  const tapped = _schedDayMinuteFromClientY(clientY);
+  if (tapped == null) return;
+  const dur = Math.max(_SCHED_DAY_DRAFT_MIN_LEN, _schedDayDraft.endMin - _schedDayDraft.startMin);
+  let start = Math.floor(tapped / 30) * 30;
+  let end = start + dur;
+  if (end > 24 * 60) { end = 24 * 60; start = Math.max(0, end - dur); }
+  _schedDayDraft.startMin = start;
+  _schedDayDraft.endMin = end;
+  _calHaptic('tick');
+  _schedDayRenderDraft();
+  const scrollEl = document.querySelector('#schedDayTimelineOverlay .sched-day-scroll');
+  if (scrollEl) scrollEl.scrollTop = Math.max(0, (start / 60) * _SCHED_DAY_HOUR_H - _SCHED_DAY_HOUR_H);
+  if (typeof _schedSheetSetTimeRange === 'function') _schedSheetSetTimeRange(_schedDayTimelineDate, start, end);
+}
+
+// 초안 몸통 드래그 → 통째로 이동 (시작/길이 유지, 5분 snap). 핸들 위 시작은 제외(리사이즈 담당).
+function _schedDayDraftMoveDown(e) {
+  if (!_schedDayDraft) return;
+  if (e.target && e.target.closest && e.target.closest('.sched-day-handle')) return;
+  if (e.type === 'mousedown' && e.button !== 0) return;
+  if (e.cancelable) e.preventDefault();
+  e.stopPropagation();
+  const isTouch = e.type === 'touchstart';
+  _schedDayDraftMove = {
+    isTouch,
+    startY: _schedDayPointY(e),
+    origStart: _schedDayDraft.startMin,
+    dur: _schedDayDraft.endMin - _schedDayDraft.startMin,
+    scrollEl: document.querySelector('#schedDayTimelineOverlay .sched-day-scroll')
+  };
+  if (_schedDayDraftMove.scrollEl) _schedDayDraftMove.scrollEl.style.overflow = 'hidden';
+  if (isTouch) {
+    document.addEventListener('touchmove', _schedDayDraftMoveMove, { passive: false });
+    document.addEventListener('touchend', _schedDayDraftMoveUp);
+    document.addEventListener('touchcancel', _schedDayDraftMoveUp);
+  } else {
+    document.addEventListener('mousemove', _schedDayDraftMoveMove);
+    document.addEventListener('mouseup', _schedDayDraftMoveUp);
+  }
+}
+
+function _schedDayDraftMoveMove(e) {
+  const d = _schedDayDraftMove;
+  if (!d || !_schedDayDraft) return;
+  if (e.cancelable) e.preventDefault();
+  const dy = _schedDayPointY(e) - d.startY;
+  const deltaMin = Math.round((dy / _SCHED_DAY_HOUR_H) * 60 / _SCHED_DAY_DRAFT_SNAP) * _SCHED_DAY_DRAFT_SNAP;
+  const start = Math.max(0, Math.min(d.origStart + deltaMin, 24 * 60 - d.dur));
+  if (start !== _schedDayDraft.startMin) {
+    _schedDayDraft.startMin = start;
+    _schedDayDraft.endMin = start + d.dur;
+    _calHaptic('tick');
+    _schedDayRenderDraft();
+    if (typeof _schedSheetSetTimeRange === 'function') _schedSheetSetTimeRange(_schedDayTimelineDate, _schedDayDraft.startMin, _schedDayDraft.endMin);
+  }
+}
+
+function _schedDayDraftMoveUp() {
+  const d = _schedDayDraftMove;
+  _schedDayDraftMove = null;
+  if (!d) return;
+  if (d.scrollEl) d.scrollEl.style.overflow = '';
+  if (d.isTouch) {
+    document.removeEventListener('touchmove', _schedDayDraftMoveMove, { passive: false });
+    document.removeEventListener('touchend', _schedDayDraftMoveUp);
+    document.removeEventListener('touchcancel', _schedDayDraftMoveUp);
+  } else {
+    document.removeEventListener('mousemove', _schedDayDraftMoveMove);
+    document.removeEventListener('mouseup', _schedDayDraftMoveUp);
+  }
 }
 
 function _schedDayHandleDown(e) {

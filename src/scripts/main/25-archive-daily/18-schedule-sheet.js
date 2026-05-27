@@ -336,6 +336,16 @@ function _schedSheetSetType(type) {
   }
   if (evFields) evFields.style.display = isEvent ? 'flex' : 'none';
   if (tkFields) tkFields.style.display = isEvent ? 'none' : 'flex';
+  // 사용자 명시 2026-05-27: day view 온그리드 초안도 토글 색 반영 (일정=파랑 / 할 일=노랑).
+  const draft = document.getElementById('schedDayDraftBlock');
+  if (draft) {
+    const c = isEvent ? 'var(--cal-event)' : 'var(--cal-task)';
+    const on = isEvent ? 'var(--cal-event-on)' : 'var(--cal-task-on)';
+    draft.style.background = c;
+    const lab = draft.querySelector('.sched-day-draft-label');
+    if (lab) lab.style.color = on;
+    draft.querySelectorAll('.sched-day-handle').forEach(h => { h.style.borderColor = c; });
+  }
 }
 
 function _schedSheetToggleAllDay() {
@@ -513,6 +523,8 @@ function _schedSheetSetTimeRange(dateKey, startMin, endMin) {
   const e = _schedSheetDateMinToLocal(dateKey, endMin);
   f.sYMD = s.slice(0, 10); f.sHM = s.slice(11, 16);
   f.eYMD = e.slice(0, 10); f.eHM = e.slice(11, 16);
+  // 사용자 명시 2026-05-27: 할 일(시각=시작)도 동기화 — 초안 이동/리사이즈 시 마감 시각이 따라감.
+  f.dueYMD = f.sYMD; f.dueHM = f.sHM;
   _schedSheetRenderLabels();
   // 시간 피커가 열려 있으면 휠 위치도 갱신.
   const op = _schedSheetCtx.openPicker;
