@@ -176,6 +176,10 @@ function _taskFormDelete(taskId) {
   state.tasks = (state.tasks || []).filter(t => t.id !== taskId);
   state.todaySchedule = (state.todaySchedule || []).filter(it => it.taskId !== taskId);
   if (typeof saveState === 'function') saveState();
+  // 사용자 명시 2026-05-27 ultrathink (4단계): 삭제 시 예약 알림도 cancel.
+  if (typeof cancelNotificationById === 'function') {
+    cancelNotificationById(taskId).catch(e => console.warn('[task notif cancel]', e));
+  }
   if (typeof showToast === 'function') showToast('🗑 삭제됨');
   _closeTaskEditModal();
   if (typeof renderExecute === 'function') renderExecute();

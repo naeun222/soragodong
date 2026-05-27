@@ -76,7 +76,24 @@ function createSchedule(opts) {
   if (!Array.isArray(state.schedules)) state.schedules = [];
   state.schedules.push(entry);
   if (typeof saveState === 'function') saveState();
+  // 사용자 명시 2026-05-27 ultrathink (4단계 — 로컬 알림): 권한 자동 prompt + 알림 schedule (fire-and-forget).
+  _fireScheduleNotif(entry);
   return entry;
+}
+
+// helper: createSchedule / updateSchedule 후 알림 schedule (fire-and-forget, 권한 자동 prompt).
+function _fireScheduleNotif(entry) {
+  if (!entry || typeof scheduleNotificationForSchedule !== 'function') return;
+  (async () => {
+    try {
+      if (typeof _ensureNotifPermissionForSchedule === 'function') {
+        await _ensureNotifPermissionForSchedule(entry);
+      }
+      await scheduleNotificationForSchedule(entry);
+    } catch (e) {
+      console.warn('[schedule notif]', e);
+    }
+  })();
 }
 
 // 일정 수정. patch 의 키만 갱신. id/createdAt 는 immutable.
@@ -114,6 +131,8 @@ function updateSchedule(id, patch) {
 
   entry.updatedAt = new Date().toISOString();
   if (typeof saveState === 'function') saveState();
+  // 사용자 명시 2026-05-27 ultrathink (4단계): 수정 후 알림 재스케줄 (startAt / notify 변경 가능).
+  _fireScheduleNotif(entry);
   return entry;
 }
 
@@ -124,6 +143,10 @@ function deleteSchedule(id) {
   state.schedules = list.filter(s => s.id !== id);
   const removed = state.schedules.length < before;
   if (removed && typeof saveState === 'function') saveState();
+  // 사용자 명시 2026-05-27 ultrathink (4단계): 삭제 시 예약된 알림도 cancel.
+  if (removed && typeof cancelNotificationById === 'function') {
+    cancelNotificationById(id).catch(e => console.warn('[schedule notif cancel]', e));
+  }
   return removed;
 }
 
@@ -202,6 +225,19 @@ function setTaskDue(taskId, opts) {
   }
 
   if (typeof saveState === 'function') saveState();
+  // 사용자 명시 2026-05-27 ultrathink (4단계): task 마감 알림 (재)스케줄 — fire-and-forget.
+  if (typeof scheduleNotificationForTask === 'function') {
+    (async () => {
+      try {
+        if (typeof _ensureNotifPermissionForSchedule === 'function') {
+          await _ensureNotifPermissionForSchedule(task);
+        }
+        await scheduleNotificationForTask(task);
+      } catch (e) {
+        console.warn('[task notif]', e);
+      }
+    })();
+  }
   return task;
 }
 
