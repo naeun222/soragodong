@@ -54522,6 +54522,16 @@ function _todayDragDown(e) {
   _todayDrag.timer = setTimeout(() => {
     if (!_todayDrag) return;
     _todayDrag.active = true;
+    // 활성화 순간 행 위치 측정 (드래그 중엔 원본 center 기준으로 슬롯 판정 — 형제는 transform 으로만 이동).
+    const rowEls = [...list.querySelectorAll('.todo-item')];
+    _todayDrag.rows = rowEls.map(rEl => {
+      const r = rEl.getBoundingClientRect();
+      return { el: rEl, center: r.top + r.height / 2 };
+    });
+    _todayDrag.fromIndex = rowEls.indexOf(el);
+    _todayDrag.toIndex = _todayDrag.fromIndex;
+    _todayDrag.slot = el.getBoundingClientRect().height + 6;  // 행 높이 + gap(6px)
+    el.style.transition = 'none';  // 손가락 1:1 추종 (지연 X)
     el.classList.add('dragging');
     if (typeof _calHaptic === 'function') _calHaptic('impact');
   }, 320);
@@ -54548,22 +54558,25 @@ function _todayDragMove(e) {
     return;
   }
   if (e.cancelable) e.preventDefault();  // 드래그 중 스크롤 차단
-  const siblings = [...d.list.querySelectorAll('.todo-item')].filter(x => x !== d.el);
-  let inserted = false;
-  for (const sib of siblings) {
-    const r = sib.getBoundingClientRect();
-    if (y < r.top + r.height / 2) {
-      if (sib.previousElementSibling !== d.el) {
-        d.list.insertBefore(d.el, sib);
-        if (typeof _calHaptic === 'function') _calHaptic('tick');
-      }
-      inserted = true;
-      break;
-    }
-  }
-  if (!inserted && d.list.lastElementChild !== d.el) {
-    d.list.appendChild(d.el);
+  const dy = y - d.startY;
+  // 드래그 항목은 손가락을 그대로 따라옴 (transition none → 1:1).
+  d.el.style.transform = `translateY(${dy}px) scale(1.03)`;
+  // 원본 center 기준으로 어느 슬롯에 들어갈지 계산.
+  const center = d.rows[d.fromIndex].center + dy;
+  let toIndex = d.fromIndex;
+  while (toIndex < d.rows.length - 1 && center > d.rows[toIndex + 1].center) toIndex++;
+  while (toIndex > 0 && center < d.rows[toIndex - 1].center) toIndex--;
+  if (toIndex !== d.toIndex) {
+    d.toIndex = toIndex;
     if (typeof _calHaptic === 'function') _calHaptic('tick');
+    // 형제들이 부드럽게 자리를 비켜줌 (CSS transform transition).
+    for (let i = 0; i < d.rows.length; i++) {
+      if (i === d.fromIndex) continue;
+      let shift = 0;
+      if (i > d.fromIndex && i <= toIndex) shift = -d.slot;       // 아래로 지나간 항목 → 위로
+      else if (i < d.fromIndex && i >= toIndex) shift = d.slot;   // 위로 지나간 항목 → 아래로
+      d.rows[i].el.style.transform = shift ? `translateY(${shift}px)` : '';
+    }
   }
 }
 
@@ -54578,14 +54591,40 @@ function _todayDragUp() {
     if (!d.moved && typeof _todayTaskMenu === 'function') _todayTaskMenu(d.taskId);
     return;
   }
+  // 드래그 항목의 드롭 직전 시각 위치 기억 (FLIP).
+  const beforeTop = d.el.getBoundingClientRect().top;
+  // 형제 transition 잠깐 끔 → 재정렬과 transform 제거가 상쇄돼 점프 없이 즉시 정착.
+  d.rows.forEach(r => { if (r.el !== d.el) r.el.style.transition = 'none'; });
+  // 최종 순서로 DOM 재정렬.
+  const els = d.rows.map(r => r.el).filter(el => el !== d.el);
+  els.splice(d.toIndex, 0, d.el);
+  els.forEach(el => d.list.appendChild(el));
+  d.rows.forEach(r => { if (r.el !== d.el) r.el.style.transform = ''; });
+  // FLIP — 드래그 항목: 재정렬 후 위치에서 손가락이 있던 위치로 되돌렸다가 그 자리로 사뿐히 안착.
   d.el.classList.remove('dragging');
+  d.el.style.transition = 'none';
+  const afterTop = d.el.getBoundingClientRect().top;
+  d.el.style.transform = `translateY(${beforeTop - afterTop}px) scale(1.03)`;
+  // 강제 reflow 후 다음 프레임에 0 으로 transition → 떨어지는 애니메이션.
+  void d.el.offsetHeight;
+  requestAnimationFrame(() => {
+    if (!d.el) return;
+    d.el.style.transition = 'transform 0.18s cubic-bezier(0.2,0.8,0.3,1)';
+    d.el.style.transform = '';
+  });
+  const draggedEl = d.el;
+  const sibEls = d.rows.map(r => r.el);
+  setTimeout(() => {
+    sibEls.forEach(el => { if (el) el.style.transition = ''; });
+    if (draggedEl) { draggedEl.style.transition = ''; draggedEl.style.transform = ''; }
+  }, 240);
+  // 새 DOM 순서 → todayOrder 저장. (renderExecute 는 호출 안 함 — 정착 애니메이션 flash 방지.)
   const ids = [...d.list.querySelectorAll('.todo-item')].map(el => el.dataset.taskId);
   ids.forEach((id, i) => {
     const t = (state.tasks || []).find(x => x.id === id);
     if (t) t.todayOrder = i;
   });
   saveState();
-  if (typeof renderExecute === 'function') renderExecute();
 }
 
 function _todayDragDetach(d) {
@@ -73084,7 +73123,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.313-notif-due-in-N-min';
+const APP_VERSION = 'v4.0.314-today-drag-physical-feel';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 
