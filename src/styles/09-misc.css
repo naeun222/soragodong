@@ -8812,6 +8812,23 @@
   }
   .cal-grid-wrap.cal-month-slide-prev { animation: cal-slide-prev 0.32s ease; }
   .cal-grid-wrap.cal-month-slide-next { animation: cal-slide-next 0.32s ease; }
+
+  /* 사용자 명시 2026-05-27 ultrathink — 일정 lens 캘린더: 아래로 스크롤 시 풀스크린 (구글 캘린더).
+     월/요일 헤더는 sticky 로 상단 고정, 그리드는 viewport 높이 (6행 1fr) → chrome 가 스크롤로 사라지면 캘린더가 화면을 가득 채움. */
+  .cal-grid-wrap.sched-cal-wrap { padding: 0; background: transparent; border: none; border-radius: 0; margin: 0 0 18px; }
+  .sched-cal-sticky {
+    position: sticky;
+    top: 0;
+    z-index: 6;
+    background: var(--bg);
+    padding: 6px 0 4px;
+  }
+  .sched-cal-monthgrid {
+    height: calc(100dvh - 188px);
+    min-height: 430px;
+  }
+  /* 일별 시간대(day view) 스크롤 영역 */
+  .sched-day-scroll { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
   .cal-nav {
     display: flex; align-items: center; justify-content: space-between;
     margin-bottom: 10px;

@@ -168,6 +168,7 @@ function _taskFormSave(taskId) {
   _closeTaskEditModal();
   if (typeof renderExecute === 'function') renderExecute();
   if (typeof renderScheduleCalendarGrid === 'function') renderScheduleCalendarGrid();
+  if (typeof _refreshScheduleDayTimelineIfOpen === 'function') _refreshScheduleDayTimelineIfOpen();
 }
 
 function _taskFormDelete(taskId) {
@@ -184,6 +185,7 @@ function _taskFormDelete(taskId) {
   _closeTaskEditModal();
   if (typeof renderExecute === 'function') renderExecute();
   if (typeof renderScheduleCalendarGrid === 'function') renderScheduleCalendarGrid();
+  if (typeof _refreshScheduleDayTimelineIfOpen === 'function') _refreshScheduleDayTimelineIfOpen();
 }
 
 try {

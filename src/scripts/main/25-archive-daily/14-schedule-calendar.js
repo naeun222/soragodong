@@ -148,17 +148,21 @@ function renderScheduleCalendarGrid() {
   }
 
   // 외곽 + 헤더 + 요일
+  // 사용자 명시 2026-05-27 ultrathink (풀스크린): 월/요일 헤더 = .sched-cal-sticky 로 top 고정.
+  //   그리드는 .sched-cal-monthgrid (viewport 높이 + 6행 1fr) — 아래로 스크롤하면 위 chrome 가 사라지고 캘린더가 화면 가득 (구글 캘린더 패턴).
   let html = `
-    <div class="cal-grid-wrap">
-      <div class="cal-nav">
-        <button class="cal-nav-btn" onclick="_schedCalMonthShift(-1)" aria-label="지난 달">←</button>
-        <div class="cal-month-label">${monthLabel}</div>
-        <button class="cal-nav-btn" onclick="_schedCalMonthShift(1)" aria-label="다음 달">→</button>
+    <div class="cal-grid-wrap sched-cal-wrap">
+      <div class="sched-cal-sticky">
+        <div class="cal-nav">
+          <button class="cal-nav-btn" onclick="_schedCalMonthShift(-1)" aria-label="지난 달">←</button>
+          <div class="cal-month-label">${monthLabel}</div>
+          <button class="cal-nav-btn" onclick="_schedCalMonthShift(1)" aria-label="다음 달">→</button>
+        </div>
+        <div class="cal-weekdays">
+          <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+        </div>
       </div>
-      <div class="cal-weekdays">
-        <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
-      </div>
-      <div style="display:grid; grid-template-columns: repeat(7, 1fr); grid-template-rows: repeat(6, minmax(96px, auto)); gap:1px; background:var(--border); border:1px solid var(--border); border-radius:8px; overflow:hidden;">
+      <div class="sched-cal-monthgrid" style="display:grid; grid-template-columns: repeat(7, 1fr); grid-template-rows: repeat(6, 1fr); gap:1px; background:var(--border); border:1px solid var(--border); border-radius:8px; overflow:hidden;">
   `;
 
   for (const cell of visibleCells) {
@@ -224,7 +228,10 @@ function renderScheduleCalendarGrid() {
 }
 
 function _schedCalDayClick(dateKey) {
-  if (typeof openScheduleDayModal === 'function') {
+  // 사용자 명시 2026-05-27 ultrathink (3단계): 날짜 클릭 → 구글 캘린더식 일별 시간대(day view).
+  if (typeof openScheduleDayTimeline === 'function') {
+    openScheduleDayTimeline(dateKey);
+  } else if (typeof openScheduleDayModal === 'function') {
     openScheduleDayModal(dateKey);
   } else if (typeof showToast === 'function') {
     showToast(`📅 ${dateKey}`);

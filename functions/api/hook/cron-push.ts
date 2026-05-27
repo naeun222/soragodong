@@ -148,6 +148,118 @@ async function _touchLastPushed(env: CronEnv, userId: string): Promise<void> {
   }).catch(() => {});
 }
 
+// ═══════════════════════════════════════════════════════════════
+// 일정/할 일 알림 push queue (0035_schedule_push_queue) — 사용자 명시 2026-05-27 ultrathink.
+//   hook 처리 후 같은 cron 에서 이어 처리. push_subscription 은 prefs 에서 join (enabled 무관 — 일정은 명시 set).
+// ═══════════════════════════════════════════════════════════════
+interface SchedQueueRow {
+  id: number;
+  user_id: string;
+  item_id: string;
+  title: string;
+  body: string;
+  send_attempts: number;
+}
+
+async function _fetchSchedPending(env: CronEnv): Promise<SchedQueueRow[]> {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return [];
+  const nowIso = new Date().toISOString();
+  const url = `${env.SUPABASE_URL}/rest/v1/soragodong_schedule_push_queue` +
+    `?select=id,user_id,item_id,title,body,send_attempts` +
+    `&sent_at=is.null&scheduled_at=lte.${encodeURIComponent(nowIso)}` +
+    `&order=scheduled_at.asc&limit=${MAX_BATCH}`;
+  const resp = await fetch(url, {
+    headers: {
+      'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
+      'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+    },
+  });
+  if (!resp.ok) {
+    console.warn('[sched cron] fetch pending', resp.status);
+    return [];
+  }
+  return (await resp.json().catch(() => [])) as SchedQueueRow[];
+}
+
+async function _markSchedSent(env: CronEnv, id: number, error: string | null): Promise<void> {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return;
+  const patch: any = { sent_at: new Date().toISOString() };
+  if (error) patch.last_error = error.slice(0, 500);
+  await fetch(`${env.SUPABASE_URL}/rest/v1/soragodong_schedule_push_queue?id=eq.${id}`, {
+    method: 'PATCH',
+    headers: {
+      'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
+      'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal',
+    },
+    body: JSON.stringify(patch),
+  }).catch(() => {});
+}
+
+async function _markSchedAttemptFail(env: CronEnv, id: number, attempts: number, error: string): Promise<void> {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return;
+  const patch: any = { send_attempts: attempts + 1, last_error: error.slice(0, 500) };
+  if (attempts + 1 >= MAX_ATTEMPTS) patch.sent_at = new Date().toISOString();
+  await fetch(`${env.SUPABASE_URL}/rest/v1/soragodong_schedule_push_queue?id=eq.${id}`, {
+    method: 'PATCH',
+    headers: {
+      'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
+      'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal',
+    },
+    body: JSON.stringify(patch),
+  }).catch(() => {});
+}
+
+async function _processScheduleQueue(
+  env: CronEnv,
+  vapidEnv: WebPushEnv | null,
+): Promise<{ processed: number; sent: number; skipped: number; failed: number; gone: number }> {
+  const pending = await _fetchSchedPending(env);
+  if (pending.length === 0) return { processed: 0, sent: 0, skipped: 0, failed: 0, gone: 0 };
+
+  const prefsMap = await _fetchPrefs(env, [...new Set(pending.map(q => q.user_id))]);
+  let sent = 0, skipped = 0, failed = 0, gone = 0;
+
+  for (const q of pending) {
+    const prefs = prefsMap.get(q.user_id);
+    // 일정 알림은 enabled (hook on/off) 와 무관. push_subscription 만 있으면 발사.
+    if (!prefs || !prefs.push_subscription) {
+      await _markSchedSent(env, q.id, 'no-subscription');
+      skipped++; continue;
+    }
+    const sub = prefs.push_subscription;
+    const title = q.title || '일정';
+    const notifBody = q.body || '';
+    let r: { ok: boolean; status?: number; error?: string; subscriptionGone?: boolean };
+    if (_isFcmSubscription(sub)) {
+      const fcmR = await sendFcm(sub.fcm_token, title, notifBody, { kind: 'schedule_notif', item_id: q.item_id }, env);
+      r = { ok: fcmR.ok, status: fcmR.status, error: fcmR.error, subscriptionGone: fcmR.gone };
+    } else {
+      if (!vapidEnv) {
+        await _markSchedAttemptFail(env, q.id, q.send_attempts || 0, 'VAPID env 누락 (web push)');
+        failed++; continue;
+      }
+      const payload = JSON.stringify({ kind: 'schedule_notif', item_id: q.item_id, title, body: notifBody });
+      r = await sendWebPush(sub as WebPushSubscription, payload, vapidEnv, { urgency: 'high', ttl: 3600 });
+    }
+    if (r.ok) {
+      await _markSchedSent(env, q.id, null);
+      sent++;
+    } else if (r.subscriptionGone) {
+      await _clearInvalidSubscription(env, q.user_id);
+      await _markSchedSent(env, q.id, 'subscription-gone');
+      gone++;
+    } else {
+      await _markSchedAttemptFail(env, q.id, q.send_attempts || 0, r.error || ('status-' + r.status));
+      failed++;
+    }
+  }
+  return { processed: pending.length, sent, skipped, failed, gone };
+}
+
 export async function onRequestPost(context: { request: Request; env: CronEnv }): Promise<Response> {
   const { request, env } = context;
   const cronSecret = request.headers.get('X-Cron-Secret') || '';
@@ -166,7 +278,11 @@ export async function onRequestPost(context: { request: Request; env: CronEnv })
   } : null;
 
   const pending = await _fetchPending(env);
-  if (pending.length === 0) return jsonResponse({ ok: true, processed: 0 });
+  if (pending.length === 0) {
+    // hook 큐 비어도 일정 큐는 처리해야 함.
+    const sched0 = await _processScheduleQueue(env, vapidEnv);
+    return jsonResponse({ ok: true, processed: 0, schedule: sched0 });
+  }
 
   const prefsMap = await _fetchPrefs(env, pending.map(q => q.user_id));
 
@@ -213,7 +329,9 @@ export async function onRequestPost(context: { request: Request; env: CronEnv })
     }
   }
 
-  return jsonResponse({ ok: true, processed: pending.length, sent, skipped, failed, subscription_gone: gone });
+  const schedule = await _processScheduleQueue(env, vapidEnv);
+
+  return jsonResponse({ ok: true, processed: pending.length, sent, skipped, failed, subscription_gone: gone, schedule });
 }
 
 // GET — health check (no-auth)

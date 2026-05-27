@@ -82,6 +82,8 @@ Admin Supabase auth uid: **`4ba0a92e-7f79-45ec-8c48-b339d259382e`**
 
 **🔴 0023 (2026-05-13 사용자 명시 ultrathink)**: `0023_cycle_anchor.sql` — `soragodong_billing` 에 `subscription_started_at TIMESTAMPTZ NULL` / `cycle_anchor_day SMALLINT NULL` 컬럼 + CHECK 제약 (1-31). **매월 가입일 anchor cycle** (Netflix/YouTube 표준). 옛 30일 fixed 주기 폐기 — 1년 12회 결제. 옛 row 백필: `cycle_anchor_day = EXTRACT(DAY FROM next_billing_at AT TIME ZONE 'Asia/Seoul')`. 미적용 시 코드는 옛 30일 fallback 으로 동작 (column NULL 이면 calcNext30DayFallback) — 안전. 가입 시 정확한 anchor 저장은 column 적용 후만 가능.
 
+**🔴 0035 (2026-05-27 사용자 명시 ultrathink — 일정 알림 서버 push)**: `0035_schedule_push_queue.sql` — `soragodong_schedule_push_queue` 신규 테이블 (id / user_id / item_id / title / body / scheduled_at / sent_at ...) + UNIQUE(user_id, item_id) + RLS + pending 인덱스 + updated_at trigger. **iOS PWA 백그라운드 일정 알림** — hook 과 같은 Web Push (VAPID) / FCM 파이프라인에 일정/할 일 알림을 태움. 미적용 시: 새 endpoint `/api/hook/schedule-queue` 가 upsert 시 테이블 없음 에러 (500) → frontend 는 자동으로 TimestampTrigger/setTimeout local fallback 으로 동작 (앱 켜져 있을 때만). 적용해야 앱 닫아도 일정 알림이 OS push 로 옴. **VAPID 키 (`VAPID_PUBLIC_KEY` env + frontend `window._VAPID_PUBLIC_KEY`) 이미 hook 용으로 set 돼 있으면 추가 작업 없음** — 같은 cron (`/api/hook/cron-push`) 이 hook 처리 후 이 큐도 같이 처리하도록 확장됨 (cron job 추가 등록 불필요).
+
 ### 2-bis. 신규 cron job 등록 (5분)
 
 **위치**: cron-job.org 또는 GitHub Actions schedule.

@@ -122,6 +122,55 @@ async function scheduleNotificationForTask(task) {
   return _scheduleNative(task.id, `✓ ${task.title || '할 일'}`, body, new Date(triggerMs));
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// 사용자 명시 2026-05-27 ultrathink (서버 push): web/PWA 일정 알림을 hook 과 같은 서버 Web Push 큐에 등록.
+//   iOS PWA 는 TimestampTrigger 미지원 + setTimeout 은 앱 켜져 있을 때만 → 서버 push 만이 진정한 백그라운드 알림.
+//   push subscription (VAPID) 은 hook 시스템과 공유 (브라우저당 1개). 구독 없으면 silent subscribe 시도, 실패 시 local fallback.
+// ─────────────────────────────────────────────────────────────────────────────
+async function _webPushSubscriptionExists() {
+  if (typeof navigator === 'undefined' || !('serviceWorker' in navigator) || !('PushManager' in window)) return false;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    return !!sub;
+  } catch (e) { return false; }
+}
+
+async function _ensureWebPushForSchedule() {
+  if (await _webPushSubscriptionExists()) return true;
+  if (typeof ensurePushSubscription !== 'function') return false;
+  // permission 이미 granted 면 silent subscribe (prompt X). VAPID 미설정 / 권한 X 면 false → local fallback.
+  try {
+    const r = await ensurePushSubscription({ silent: true });
+    return !!(r && r.ok);
+  } catch (e) { return false; }
+}
+
+async function _enqueueSchedulePush(id, title, body, at) {
+  const token = (typeof session !== 'undefined' && session && session.access_token) || null;
+  if (!token) return false;
+  if (!(await _ensureWebPushForSchedule())) return false;
+  try {
+    const resp = await fetch('/api/hook/schedule-queue', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ item_id: id, title, body, scheduled_at: at.toISOString() })
+    });
+    return resp.ok;
+  } catch (e) { return false; }
+}
+
+async function _cancelSchedulePush(id) {
+  const token = (typeof session !== 'undefined' && session && session.access_token) || null;
+  if (!token) return;
+  try {
+    await fetch('/api/hook/schedule-queue?item_id=' + encodeURIComponent(id), {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+  } catch (e) {}
+}
+
 async function _scheduleNative(id, title, body, at) {
   const notifId = _notifIdFromString(id);
   const LN = _getLocalNotifications();
@@ -143,11 +192,19 @@ async function _scheduleNative(id, title, body, at) {
       return false;
     }
   }
-  // 사용자 명시 2026-05-27 ultrathink (PWA push):
-  //   PWA 환경 — Notification Triggers API 의 TimestampTrigger 우선 사용.
-  //   sw.registration.showNotification + showTrigger 박으면 sw 가 시각 도달 시 자동 활성 + OS 알림 fire — 브라우저 종료 후에도 동작 (진정한 PWA background notification).
+  // 사용자 명시 2026-05-27 ultrathink (서버 push 우선): web/PWA — 서버 push queue 에 등록.
+  //   cron 이 시각 도달 시 Web Push / FCM 발사 → 브라우저 종료 후에도 OS 알림 fire (iOS PWA 백그라운드 cover).
+  //   성공 시 여기서 종료 (TimestampTrigger / setTimeout 중복 방지).
+  try {
+    const enq = await _enqueueSchedulePush(id, title, body, at);
+    if (enq) return true;
+  } catch (e) {
+    console.warn(_NOTIF_LOG, '서버 push enqueue 실패 → local fallback', e);
+  }
+
+  // 사용자 명시 2026-05-27 ultrathink (PWA push fallback):
+  //   서버 push 불가 (구독 없음 / VAPID 미설정) — Notification Triggers API 의 TimestampTrigger.
   //   Chrome 86+ Android/desktop 지원. Safari/Firefox 미지원 → setTimeout fallback (앱 켜져 있을 때만).
-  //   iOS Safari PWA 는 한계 — Capacitor iOS 의 LocalNotifications 가 cover (이미 4단계).
   if (typeof Notification === 'undefined') return false;
   if (Notification.permission !== 'granted') return false;
   const delayMs = at.getTime() - Date.now();
@@ -219,6 +276,10 @@ async function cancelNotificationById(id) {
   if (window._pwaNotifTimers && window._pwaNotifTimers[id]) {
     clearTimeout(window._pwaNotifTimers[id]);
     delete window._pwaNotifTimers[id];
+  }
+  // 사용자 명시 2026-05-27 ultrathink (서버 push): web 환경이면 서버 큐에서도 삭제 (Capacitor 는 큐에 등록 안 함).
+  if (!LN) {
+    try { await _cancelSchedulePush(id); } catch (e) {}
   }
 }
 
