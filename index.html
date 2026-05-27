@@ -57238,21 +57238,55 @@ async function _scheduleNative(id, title, body, at) {
       return false;
     }
   }
-  // PWA fallback — setTimeout (앱 켜져 있을 때만). 단순 path.
+  // 사용자 명시 2026-05-27 ultrathink (PWA push):
+  //   PWA 환경 — Notification Triggers API 의 TimestampTrigger 우선 사용.
+  //   sw.registration.showNotification + showTrigger 박으면 sw 가 시각 도달 시 자동 활성 + OS 알림 fire — 브라우저 종료 후에도 동작 (진정한 PWA background notification).
+  //   Chrome 86+ Android/desktop 지원. Safari/Firefox 미지원 → setTimeout fallback (앱 켜져 있을 때만).
+  //   iOS Safari PWA 는 한계 — Capacitor iOS 의 LocalNotifications 가 cover (이미 4단계).
   if (typeof Notification === 'undefined') return false;
   if (Notification.permission !== 'granted') return false;
   const delayMs = at.getTime() - Date.now();
-  if (delayMs <= 0 || delayMs > 24 * 3600 * 1000) return false;  // 24h 안 만
-  // setTimeout ref 보관 — cancel 시 사용
-  if (!window._pwaNotifTimers) window._pwaNotifTimers = {};
-  if (window._pwaNotifTimers[id]) {
-    clearTimeout(window._pwaNotifTimers[id]);
-  }
-  window._pwaNotifTimers[id] = setTimeout(() => {
+  if (delayMs <= 0) return false;
+
+  // path 1 — TimestampTrigger (PWA push 정통)
+  if (typeof TimestampTrigger !== 'undefined' && 'serviceWorker' in navigator) {
     try {
-      new Notification(title, { body, tag: id });
+      const reg = await navigator.serviceWorker.ready;
+      if (reg && reg.showNotification) {
+        // 같은 tag 의 옛 알림 cancel (트리거 전 포함) — 재예약 보장.
+        try {
+          const existing = await reg.getNotifications({ tag: id, includeTriggered: true });
+          for (const n of existing) { try { n.close(); } catch (e) {} }
+        } catch (e) {}
+        await reg.showNotification(title, {
+          body,
+          tag: id,
+          icon: '/icon-192.png',
+          badge: '/icon-192.png',
+          showTrigger: new TimestampTrigger(at.getTime()),
+          data: { kind: 'schedule_notif', id }
+        });
+        return true;
+      }
     } catch (e) {
-      console.warn(_NOTIF_LOG, 'web Notification 실패', e);
+      console.warn(_NOTIF_LOG, 'TimestampTrigger 실패 → setTimeout fallback', e);
+    }
+  }
+
+  // path 2 — setTimeout fallback (앱 켜져 있을 때만, 24h 안)
+  if (delayMs > 24 * 3600 * 1000) return false;
+  if (!window._pwaNotifTimers) window._pwaNotifTimers = {};
+  if (window._pwaNotifTimers[id]) clearTimeout(window._pwaNotifTimers[id]);
+  window._pwaNotifTimers[id] = setTimeout(() => {
+    // sw.registration.showNotification 우선 (앱 아이콘 표시), 미지원 시 new Notification
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then(reg => {
+        return reg.showNotification(title, { body, tag: id, icon: '/icon-192.png', badge: '/icon-192.png' });
+      }).catch(() => {
+        try { new Notification(title, { body, tag: id }); } catch (e) {}
+      });
+    } else {
+      try { new Notification(title, { body, tag: id }); } catch (e) {}
     }
     delete window._pwaNotifTimers[id];
   }, delayMs);
@@ -57266,6 +57300,14 @@ async function cancelNotificationById(id) {
   if (LN) {
     try {
       await LN.cancel({ notifications: [{ id: notifId }] });
+    } catch (e) {}
+  }
+  // 사용자 명시 2026-05-27 ultrathink (PWA push): TimestampTrigger 알림도 cancel — sw.registration.getNotifications + close.
+  if ('serviceWorker' in navigator) {
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const existing = await reg.getNotifications({ tag: id, includeTriggered: true });
+      for (const n of existing) { try { n.close(); } catch (e) {} }
     } catch (e) {}
   }
   // PWA setTimeout 취소
@@ -71448,7 +71490,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.287-notif-self-init';
+const APP_VERSION = 'v4.0.288-pwa-timestamp-trigger';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 

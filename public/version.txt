@@ -1,1 +1,1 @@
-v4.0.287-notif-self-init
+v4.0.288-pwa-timestamp-trigger
