@@ -71,7 +71,8 @@
 //   match: fonts.googleapis.com (CSS) + fonts.gstatic.com (woff2). 별도 캐시 sora-font-v1 + 30d/40 entries.
 //   _handlePhotoFetch → generic _handleCacheFirst 로 리팩토 (photo + font 공유). 행동 변경 0.
 // v53 (2026-05-27 사용자 명시 ultrathink): 일정/할 일 알림 서버 push (schedule_notif) — push handler 분기 추가 + 캘린더 풀스크린/day view 변경 index.html 갱신. 강제 invalidate.
-const CACHE_NAME = 'soragodong-v4-cache-v51';
+// v54 (2026-05-27 사용자 명시 ultrathink): 일정 알림 클릭 → day view deep link (notificationclick schedule_notif → ?schedNotif / postMessage) + day view 드래그/완료메뉴 index.html 갱신.
+const CACHE_NAME = 'soragodong-v4-cache-v52';
 const PHOTO_CACHE_NAME = 'sora-photo-v1';
 const PHOTO_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
 const PHOTO_MAX_ENTRIES = 200;
@@ -294,15 +295,20 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const hookId = (event.notification.data && event.notification.data.hookId) || '';
-  const url = hookId ? `/?hookTrigger=${encodeURIComponent(hookId)}` : '/';
+  const _ndata = event.notification.data || {};
+  const hookId = _ndata.hookId || '';
+  // 사용자 명시 2026-05-27 ultrathink: 일정 알림 클릭 → 그 일정 날짜의 day view 로 deep link.
+  const schedItemId = (_ndata.kind === 'schedule_notif' && _ndata.item_id) ? _ndata.item_id : '';
+  let url = '/';
+  if (hookId) url = `/?hookTrigger=${encodeURIComponent(hookId)}`;
+  else if (schedItemId) url = `/?schedNotif=${encodeURIComponent(schedItemId)}`;
   event.waitUntil((async () => {
     const clientsList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-    // 이미 열린 client 있으면 focus + 메시지 보내서 hook trigger
+    // 이미 열린 client 있으면 focus + 메시지 보내서 해당 화면으로 이동.
     for (const c of clientsList) {
       if (c.url && c.url.includes(self.location.origin)) {
-        // hookId 있을 때만 hook trigger (일정 알림 클릭은 앱 focus 만).
         if (hookId) { try { c.postMessage({ type: 'hook-trigger', hookId }); } catch {} }
+        else if (schedItemId) { try { c.postMessage({ type: 'schedule-notif-click', itemId: schedItemId }); } catch {} }
         if ('focus' in c) return c.focus();
       }
     }

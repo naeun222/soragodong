@@ -54,6 +54,8 @@ function openTaskEditModal(taskId, opts) {
 
   const inputStyle = 'padding:10px 12px; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:14px; font-family:inherit; width:100%; box-sizing:border-box;';
   const dtStyle    = 'padding:10px 12px; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:13px; font-family:inherit; width:100%; box-sizing:border-box;';
+  // 사용자 보고 2026-05-27: date/time input 이 가로로 튀어나옴 (iOS -webkit-appearance 기본 intrinsic width) → appearance none + min-width 0.
+  const dateTimeStyle = dtStyle + ' -webkit-appearance:none; appearance:none; min-width:0; max-width:100%;';
 
   const headerLabel = isCreate ? '✓ 새 할 일 마감' : '✏️ 할 일 수정';
   const saveLabel   = isCreate ? '추가' : '저장';
@@ -72,22 +74,21 @@ function openTaskEditModal(taskId, opts) {
           </label>
           <label style="display:flex; flex-direction:column; gap:5px;">
             <span style="font-size:12px; color:var(--text-soft);">메모 (선택)</span>
-            <textarea id="taskFormDesc" rows="2" placeholder="..." style="${inputStyle} resize:vertical; min-height:48px;">${escapeHtml(descVal)}</textarea>
+            <textarea id="taskFormDesc" rows="2" style="${inputStyle} resize:vertical; min-height:48px;">${escapeHtml(descVal)}</textarea>
           </label>
           <div style="height:1px; background:var(--border); margin:4px 0;"></div>
           <div style="font-size:13px; color:var(--text); font-weight:500; display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:8px; height:8px; background:${_TASK_MODAL_TASK_COLOR}; border-radius:50%;"></span>마감 (선택)</div>
           <label style="display:flex; flex-direction:column; gap:5px;">
             <span style="font-size:12px; color:var(--text-soft);">날짜</span>
-            <input type="date" id="taskFormDueDate" value="${dueDateVal}" style="${dtStyle}">
+            <input type="date" id="taskFormDueDate" value="${dueDateVal}" style="${dateTimeStyle}">
           </label>
           <label style="display:flex; flex-direction:column; gap:5px;">
             <span style="font-size:12px; color:var(--text-soft);">시간 (비우면 종일 마감)</span>
-            <input type="time" id="taskFormDueTime" value="${dueTimeVal}" step="300" style="${dtStyle}">
+            <input type="time" id="taskFormDueTime" value="${dueTimeVal}" step="300" style="${dateTimeStyle}">
           </label>
           <label style="display:flex; flex-direction:column; gap:5px;">
             <span style="font-size:12px; color:var(--text-soft);">알림</span>
             <select id="taskFormNotify" style="${dtStyle}">${notifyOptHtml}</select>
-            <span style="font-size:11px; color:var(--text-soft); margin-top:2px;">알림 실제 동작은 4단계 (로컬 알림) 에서 연결.</span>
           </label>
         </div>
         <div style="display:flex; gap:8px; margin-top:18px; flex-wrap:wrap;">

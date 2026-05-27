@@ -116,6 +116,10 @@ async function init() {
         if (msg.type === 'hook-trigger' && msg.hookId && typeof hookCardTap === 'function') {
           try { hookCardTap(msg.hookId); } catch (e) { console.warn('[hookTrigger msg]', e); }
         }
+        // 사용자 명시 2026-05-27 ultrathink: 일정 알림 클릭 → 해당 일정 day view.
+        if (msg.type === 'schedule-notif-click' && msg.itemId && typeof _openScheduleFromNotif === 'function') {
+          try { _openScheduleFromNotif(msg.itemId); } catch (e) { console.warn('[schedNotif msg]', e); }
+        }
       });
     } catch (e) { console.warn('[SW message listener]', e); }
   }
@@ -546,6 +550,21 @@ async function init() {
       } catch {}
     }
   } catch (e) { console.warn('[hookTrigger parse]', e); }
+
+  // 사용자 명시 2026-05-27 ultrathink: 일정 알림 클릭 (cold start) → /?schedNotif=<item_id> deep link.
+  try {
+    const _schedNotifId = new URLSearchParams(window.location.search).get('schedNotif');
+    if (_schedNotifId && typeof _openScheduleFromNotif === 'function') {
+      setTimeout(() => {
+        try { _openScheduleFromNotif(_schedNotifId); } catch (e) { console.warn('[schedNotif]', e); }
+      }, 3000);  // cloud load 끝나고 state 안정화 후
+      try {
+        const _u = new URL(window.location.href);
+        _u.searchParams.delete('schedNotif');
+        window.history.replaceState({}, document.title, _u.pathname + _u.search + _u.hash);
+      } catch {}
+    }
+  } catch (e) { console.warn('[schedNotif parse]', e); }
 }
 
 // V4 (사용자 명시 2026-05-26 ultrathink): cf 5차원 객체 형식 통일 — 옛 string 항목 1회 마이그.
