@@ -64452,15 +64452,28 @@ function _toggleWeeklyInlineExpand(reviewId) {
     const _cycles = r.cycles || {};
     const _hasCycles = !!(typeof _cycles === 'object' && (_cycles.sleep || _cycles.mode || _cycles.other));
     const _soft = r.soft_notice || (Array.isArray(r.risk_signals) && r.risk_signals[0]) || '';
-    // 사용자 명시 2026-05-10: 활력/기분 7일 차트 — review 시점 기준 직전 7일 entries.
+    // 활력/기분 7일 차트.
+    // V4 fix (사용자 보고 2026-05-28 ultrathink): 차트 range = review.weekKey 기반 (renderReviewScreen 과 동일).
+    //   옛 (2026-05-10): completedAt - 7일 rolling → 백필/재생성 review (completedAt=now) 면 실제 주와 무관하게 항상 '현재 주' 차트.
+    //   renderReviewScreen 은 2026-05-22 에 weekKey 기반으로 고쳤는데 이 인라인 펼침만 옛 rolling 로직 잔존 → W18/W19/W21 셋 다 5/21~27 버그.
     let _chartHtml = '';
     if (typeof _renderReviewMoodChartInline === 'function') {
-      const _refDate = r.completedAt ? new Date(r.completedAt) : new Date();
-      const _cutoff = new Date(_refDate.getTime() - 7 * 86400000);
+      let _cutoff, _cutoffEnd;
+      const _range = (typeof _weeklyChartRangeFromKey === 'function' && r.weekKey)
+        ? _weeklyChartRangeFromKey(r.weekKey)
+        : null;
+      if (_range) {
+        _cutoff = _range.start; _cutoffEnd = _range.end;
+      } else {
+        // fallback (weekKey 없는 옛 review) — completedAt 기준 -7일
+        const _refDate = r.completedAt ? new Date(r.completedAt) : new Date();
+        _cutoff = new Date(_refDate.getTime() - 7 * 86400000);
+        _cutoffEnd = _refDate;
+      }
       const _entries = (state.entries || []).filter(e => {
         if (!e.date) return false;
         const d = new Date(e.date + 'T12:00:00');
-        return d >= _cutoff && d <= _refDate;
+        return d >= _cutoff && d < _cutoffEnd;
       }).slice(-7);
       if (_entries.length >= 2) {
         try { _chartHtml = _renderReviewMoodChartInline(_entries); } catch {}
@@ -73552,7 +73565,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.340-review-delete-btn-ui';
+const APP_VERSION = 'v4.0.341-weekly-inline-chart-weekkey';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 
