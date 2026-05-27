@@ -200,11 +200,10 @@ function openScheduleSheet(opts) {
   if (sheetEl) {
     sheetEl.style.height = Math.round(window.innerHeight * 0.52) + 'px';
     sheetEl.style.maxHeight = '92vh';
-    const grab = sheetEl.querySelector('.sched-sheet-grab');
-    if (grab) {
-      grab.addEventListener('touchstart', _schedSheetGripDown, { passive: false });
-      grab.addEventListener('mousedown', _schedSheetGripDown);
-    }
+    // 사용자 명시 2026-05-27: grip 뿐 아니라 시트 본문 어디서 위/아래로 끌어도 시트가 따라 리사이즈.
+    //   입력/버튼/시간휠 위 시작은 제외(정상 동작). 본문은 6px 이상 끌 때만 드래그로 잡아 탭 보존.
+    sheetEl.addEventListener('touchstart', _schedSheetDragDown, { passive: false });
+    sheetEl.addEventListener('mousedown', _schedSheetDragDown);
   }
   _schedSheetSetType(type0);
   _schedSheetRenderLabels();
@@ -565,7 +564,9 @@ function _schedSheetDelete() {
   if (typeof _refreshScheduleDayTimelineIfOpen === 'function') _refreshScheduleDayTimelineIfOpen();
 }
 
-// ── 드래그 시트 (grip) — 위로 끌면 full, 내리면 half / half 에서 더 내리면 닫기(확인) ──
+// ── 드래그 시트 — 위로 끌면 full, 내리면 half / half 에서 더 내리면 닫기(확인) ──
+//   사용자 명시 2026-05-27: grip 뿐 아니라 시트 본문 어디서 끌어도 동작.
+//   본문은 입력/버튼/시간휠 제외 + 6px 임계 후 활성(탭 보존). grip 은 즉시 활성.
 let _schedSheetDrag = null;
 
 function _schedSheetPointY(e) {
@@ -574,46 +575,69 @@ function _schedSheetPointY(e) {
   return e.clientY;
 }
 
-function _schedSheetGripDown(e) {
+function _schedSheetDragDown(e) {
   if (e.type === 'mousedown' && e.button !== 0) return;
+  if (_schedSheetDrag) return;
   const sheet = document.querySelector('#schedSheetOverlay .sched-sheet');
   if (!sheet) return;
-  if (e.cancelable) e.preventDefault();
-  _schedSheetDrag = { sheet, startY: _schedSheetPointY(e), startH: sheet.offsetHeight, lastDy: 0, curH: sheet.offsetHeight, isTouch: e.type === 'touchstart' };
-  sheet.style.transition = 'none';
+  const tgt = e.target;
+  const onGrab = !!(tgt && tgt.closest && tgt.closest('.sched-sheet-grab'));
+  // 본문: 입력/선택/버튼/시간휠 위에서 시작하면 드래그 X (정상 동작 우선).
+  if (!onGrab && tgt && tgt.closest && tgt.closest('input, textarea, select, button, .dtw')) return;
+  _schedSheetDrag = {
+    sheet,
+    startY: _schedSheetPointY(e),
+    startH: sheet.offsetHeight,
+    lastDy: 0,
+    curH: sheet.offsetHeight,
+    isTouch: e.type === 'touchstart',
+    active: onGrab,                 // grip = 즉시 / 본문 = 임계 넘으면
+    threshold: onGrab ? 0 : 6
+  };
+  if (onGrab) {
+    if (e.cancelable) e.preventDefault();
+    sheet.style.transition = 'none';
+  }
   if (_schedSheetDrag.isTouch) {
-    document.addEventListener('touchmove', _schedSheetGripMove, { passive: false });
-    document.addEventListener('touchend', _schedSheetGripUp);
-    document.addEventListener('touchcancel', _schedSheetGripUp);
+    document.addEventListener('touchmove', _schedSheetDragMove, { passive: false });
+    document.addEventListener('touchend', _schedSheetDragUp);
+    document.addEventListener('touchcancel', _schedSheetDragUp);
   } else {
-    document.addEventListener('mousemove', _schedSheetGripMove);
-    document.addEventListener('mouseup', _schedSheetGripUp);
+    document.addEventListener('mousemove', _schedSheetDragMove);
+    document.addEventListener('mouseup', _schedSheetDragUp);
   }
 }
 
-function _schedSheetGripMove(e) {
+function _schedSheetDragMove(e) {
   const d = _schedSheetDrag;
   if (!d) return;
-  if (e.cancelable) e.preventDefault();
-  d.lastDy = _schedSheetPointY(e) - d.startY;
-  let h = d.startH - d.lastDy;
+  const dy = _schedSheetPointY(e) - d.startY;
+  if (!d.active) {
+    if (Math.abs(dy) < d.threshold) return;   // 임계 전 — 탭/스크롤 통과
+    d.active = true;
+    d.sheet.style.transition = 'none';
+  }
+  if (e.cancelable) e.preventDefault();        // 활성 후 스크롤 차단 → 시트 리사이즈
+  d.lastDy = dy;
+  let h = d.startH - dy;
   h = Math.max(110, Math.min(h, window.innerHeight * 0.92));
   d.sheet.style.height = h + 'px';
   d.curH = h;
 }
 
-function _schedSheetGripUp() {
+function _schedSheetDragUp() {
   const d = _schedSheetDrag;
   _schedSheetDrag = null;
   if (!d) return;
   if (d.isTouch) {
-    document.removeEventListener('touchmove', _schedSheetGripMove, { passive: false });
-    document.removeEventListener('touchend', _schedSheetGripUp);
-    document.removeEventListener('touchcancel', _schedSheetGripUp);
+    document.removeEventListener('touchmove', _schedSheetDragMove);
+    document.removeEventListener('touchend', _schedSheetDragUp);
+    document.removeEventListener('touchcancel', _schedSheetDragUp);
   } else {
-    document.removeEventListener('mousemove', _schedSheetGripMove);
-    document.removeEventListener('mouseup', _schedSheetGripUp);
+    document.removeEventListener('mousemove', _schedSheetDragMove);
+    document.removeEventListener('mouseup', _schedSheetDragUp);
   }
+  if (!d.active) return;   // 임계 못 넘음 = 탭 → 동작 없음 (네이티브 click 진행)
   const sheet = d.sheet;
   const vh = window.innerHeight;
   const HALF = Math.round(vh * 0.52), FULL = Math.round(vh * 0.92);
