@@ -140,8 +140,8 @@ function openScheduleSheet(opts) {
   // 날짜·시간 줄 (탭 → 인라인 펼침). 라벨은 _schedSheetRenderLabels 가 채움.
   const dtRow = (field, withTime) => `
     <div class="dt-row">
-      <span class="dt-cell dt-cell-date" id="dtLabel-${field}-date" onclick="_schedSheetTogglePicker('${field}','date')"></span>
-      ${withTime ? `<span class="dt-cell dt-cell-time sched-sheet-timeonly" id="dtLabel-${field}-time" onclick="_schedSheetTogglePicker('${field}','time')"></span>` : ''}
+      <span class="dt-cell dt-cell-date" id="dtLabel-${field}-date" role="button" tabindex="0" onclick="_schedSheetTogglePicker('${field}','date')"></span>
+      ${withTime ? `<span class="dt-cell dt-cell-time sched-sheet-timeonly" id="dtLabel-${field}-time" role="button" tabindex="0" onclick="_schedSheetTogglePicker('${field}','time')"></span>` : ''}
     </div>
     <div class="dt-slot" id="dtSlot-${field}"></div>`;
 
@@ -328,9 +328,9 @@ function _schedSheetRenderDatePicker(slot, field, cursorYM) {
   slot.innerHTML = `
     <div class="dtc">
       <div class="dtc-nav">
-        <button type="button" class="dtc-nav-btn" onclick="_schedSheetDatePickerNav('${field}',-1)">‹</button>
+        <button type="button" class="dtc-nav-btn" aria-label="이전 달" onclick="_schedSheetDatePickerNav('${field}',-1)">‹</button>
         <span class="dtc-month">${Y}년 ${M}월</span>
-        <button type="button" class="dtc-nav-btn" onclick="_schedSheetDatePickerNav('${field}',1)">›</button>
+        <button type="button" class="dtc-nav-btn" aria-label="다음 달" onclick="_schedSheetDatePickerNav('${field}',1)">›</button>
       </div>
       <div class="dtc-weekdays">${_SCHED_WD.map(w => `<span>${w}</span>`).join('')}</div>
       <div class="dtc-grid">${cells}</div>

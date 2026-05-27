@@ -8850,9 +8850,10 @@
   .sched-sheet-grab:active { cursor: grabbing; }
   .sched-sheet-grip { width: 38px; height: 4px; border-radius: 2px; background: var(--border-strong); margin: 6px auto 8px; pointer-events: none; }
   .sched-sheet-topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
-  .sched-sheet-cancel { background: transparent; border: none; color: var(--text-soft); font-size: 14px; font-family: inherit; cursor: pointer; padding: 6px 4px; }
-  .sched-sheet-save { background: var(--accent2); border: none; color: var(--bg); font-size: 14px; font-weight: 700; font-family: inherit; cursor: pointer; padding: 8px 18px; border-radius: 10px; }
-  .sched-sheet-save:active { opacity: 0.85; }
+  .sched-sheet-cancel { background: transparent; border: none; color: var(--text-soft); font-size: 15px; font-family: inherit; cursor: pointer; padding: 11px 12px; margin-left: -8px; min-height: 44px; border-radius: 10px; }
+  .sched-sheet-cancel:active { background: var(--surface); }
+  .sched-sheet-save { background: var(--accent2); border: none; color: var(--bg); font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer; padding: 11px 20px; min-height: 44px; border-radius: 12px; }
+  .sched-sheet-save:active { opacity: 0.82; }
   .sched-sheet-title {
     width: 100%; box-sizing: border-box; border: none; background: transparent;
     color: var(--text); font-size: 21px; font-weight: 600; font-family: inherit;
@@ -8861,10 +8862,11 @@
   .sched-sheet-title::placeholder { color: var(--text-soft); font-weight: 400; }
   .sched-sheet-seg { display: flex; gap: 5px; background: var(--surface); border-radius: 12px; padding: 4px; margin-bottom: 14px; }
   .sched-sheet-seg button {
-    flex: 1; padding: 9px; border: none; border-radius: 9px; background: transparent;
-    color: var(--text-soft); font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer;
-    transition: background 0.15s, color 0.15s;
+    flex: 1; padding: 11px; min-height: 44px; border: none; border-radius: 9px; background: transparent;
+    color: var(--text-soft); font-size: 14px; font-weight: 700; font-family: inherit; cursor: pointer;
+    transition: background 0.15s, color 0.15s, opacity 0.12s;
   }
+  .sched-sheet-seg button:active { opacity: 0.7; }
   .sched-sheet-fields { display: flex; flex-direction: column; gap: 12px; }
   .sched-sheet-delete {
     width: 100%; margin-top: 16px; padding: 12px; background: transparent;
@@ -8883,7 +8885,7 @@
     animation: sched-sheet-up 0.22s cubic-bezier(0.22, 1, 0.36, 1);
   }
   .sched-discard-msg {
-    background: var(--surface); color: var(--text-soft); text-align: center;
+    background: var(--surface); color: var(--text-dim); text-align: center;
     font-size: 13px; padding: 16px; border-radius: 14px 14px 0 0; border-bottom: 1px solid var(--border);
   }
   .sched-discard-del {
@@ -8917,6 +8919,8 @@
     background: var(--bg); border: 3px solid var(--cal-event);
     cursor: ns-resize; touch-action: none; z-index: 6;
   }
+  /* 정밀 탭 요구 완화 — 보이는 핸들은 16px이지만 히트 영역을 사방 14px 확장 (no-precision-required). */
+  .sched-day-handle::before { content: ''; position: absolute; inset: -14px; border-radius: 50%; }
   .sched-day-handle-top { top: -8px; left: -7px; }
   .sched-day-handle-bottom { bottom: -8px; right: -7px; }
 
@@ -8943,12 +8947,14 @@
   .dt-rows { display: flex; flex-direction: column; }
   .dt-row {
     display: flex; align-items: center; justify-content: space-between; gap: 8px;
-    padding: 11px 2px; border-top: 1px solid var(--border);
+    padding: 2px; border-top: 1px solid var(--border);
   }
   .dt-cell {
     font-size: 16px; color: var(--text); cursor: pointer;
-    padding: 4px 8px; border-radius: 8px; transition: color 0.15s, background 0.15s;
+    padding: 10px; min-height: 44px; display: inline-flex; align-items: center;
+    border-radius: 8px; transition: color 0.15s, background 0.15s;
   }
+  .dt-cell:active { background: var(--surface); }
   .dt-cell-time { font-variant-numeric: tabular-nums; }
   .dt-slot:empty { display: none; }
   .dt-slot { overflow: hidden; }
@@ -8959,7 +8965,7 @@
   .dtc-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
   .dtc-nav-btn {
     background: transparent; border: none; color: var(--text-dim);
-    width: 34px; height: 34px; border-radius: 8px; font-size: 18px; cursor: pointer; font-family: inherit;
+    width: 44px; height: 44px; border-radius: 10px; font-size: 18px; cursor: pointer; font-family: inherit;
   }
   .dtc-nav-btn:active { background: var(--surface2); }
   .dtc-month { font-size: 14px; font-weight: 600; color: var(--text); }
@@ -8994,6 +9000,14 @@
   .dtw-fade { position: absolute; left: 0; right: 0; height: 80px; z-index: 2; pointer-events: none; }
   .dtw-fade-top { top: 0; background: linear-gradient(var(--bg), transparent); }
   .dtw-fade-bottom { bottom: 0; background: linear-gradient(transparent, var(--bg)); }
+
+  /* prefers-reduced-motion — 시트/펼침/확인 진입 애니메이션 비활성 (접근성). */
+  @media (prefers-reduced-motion: reduce) {
+    .sched-sheet-overlay, .sched-sheet, .sched-discard-overlay, .sched-discard-sheet,
+    .sched-cal-fs-overlay, .dtc { animation: none !important; }
+    .dt-cell, .sched-sheet-seg button, .sw-toggle .sw-track, .sw-toggle .sw-knob,
+    .dtw-item, .cal-grid-wrap.cal-month-slide-prev, .cal-grid-wrap.cal-month-slide-next { transition: none !important; }
+  }
   .cal-nav {
     display: flex; align-items: center; justify-content: space-between;
     margin-bottom: 10px;
