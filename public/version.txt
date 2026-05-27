@@ -1,1 +1,1 @@
-v4.0.339-review-weekday-kst-fix
+v4.0.340-review-delete-btn-ui
