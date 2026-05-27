@@ -287,10 +287,16 @@ function openScheduleDayTimeline(dateKey) {
     initialScrollTop = Math.max(nowTop - HOUR_H * 2, 0);
   }
 
-  // 종일 strip
+  // 종일 strip — 사용자 명시 2026-05-28: 공휴일이면 초록 칩을 맨 앞에 (종일 일정처럼). 공휴일만 있어도 strip 표시.
   let allDayHtml = '';
-  if (allDay.length > 0) {
+  const _holidayName = (typeof _krHolidayName === 'function') ? _krHolidayName(dateKey) : null;
+  const _holidayGreen = (typeof _KR_HOLIDAY_GREEN !== 'undefined') ? _KR_HOLIDAY_GREEN : '#4caf72';
+  const _holidayChip = _holidayName
+    ? `<div style="font-size:13px; font-weight:700; padding:5px 10px; background:${_holidayGreen}; border-radius:5px; color:#0b3d22; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(_holidayName)}</div>`
+    : '';
+  if (allDay.length > 0 || _holidayChip) {
     allDayHtml = `<div style="display:flex; flex-wrap:wrap; gap:6px; padding:8px 14px; border-bottom:1px solid var(--border);">
+      ${_holidayChip}
       ${allDay.map(a => {
         const act = a.kind === 'schedule' ? `openScheduleEditModal('${a.id}')` : (a.kind === 'legacy' ? `openV4ScheduleItem('${a.id}')` : `_schedDayTaskMenu('${a.id}')`);
         const ink = (a.kind === 'task' || a._taskTone) ? _SCHED_MOD_TASK_INK : _SCHED_MOD_SCHED_INK;
