@@ -53,6 +53,74 @@ function _schedSheetFmtTime(hm) {
   return M === 0 ? `${ampm} ${h12}시` : `${ampm} ${h12}:${_schedPad2(M)}`;
 }
 
+// 오늘 키 — 24-execute / save 와 같은 todayKey() 기준 (오늘 할 일 승격 판정에 사용).
+function _schedSheetTodayKey() {
+  return (typeof todayKey === 'function') ? todayKey() : (new Date()).toLocaleDateString('sv-SE');
+}
+
+// 알림 밑 picker HTML — 오늘 할 일 / 서랍장 칩 목록. create 모드만 호출.
+function _schedSheetBuildPickerHtml(sheetDate) {
+  const todayK = _schedSheetTodayKey();
+  const isToday = sheetDate === todayK;
+  const tasks = Array.isArray(state.tasks) ? state.tasks : [];
+  const chip = t => {
+    const due = (t.dueDate && t.dueDate !== sheetDate)
+      ? `<span class="ssp-chip-due">📅${escapeHtml(t.dueDate.slice(5).replace('-', '/'))}</span>` : '';
+    return `<button type="button" class="ssp-chip" onclick="_schedSheetPickExistingTask('${t.id}')">${escapeHtml((t.title || '').slice(0, 28))}${due}</button>`;
+  };
+  let groups = '';
+  if (isToday) {
+    const todayList = tasks.filter(t => t.slot === 'drawer' && t.isToday && t.status !== 'done');
+    if (todayList.length) groups += `<div class="ssp-group-title">오늘 할 일</div><div class="ssp-chips">${todayList.map(chip).join('')}</div>`;
+  }
+  const drawerList = tasks.filter(t => t.slot === 'drawer' && !t.isToday && t.status !== 'done');
+  if (drawerList.length) groups += `<div class="ssp-group-title">서랍장</div><div class="ssp-chips">${drawerList.map(chip).join('')}</div>`;
+  if (!groups) return '';  // 가져올 할 일 없으면 picker 섹션 자체 숨김
+  return `
+    <div class="sched-sheet-picker">
+      <span class="sched-sheet-picker-label">여기에 기존 할 일 놓기</span>
+      ${groups}
+    </div>`;
+}
+
+// picker 칩 탭 → 기존 task 를 시트의 날짜·시각에 매핑(이동). 한 task = 한 날짜 (덮어쓰기, 복제 X).
+//   매핑 날짜가 오늘이면 '오늘 할 일'(isToday)로 승격, 아니면 서랍장 유지 (📅 그 날 캘린더/타임라인에 표시).
+function _schedSheetPickExistingTask(taskId) {
+  const ctx = _schedSheetCtx;
+  if (!ctx) return;
+  const task = (state.tasks || []).find(t => t.id === taskId);
+  if (!task) { if (typeof showToast === 'function') showToast('할 일 없음'); return; }
+  const isTaskSeg = ctx.type === 'task';
+  const ymd = isTaskSeg ? ctx.fields.dueYMD : ctx.fields.sYMD;
+  const allDayCb = document.getElementById(isTaskSeg ? 'schedSheetTaskAllDay' : 'schedSheetAllDay');
+  const allDay = !!(allDayCb && allDayCb.checked);
+  const hm = allDay ? null : (isTaskSeg ? ctx.fields.dueHM : ctx.fields.sHM);
+  const notifyEl = document.getElementById('schedSheetNotify');
+  const notifyStr = notifyEl ? notifyEl.value : '';
+  const notify = (notifyStr === '' || notifyStr === null || notifyStr === undefined) ? null : parseInt(notifyStr, 10);
+  const todayK = _schedSheetTodayKey();
+  try {
+    if (typeof setTaskDue === 'function') {
+      setTaskDue(taskId, { dueDate: ymd || null, dueTime: hm || null, notifyMinutesBefore: notify });
+    } else {
+      task.dueDate = ymd || null; task.dueTime = hm || null; task.notifyMinutesBefore = notify;
+    }
+    task.isToday = (ymd === todayK);   // 오늘이면 오늘 할 일로, 아니면 서랍장 유지
+    if (ymd === todayK) task.date = todayK;
+    if (typeof saveState === 'function') saveState();
+  } catch (e) {
+    console.warn('[sched pick task]', e);
+  }
+  _closeSchedSheet();
+  if (typeof renderExecute === 'function') renderExecute();
+  if (typeof renderScheduleCalendarGrid === 'function') renderScheduleCalendarGrid();
+  if (typeof _refreshScheduleDayTimelineIfOpen === 'function') _refreshScheduleDayTimelineIfOpen();
+  if (typeof showToast === 'function') {
+    const where = (ymd === todayK) ? '오늘 할 일' : (ymd ? ymd.slice(5).replace('-', '/') : '서랍장');
+    showToast(`✓ ${(task.title || '').slice(0, 14)} → ${hm ? hm + ' ' : ''}${where}`);
+  }
+}
+
 // opts: { type:'schedule'|'task', id?, date?, dueDate?, startMin?, endMin?, docked? }
 function openScheduleSheet(opts) {
   opts = opts || {};
@@ -137,6 +205,10 @@ function openScheduleSheet(opts) {
       <button id="schedSheetSegTask" type="button" onclick="_schedSheetSetType('task')">할 일</button>
     </div>`;
 
+  // 사용자 명시 2026-05-27: 알림 밑 picker — 오늘 할 일 / 서랍장에서 골라 이 시각에 놓기 (create 모드만).
+  //   시트 날짜가 오늘이면 '오늘 할 일' + '서랍장' 둘 다, 다른 날이면 '서랍장' 만 (오늘 할 일은 정의상 오늘 것).
+  const pickerHtml = isEdit ? '' : _schedSheetBuildPickerHtml(opts.date || opts.dueDate || (new Date()).toLocaleDateString('sv-SE'));
+
   // 날짜·시간 줄 (탭 → 인라인 펼침). 라벨은 _schedSheetRenderLabels 가 채움.
   const dtRow = (field, withTime) => `
     <div class="dt-row">
@@ -189,6 +261,7 @@ function openScheduleSheet(opts) {
             <span style="${fieldLabel}">알림</span>
             <select id="schedSheetNotify" style="${dtInp}">${notifyOptHtml}</select>
           </label>
+          ${pickerHtml}
         </div>
         ${isEdit ? `<button type="button" onclick="_schedSheetDelete()" class="sched-sheet-delete">🗑 삭제</button>` : ''}
       </div>
@@ -688,6 +761,7 @@ try {
 
 try {
   window.openScheduleSheet = openScheduleSheet;
+  window._schedSheetPickExistingTask = _schedSheetPickExistingTask;
   window._closeSchedSheet = _closeSchedSheet;
   window._schedSheetSetType = _schedSheetSetType;
   window._schedSheetToggleAllDay = _schedSheetToggleAllDay;

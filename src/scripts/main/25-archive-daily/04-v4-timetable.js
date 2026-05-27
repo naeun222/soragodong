@@ -7,16 +7,16 @@ function renderV4TimetableHTML() {
   const todayK = (typeof _scheduleDateKey === 'function') ? _scheduleDateKey() : todayKey();
   const todayItems = items.filter(it => !it.date || it.date === todayK);
 
-  // 사용 시간 범위: 항목 있으면 min~max, 없으면 8-22 default
-  let startHour = 8, endHour = 22;
+  // 사용자 명시 2026-05-27: 타임라인 06:00 ~ 24:00 고정. 범위 밖 항목 있으면 그만큼만 확장(숨김 방지).
+  let startHour = 6, endHour = 24;
   if (todayItems.length > 0) {
     const hours = todayItems.flatMap(it => {
       const s = parseInt((it.start || '').split(':')[0]) || 0;
       const e = parseInt((it.end   || '').split(':')[0]) || 0;
       return [s, e];
     });
-    startHour = Math.min(...hours, 8);
-    endHour = Math.max(...hours, 22);
+    startHour = Math.min(startHour, ...hours);
+    endHour = Math.max(endHour, ...hours);
   }
 
   // 현재 시각
@@ -39,8 +39,8 @@ function renderV4TimetableHTML() {
   `;
   for (let h = startHour; h <= endHour; h++) {
     const hourLabel = String(h).padStart(2, '0') + ':00';
-    // V4-fix: 빈 시간대 클릭 → task picker
-    html += `<div class="v4-tt-hour-row" style="height:${HOUR_PX}px;" onclick="pickTaskForHour(${h})" title="이 시간에 할 일 적용하기">
+    // 사용자 명시 2026-05-27: 빈 시간대 탭 → 추가 시트(캘린더 데일리뷰와 동일). 시트 안에서 오늘 할 일/서랍장 pick.
+    html += `<div class="v4-tt-hour-row" style="height:${HOUR_PX}px;" onclick="_v4ttSlotTap(${h})" title="이 시간에 추가">
       <span class="v4-tt-hour-label">${hourLabel}</span>
     </div>`;
   }
@@ -77,92 +77,14 @@ function renderV4TimetableHTML() {
   return html;
 }
 
-// V4-fix: 시간 grid 빈 시간대 클릭 → 할 일 목록 picker (그 시간에 적용하기)
-async function pickTaskForHour(hour) {
-  // 아직 시간 안 적용된 오늘 할 일 (drawer + isToday=true). 사용자 명시 2026-05-27 ultrathink (re-iter): now3 폐기 → isToday 만 필터.
-  const todayKeyVal = todayKey();
-  const tasks = (state.tasks || []).filter(t =>
-    t.status !== 'done' &&
-    !t.scheduledStart &&
-    t.date === todayKeyVal &&
-    t.isToday
-  );
-  const options = tasks.map(t => {
-    return { label: `📋 ${(t.title || '').slice(0, 35)}`, value: t.id };
-  });
-  options.push({ label: '+ 새 일정 직접 입력', value: '__new' });
-  options.push({ label: '취소', value: 'cancel' });
-
-  const action = await showOptionsModal({
-    title: `${String(hour).padStart(2,'0')}:00 — 뭘 적용할까?`,
-    message: tasks.length === 0 ? '적용할 할 일 없음 — 직접 입력 가능' : '오늘 할 일 중 골라.',
-    options
-  });
-  if (!action || action === 'cancel') return;
-
-  const startStr = `${String(hour).padStart(2,'0')}:00`;
-  const endHour = (hour + 1) % 24;
-  const endStr = `${String(endHour).padStart(2,'0')}:00`;
-  // 사용자 명시 2026-05-06 (정정): 자정 cutoff helper.
+// 사용자 명시 2026-05-27: 빈 시간대 탭 → 통합 추가 시트(openScheduleSheet). 옛 옵션모달 picker 폐기 —
+//   오늘 할 일/서랍장 선택은 이제 시트 안 picker 가 담당 (캘린더 데일리뷰와 동일 UX).
+function _v4ttSlotTap(hour) {
   const todayK = (typeof _scheduleDateKey === 'function') ? _scheduleDateKey() : todayKey();
-
-  if (action === '__new') {
-    const title = await showInputModal({
-      title: `📅 ${startStr} 새 일정`,
-      placeholder: '뭐 할 거야?',
-      maxLength: 60,
-      okLabel: '적용하기'
-    });
-    if (!title || !title.trim()) return;
-    // 시간 정확히 조정 picker
-    const time = await showTimeRangePicker({
-      title: title.trim(),
-      startDefault: startStr,
-      endDefault: endStr
-    });
-    if (!time) return;
-    if (!Array.isArray(state.todaySchedule)) state.todaySchedule = [];
-    state.todaySchedule.push({
-      id: 'sched_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-      title: title.trim(),
-      start: time.start,
-      end: time.end,
-      date: todayK,
-      source: 'manual',
-      taskId: null,
-      color: _V4_TT_COLORS[Math.floor(Math.random() * _V4_TT_COLORS.length)]
-    });
-    saveState();
-    renderExecute();
-    showToast(`📅 ${time.start} 적용됨`);
-    return;
+  const start = Math.min(hour, 23) * 60;
+  const end = Math.min(start + 60, 24 * 60);
+  if (typeof openScheduleSheet === 'function') {
+    openScheduleSheet({ type: 'schedule', date: todayK, startMin: start, endMin: end });
   }
-
-  // 기존 task → schedule push
-  const t = tasks.find(x => x.id === action);
-  if (!t) return;
-  // 시간 확인 picker (사용자가 1시간 default 변경 가능)
-  const time = await showTimeRangePicker({
-    title: `⏰ ${t.title}`,
-    startDefault: startStr,
-    endDefault: endStr
-  });
-  if (!time) return;
-  if (!Array.isArray(state.todaySchedule)) state.todaySchedule = [];
-  state.todaySchedule.push({
-    id: 'sched_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-    title: t.title,
-    start: time.start,
-    end: time.end,
-    date: todayK,
-    source: 'task',
-    taskId: t.id,
-    color: _V4_TT_COLORS[Math.floor(Math.random() * _V4_TT_COLORS.length)]
-  });
-  t.scheduledStart = time.start;
-  t.scheduledEnd = time.end;
-  saveState();
-  renderExecute();
-  showToast(`⏰ ${(t.title || '').slice(0, 20)} → ${time.start}`);
 }
 
