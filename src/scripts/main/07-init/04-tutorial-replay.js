@@ -18,7 +18,7 @@ const ONBOARDING_PHASES = [
   { startId: 'go_home_for_checkin',    name: '첫 체크인',             desc: '오늘 너 30초 기록' },
   { startId: 'go_chat',                name: '대화 + 전략',           desc: '소라랑 풀고 무기 만들기' },
   { startId: 'go_home_for_mission',    name: '미션 + 모래사장',       desc: '소라의 부름과 결과 체크' },
-  { startId: 'go_archive',             name: '🧬 양생방',             desc: '전략이 자라는 곳 — 핵심' },
+  { startId: 'go_archive',             name: '🧬 키움',             desc: '전략이 자라는 곳 — 핵심' },
   { startId: 'go_execute',             name: '실행 + 나',             desc: '몰입 + 자기 모델' },
   { startId: 'go_archive_lib',         name: '홈 둘러보기',       desc: '5 카테고리 + 숙고' },
   { startId: 'finish',                 name: '마무리',                desc: '준비 끝!' }

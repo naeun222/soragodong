@@ -56,7 +56,7 @@ async function runFirstStrategyTutorialV8(trigger, msgIdx) {
 
 function _c2P1Title() {
   const body = `
-    <div class="v8-coach-title">홈의 '양생방'에 전략 카드가 생겼어요.</div>
+    <div class="v8-coach-title">홈의 '키움'에 전략 카드가 생겼어요.</div>
     <div class="v8-coach-text">
       <span class="v8-coach-text-soft">전략 카드 미리보기를 확인해보세요.</span>
     </div>
@@ -88,7 +88,7 @@ function _c2P2() {
 function _c2P3() {
   const body = `
     <div class="v8-coach-text">
-      자세한 건 <b>'양생방'</b>을 들어가서<br>확인해보세요. 👍
+      자세한 건 <b>'키움'</b>을 들어가서<br>확인해보세요. 👍
     </div>
   `;
   return _v8ShowCoachmark({

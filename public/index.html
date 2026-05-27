@@ -14163,7 +14163,7 @@ img.pearl-load-fail {
           <button class="lib-cat-chip active" data-cat="diary"     onclick="switchLibraryCat('diary')"><span class="cat-icon">📔</span><span class="cat-label">일기·대화</span></button>
           <!-- 사용자 요청 2026-05-27: 일정 chip — 일기·대화 오른쪽 + 양생방 왼쪽 (재배치). -->
           <button class="lib-cat-chip"        data-cat="execute"   onclick="switchLibraryCat('execute')"><span class="cat-icon">🗓️</span><span class="cat-label">일정</span></button>
-          <button class="lib-cat-chip"        data-cat="yangsaeng" onclick="switchLibraryCat('yangsaeng')"><span class="cat-icon">🌱</span><span class="cat-label">양생방</span></button>
+          <button class="lib-cat-chip"        data-cat="yangsaeng" onclick="switchLibraryCat('yangsaeng')"><span class="cat-icon">🌱</span><span class="cat-label">키움</span></button>
           <button class="lib-cat-chip"        data-cat="insights"  onclick="switchLibraryCat('insights')"><span class="cat-icon">✨</span><span class="cat-label">깨달음</span></button>
           <button class="lib-cat-chip"        data-cat="galpi"     onclick="switchLibraryCat('galpi')"><span class="cat-icon">🌀</span><span class="cat-label">마법·리뷰</span></button>
         </div>
@@ -14307,7 +14307,7 @@ img.pearl-load-fail {
 
     <!-- pearl_design_spec_2026-05-03 §4: 양생방 "어떻게 자라" 다이어그램 모달 -->
     <div id="yangsaengGrowthOverlay" class="yg-overlay" onclick="if(event.target===this) closeYangsaengGrowthDiagram()">
-      <div class="yg-card" role="dialog" aria-label="양생방 — 어떻게 자라">
+      <div class="yg-card" role="dialog" aria-label="키움 — 어떻게 자라">
 
         <div class="yg-header">
           <div class="yg-title">전략은 어떻게 자라</div>
@@ -14396,7 +14396,7 @@ img.pearl-load-fail {
               <div class="yg-step-body">친구랑 하니까 진짜 안 미루네.</div>
             </div>
             <div style="margin-top:6px;" class="yg-step worked">
-              <div class="yg-step-title">🌿 양생방에서 자람</div>
+              <div class="yg-step-title">🌿 키움에서 자람</div>
               <div class="yg-step-visual">
                 <div class="yg-shell-dna-mini">🐚</div>
                 <div class="yg-step-visual-caption">🧬 마크 붙은 소라<br>= <em>전략 DNA 한 조각</em></div>
@@ -23140,6 +23140,10 @@ async function init() {
   if (typeof maybeRunChapterCleanup === 'function') {
     setTimeout(() => { maybeRunChapterCleanup().catch(e => console.warn('chapterCleanup:', e)); }, 4000);
   }
+  // V4 사용자 명시 2026-05-28 — init 시 저녁 6시~새벽 4시 자동 일상고동 모드 적용 (첫 화면이 챗일 때 반영).
+  if (typeof _maybeAutoDailyChatMode === 'function') {
+    try { _maybeAutoDailyChatMode(); } catch (e) { console.warn('autoDailyChatMode:', e); }
+  }
   // V4 feat (사용자 명시 2026-05-26 ultrathink): forceAnalyze batch polling — pending 있으면 init 시 + 주기적 폴링.
   //   submit 후 5min / 15min / 30min 폴링 setTimeout — chapter cleanup polling 패턴 동일.
   if (typeof _resumeForceAnalyzeBatch === 'function') {
@@ -23669,7 +23673,7 @@ const ONBOARDING_PHASES = [
   { startId: 'go_home_for_checkin',    name: '첫 체크인',             desc: '오늘 너 30초 기록' },
   { startId: 'go_chat',                name: '대화 + 전략',           desc: '소라랑 풀고 무기 만들기' },
   { startId: 'go_home_for_mission',    name: '미션 + 모래사장',       desc: '소라의 부름과 결과 체크' },
-  { startId: 'go_archive',             name: '🧬 양생방',             desc: '전략이 자라는 곳 — 핵심' },
+  { startId: 'go_archive',             name: '🧬 키움',             desc: '전략이 자라는 곳 — 핵심' },
   { startId: 'go_execute',             name: '실행 + 나',             desc: '몰입 + 자기 모델' },
   { startId: 'go_archive_lib',         name: '홈 둘러보기',       desc: '5 카테고리 + 숙고' },
   { startId: 'finish',                 name: '마무리',                desc: '준비 끝!' }
@@ -25449,7 +25453,7 @@ async function runFirstStrategyTutorialV8(trigger, msgIdx) {
 
 function _c2P1Title() {
   const body = `
-    <div class="v8-coach-title">홈의 '양생방'에 전략 카드가 생겼어요.</div>
+    <div class="v8-coach-title">홈의 '키움'에 전략 카드가 생겼어요.</div>
     <div class="v8-coach-text">
       <span class="v8-coach-text-soft">전략 카드 미리보기를 확인해보세요.</span>
     </div>
@@ -25481,7 +25485,7 @@ function _c2P2() {
 function _c2P3() {
   const body = `
     <div class="v8-coach-text">
-      자세한 건 <b>'양생방'</b>을 들어가서<br>확인해보세요. 👍
+      자세한 건 <b>'키움'</b>을 들어가서<br>확인해보세요. 👍
     </div>
   `;
   return _v8ShowCoachmark({
@@ -38309,7 +38313,7 @@ function _showStrategyCardModal(card, opts) {
   const msgIdx = (typeof opts.msgIdx === 'number') ? opts.msgIdx : null;
   const subCopy = isResurface
     ? '같은 결 다시 마주쳤네 — 다시 꺼내볼래?'
-    : '전략 카드로 양생방에 저장됐어 ✦';
+    : '전략 카드로 키움에 저장됐어 ✦';
   const primaryLabel = isResurface ? '✦ 다시 해볼게' : '계속 ✦';
   const ghostBtn = isResurface
     ? `<button class="scp-btn scp-btn-ghost" id="scpGhost">다음에</button>`
@@ -40183,6 +40187,10 @@ function showScreen(name) {
   }
   // V4 사용자 보고 2026-05-23 — chat 진입 시 renderChat 강제 호출. 옛 코드로 render 된 메시지를 새 코드 (avatar 포함) 로 재 render.
   //   empty entry (welcome bubble + chip) 도 renderChat 안 _chatEmptyAreaHtml 가 처리 — 별도 updateChatEmptyState 호출 불필요.
+  // V4 사용자 명시 2026-05-28 — 챗 진입 시 저녁 6시~새벽 4시 자동 일상고동 모드 적용 (renderChat 전 = 모드 반영된 상태로 render).
+  if (name === 'chat' && typeof _maybeAutoDailyChatMode === 'function') {
+    try { _maybeAutoDailyChatMode(); } catch {}
+  }
   if (name === 'chat' && typeof renderChat === 'function') {
     setTimeout(() => { try { renderChat(); } catch {} }, 0);
   }
@@ -46495,6 +46503,37 @@ function _renderChatModeSheetMemoState() {
   hint.textContent = on ? '안경 쓴 고동이가 너를 기억해' : '이번 대화만 기억해';
 }
 
+// V4 사용자 명시 2026-05-28 — 저녁 6시~새벽 4시 자동 일상고동(daily) 모드.
+//   조건: chatMode 가 default(null) 일 때만 daily 자동 on. 다른 모드 (inquiry/vent) 가 명시 set 이면 건드리지 않음.
+//   _chatModeAutoDaily 플래그로 '자동으로 켰음' 추적 → 시간대 벗어나면 null 로 자동 복귀.
+//   수동 선택 (selectChatMode) 은 플래그를 끄므로 시간대 벗어나도 복귀 X (사용자 의도 보존).
+//   호출: showScreen('chat') 진입 + init. 실시간 6시 경계 전환은 안 함 (재진입/reload 시 적용 — gold-plating 회피).
+function _maybeAutoDailyChatMode() {
+  if (!state) return;
+  const hour = new Date().getHours();
+  const inWindow = (hour >= 18 || hour < 4);  // 로컬 18:00 ~ 03:59
+  if (!state.preferences) state.preferences = {};
+  let changed = false;
+  if (inWindow) {
+    if (!state.chatMode) {   // default(null) 일 때만
+      state.chatMode = 'daily';
+      state.preferences._chatModeAutoDaily = true;
+      changed = true;
+    }
+  } else if (state.chatMode === 'daily' && state.preferences._chatModeAutoDaily) {
+    // 시간대 벗어남 — 자동으로 켰던 daily 만 복귀. 수동 daily 는 플래그 false 라 보존.
+    state.chatMode = null;
+    state.preferences._chatModeAutoDaily = false;
+    changed = true;
+  }
+  if (changed) {
+    try { saveState(true); } catch {}
+    if (typeof updateMainHeaderBtnVisual === 'function') { try { updateMainHeaderBtnVisual(); } catch {} }
+    if (typeof _applyChatModeBg === 'function') { try { _applyChatModeBg(); } catch {} }
+    if (typeof _refreshAllMsgAvatars === 'function') { try { _refreshAllMsgAvatars(); } catch {} }
+  }
+}
+
 function selectChatMode(mode) {
   if (!mode || (mode !== 'daily' && mode !== 'inquiry' && mode !== 'vent')) return;
   if (!state) return;
@@ -46502,6 +46541,9 @@ function selectChatMode(mode) {
   // V4 사용자 명시 2026-05-23 — 같은 모드 재선택 = deselect (null 로 복귀, 기본 상태). 토스트 silent.
   const next = (prev === mode) ? null : mode;
   state.chatMode = next;
+  // V4 사용자 명시 2026-05-28 — 수동 선택 = 자동-daily 추적 해제 (시간대 벗어나도 복귀 X, 사용자 명시 의도 보존).
+  if (!state.preferences) state.preferences = {};
+  state.preferences._chatModeAutoDaily = false;
   // V4 fix (사용자 보고 2026-05-25 ultrathink) — force=true: 강제 새로고침 시 mode 풀림 방지.
   //   debounce (local 400ms idle / cloud 1s) 안에 reload 떨어지면 미저장 → null 복귀. force 면 즉시 동기 flush + cloud PATCH 발사.
   try { saveState(true); } catch {}
@@ -52817,7 +52859,7 @@ function renderLensStrategies() {
     html += `
       <div class="ys-empty-card">
         <div class="ys-empty-icon">🌿</div>
-        <div class="ys-empty-title">양생방 - 아직 비어있어요.</div>
+        <div class="ys-empty-title">키움 - 아직 비어있어요.</div>
         <div class="ys-empty-body">여기는 전략들이 자라는 곳.</div>
         <button class="ys-empty-cta" onclick="showYangsaengGrowthDiagram()">어떻게 자라는지 궁금해</button>
       </div>
@@ -68024,8 +68066,9 @@ async function _timeoutReviewChainBatch() {
 //     · 모든 missing 한 batch_id (weekly 있으면 insight 통합)
 //   legacy: 옛 state.pendingBatch 잔재 = single-shot _resumePendingBatch 후 새 schema 만.
 async function maybeRunChapterCleanup() {
-  if (!authUserId || window._onbTutorialMode) return;
-  if (state.preferences && state.preferences.testerMode) return;
+  if (!authUserId || window._onbTutorialMode) { console.info('[chapterCleanup] skip — 미로그인 또는 튜토리얼 중'); return; }
+  // V4 사용자 보고 2026-05-28: testerMode 면 daily 요약 / batch / 리뷰 체인 전체 skip. 콘솔에서 이유 보이도록 명시 로그.
+  if (state.preferences && state.preferences.testerMode) { console.info('[chapterCleanup] skip — testerMode ON (daily 요약·batch·리뷰 전부 정지). _batchStatus() 로 확인.'); return; }
 
   const isGuest = !_canAI();  // 게스트 = step A 분리만 (step B+C X)
 
@@ -68210,6 +68253,66 @@ async function maybeRunChapterCleanup() {
 // V4 (사용자 명시 2026-05-25 ultrathink): 옛 함수명 alias — 옛 호출처 호환 (07-init / 35-bg-fetch).
 //   step 4 의 호출처 rename 함께 진행. 다음 step (5) 에서 옛 함수 (_submitDailyExtractBatch 등) 폐기.
 const maybeRunDailyChapterExtract = maybeRunChapterCleanup;
+
+// V4 사용자 보고 2026-05-28: batch / daily 요약 진행 상황 진단 콘솔 명령.
+//   "앱 진입마다 새 batch 보내는 거 아니지? daily 요약 잘 되나? 콘솔에 안 보여" 에 대한 가시성.
+//   호출: 콘솔에서 `_batchStatus()`. 진행 중 batch / 차단 원인 / 대기 중 일기 날짜를 한눈에.
+window._batchStatus = function() {
+  const now = Date.now();
+  const ageStr = (ms) => {
+    if (!ms) return '?';
+    const m = Math.round((now - ms) / 60000);
+    return m < 60 ? `${m}분 전` : `${(m / 60).toFixed(1)}시간 전`;
+  };
+  const tester = !!(state.preferences && state.preferences.testerMode);
+  const loggedIn = !!authUserId;
+  const canAI = (typeof _canAI === 'function') ? _canAI() : null;
+  console.log('═══ batch / daily 요약 진단 ═══');
+  console.log('• 로그인:', loggedIn, '| AI 가능(_canAI):', canAI, '| testerMode:', tester);
+  if (tester) console.warn('  ⚠️ testerMode ON — daily 요약 / batch / 리뷰 체인 전부 정지. 설정에서 끄면 동작.');
+  if (!loggedIn) console.warn('  ⚠️ 미로그인 — batch 파이프라인 동작 X.');
+
+  const batches = [
+    ['cleanup (case+topic+diary)', state.pendingChapterCleanupBatch, window._pendingCleanupBatchPollingFor],
+    ['review chain', state.pendingReviewBatch, window._pendingReviewBatchPollingFor],
+    ['forceAnalyze', state.pendingForceAnalyzeBatch, window._forceAnalyzeBatchPollingFor],
+    ['legacy pendingBatch', state.pendingBatch, window._pendingBatchPollingFor],
+  ];
+  let anyActive = false;
+  batches.forEach(([label, pb, pollingFor]) => {
+    if (pb && pb.batch_id) {
+      anyActive = true;
+      console.log(`• [진행 중] ${label}: ${pb.batch_id} (제출 ${ageStr(pb.submitted_at)}) | polling=${pollingFor === pb.batch_id ? 'ON' : 'OFF'}`);
+      if (pb.diary_pending_dates && pb.diary_pending_dates.length) {
+        console.log(`    └ 이 batch 안 일기 요약 대기: ${pb.diary_pending_dates.join(', ')}`);
+      }
+    }
+  });
+  if (!anyActive) console.log('• 진행 중인 batch 없음 (모두 완료됐거나 아직 제출 안 됨).');
+
+  // daily cleanup 스케줄 — 오늘 4AM cutoff 통과 후 1회. 이미 돌았으면 다음 cutoff 까지 대기.
+  if (typeof _lastDaily4amCutoff === 'function' && typeof _shouldRunSchedule === 'function') {
+    const cutoff = _lastDaily4amCutoff();
+    const due = _shouldRunSchedule(state.lastChapterCleanupAt, cutoff);
+    console.log('• daily cleanup 마지막 실행:', state.lastChapterCleanupAt || '(없음)',
+      `| 이번 cutoff(${cutoff.toLocaleString('ko-KR')}) 기준 ${due ? '실행 대상 ✓' : '이미 실행됨 (다음 4AM 까지 대기)'}`);
+  }
+
+  // _pendingCleanup 마커 달린 챕터 (요약 큐)
+  const pendingCleanup = (state.chatArchive || []).filter(a => a && !a._deleted && a._pendingCleanup && Array.isArray(a.messages) && a.messages.length >= 3);
+  console.log('• 요약 대기 챕터(_pendingCleanup, msg≥3):', pendingCleanup.length, pendingCleanup.map(a => a.date || a.id).join(', '));
+
+  // 지난 7일 중 일기 요약 생겨야 할 날짜
+  if (typeof _buildDiaryBatchRequests === 'function') {
+    try {
+      const { pendingDates } = _buildDiaryBatchRequests();
+      console.log('• 일기 자동요약 생겨야 할 날짜(지난 7일):', pendingDates.length ? pendingDates.join(', ') : '없음');
+      if (!pendingDates.length) console.log('    (해당 날 entry 없음 / 이미 일기·aiSummary 있음 / _aiSummaryFailed sentinel → 다 skip 됐을 수 있음)');
+    } catch (e) { console.warn('  일기 후보 계산 실패:', e); }
+  }
+  console.log('═══════════════════════════════');
+  return { tester, loggedIn, canAI, activeBatches: anyActive, pendingCleanupChapters: pendingCleanup.length };
+};
 
 // 사용자 명시 2026-05-10: 주간 리뷰만 새로 받는 명령어 — _diagnoseExtract 의 weekly 부분만 추출.
 //   console: `_forceWeeklyReview()` → 이번 주 weekKey 기준 새 review 생성 (이미 있으면 toast 알림 + skip).
@@ -73390,7 +73493,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.333-pearl-grid-flicker';
+const APP_VERSION = 'v4.0.334-auto-daily-mode-keaum';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 

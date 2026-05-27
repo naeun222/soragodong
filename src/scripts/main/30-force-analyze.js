@@ -1917,8 +1917,9 @@ async function _timeoutReviewChainBatch() {
 //     · 모든 missing 한 batch_id (weekly 있으면 insight 통합)
 //   legacy: 옛 state.pendingBatch 잔재 = single-shot _resumePendingBatch 후 새 schema 만.
 async function maybeRunChapterCleanup() {
-  if (!authUserId || window._onbTutorialMode) return;
-  if (state.preferences && state.preferences.testerMode) return;
+  if (!authUserId || window._onbTutorialMode) { console.info('[chapterCleanup] skip — 미로그인 또는 튜토리얼 중'); return; }
+  // V4 사용자 보고 2026-05-28: testerMode 면 daily 요약 / batch / 리뷰 체인 전체 skip. 콘솔에서 이유 보이도록 명시 로그.
+  if (state.preferences && state.preferences.testerMode) { console.info('[chapterCleanup] skip — testerMode ON (daily 요약·batch·리뷰 전부 정지). _batchStatus() 로 확인.'); return; }
 
   const isGuest = !_canAI();  // 게스트 = step A 분리만 (step B+C X)
 
@@ -2103,6 +2104,66 @@ async function maybeRunChapterCleanup() {
 // V4 (사용자 명시 2026-05-25 ultrathink): 옛 함수명 alias — 옛 호출처 호환 (07-init / 35-bg-fetch).
 //   step 4 의 호출처 rename 함께 진행. 다음 step (5) 에서 옛 함수 (_submitDailyExtractBatch 등) 폐기.
 const maybeRunDailyChapterExtract = maybeRunChapterCleanup;
+
+// V4 사용자 보고 2026-05-28: batch / daily 요약 진행 상황 진단 콘솔 명령.
+//   "앱 진입마다 새 batch 보내는 거 아니지? daily 요약 잘 되나? 콘솔에 안 보여" 에 대한 가시성.
+//   호출: 콘솔에서 `_batchStatus()`. 진행 중 batch / 차단 원인 / 대기 중 일기 날짜를 한눈에.
+window._batchStatus = function() {
+  const now = Date.now();
+  const ageStr = (ms) => {
+    if (!ms) return '?';
+    const m = Math.round((now - ms) / 60000);
+    return m < 60 ? `${m}분 전` : `${(m / 60).toFixed(1)}시간 전`;
+  };
+  const tester = !!(state.preferences && state.preferences.testerMode);
+  const loggedIn = !!authUserId;
+  const canAI = (typeof _canAI === 'function') ? _canAI() : null;
+  console.log('═══ batch / daily 요약 진단 ═══');
+  console.log('• 로그인:', loggedIn, '| AI 가능(_canAI):', canAI, '| testerMode:', tester);
+  if (tester) console.warn('  ⚠️ testerMode ON — daily 요약 / batch / 리뷰 체인 전부 정지. 설정에서 끄면 동작.');
+  if (!loggedIn) console.warn('  ⚠️ 미로그인 — batch 파이프라인 동작 X.');
+
+  const batches = [
+    ['cleanup (case+topic+diary)', state.pendingChapterCleanupBatch, window._pendingCleanupBatchPollingFor],
+    ['review chain', state.pendingReviewBatch, window._pendingReviewBatchPollingFor],
+    ['forceAnalyze', state.pendingForceAnalyzeBatch, window._forceAnalyzeBatchPollingFor],
+    ['legacy pendingBatch', state.pendingBatch, window._pendingBatchPollingFor],
+  ];
+  let anyActive = false;
+  batches.forEach(([label, pb, pollingFor]) => {
+    if (pb && pb.batch_id) {
+      anyActive = true;
+      console.log(`• [진행 중] ${label}: ${pb.batch_id} (제출 ${ageStr(pb.submitted_at)}) | polling=${pollingFor === pb.batch_id ? 'ON' : 'OFF'}`);
+      if (pb.diary_pending_dates && pb.diary_pending_dates.length) {
+        console.log(`    └ 이 batch 안 일기 요약 대기: ${pb.diary_pending_dates.join(', ')}`);
+      }
+    }
+  });
+  if (!anyActive) console.log('• 진행 중인 batch 없음 (모두 완료됐거나 아직 제출 안 됨).');
+
+  // daily cleanup 스케줄 — 오늘 4AM cutoff 통과 후 1회. 이미 돌았으면 다음 cutoff 까지 대기.
+  if (typeof _lastDaily4amCutoff === 'function' && typeof _shouldRunSchedule === 'function') {
+    const cutoff = _lastDaily4amCutoff();
+    const due = _shouldRunSchedule(state.lastChapterCleanupAt, cutoff);
+    console.log('• daily cleanup 마지막 실행:', state.lastChapterCleanupAt || '(없음)',
+      `| 이번 cutoff(${cutoff.toLocaleString('ko-KR')}) 기준 ${due ? '실행 대상 ✓' : '이미 실행됨 (다음 4AM 까지 대기)'}`);
+  }
+
+  // _pendingCleanup 마커 달린 챕터 (요약 큐)
+  const pendingCleanup = (state.chatArchive || []).filter(a => a && !a._deleted && a._pendingCleanup && Array.isArray(a.messages) && a.messages.length >= 3);
+  console.log('• 요약 대기 챕터(_pendingCleanup, msg≥3):', pendingCleanup.length, pendingCleanup.map(a => a.date || a.id).join(', '));
+
+  // 지난 7일 중 일기 요약 생겨야 할 날짜
+  if (typeof _buildDiaryBatchRequests === 'function') {
+    try {
+      const { pendingDates } = _buildDiaryBatchRequests();
+      console.log('• 일기 자동요약 생겨야 할 날짜(지난 7일):', pendingDates.length ? pendingDates.join(', ') : '없음');
+      if (!pendingDates.length) console.log('    (해당 날 entry 없음 / 이미 일기·aiSummary 있음 / _aiSummaryFailed sentinel → 다 skip 됐을 수 있음)');
+    } catch (e) { console.warn('  일기 후보 계산 실패:', e); }
+  }
+  console.log('═══════════════════════════════');
+  return { tester, loggedIn, canAI, activeBatches: anyActive, pendingCleanupChapters: pendingCleanup.length };
+};
 
 // 사용자 명시 2026-05-10: 주간 리뷰만 새로 받는 명령어 — _diagnoseExtract 의 weekly 부분만 추출.
 //   console: `_forceWeeklyReview()` → 이번 주 weekKey 기준 새 review 생성 (이미 있으면 toast 알림 + skip).

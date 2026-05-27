@@ -9,7 +9,7 @@ function _showStrategyCardModal(card, opts) {
   const msgIdx = (typeof opts.msgIdx === 'number') ? opts.msgIdx : null;
   const subCopy = isResurface
     ? '같은 결 다시 마주쳤네 — 다시 꺼내볼래?'
-    : '전략 카드로 양생방에 저장됐어 ✦';
+    : '전략 카드로 키움에 저장됐어 ✦';
   const primaryLabel = isResurface ? '✦ 다시 해볼게' : '계속 ✦';
   const ghostBtn = isResurface
     ? `<button class="scp-btn scp-btn-ghost" id="scpGhost">다음에</button>`

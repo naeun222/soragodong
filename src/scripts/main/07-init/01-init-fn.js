@@ -362,6 +362,10 @@ async function init() {
   if (typeof maybeRunChapterCleanup === 'function') {
     setTimeout(() => { maybeRunChapterCleanup().catch(e => console.warn('chapterCleanup:', e)); }, 4000);
   }
+  // V4 사용자 명시 2026-05-28 — init 시 저녁 6시~새벽 4시 자동 일상고동 모드 적용 (첫 화면이 챗일 때 반영).
+  if (typeof _maybeAutoDailyChatMode === 'function') {
+    try { _maybeAutoDailyChatMode(); } catch (e) { console.warn('autoDailyChatMode:', e); }
+  }
   // V4 feat (사용자 명시 2026-05-26 ultrathink): forceAnalyze batch polling — pending 있으면 init 시 + 주기적 폴링.
   //   submit 후 5min / 15min / 30min 폴링 setTimeout — chapter cleanup polling 패턴 동일.
   if (typeof _resumeForceAnalyzeBatch === 'function') {

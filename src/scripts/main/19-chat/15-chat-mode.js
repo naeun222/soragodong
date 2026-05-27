@@ -189,6 +189,37 @@ function _renderChatModeSheetMemoState() {
   hint.textContent = on ? '안경 쓴 고동이가 너를 기억해' : '이번 대화만 기억해';
 }
 
+// V4 사용자 명시 2026-05-28 — 저녁 6시~새벽 4시 자동 일상고동(daily) 모드.
+//   조건: chatMode 가 default(null) 일 때만 daily 자동 on. 다른 모드 (inquiry/vent) 가 명시 set 이면 건드리지 않음.
+//   _chatModeAutoDaily 플래그로 '자동으로 켰음' 추적 → 시간대 벗어나면 null 로 자동 복귀.
+//   수동 선택 (selectChatMode) 은 플래그를 끄므로 시간대 벗어나도 복귀 X (사용자 의도 보존).
+//   호출: showScreen('chat') 진입 + init. 실시간 6시 경계 전환은 안 함 (재진입/reload 시 적용 — gold-plating 회피).
+function _maybeAutoDailyChatMode() {
+  if (!state) return;
+  const hour = new Date().getHours();
+  const inWindow = (hour >= 18 || hour < 4);  // 로컬 18:00 ~ 03:59
+  if (!state.preferences) state.preferences = {};
+  let changed = false;
+  if (inWindow) {
+    if (!state.chatMode) {   // default(null) 일 때만
+      state.chatMode = 'daily';
+      state.preferences._chatModeAutoDaily = true;
+      changed = true;
+    }
+  } else if (state.chatMode === 'daily' && state.preferences._chatModeAutoDaily) {
+    // 시간대 벗어남 — 자동으로 켰던 daily 만 복귀. 수동 daily 는 플래그 false 라 보존.
+    state.chatMode = null;
+    state.preferences._chatModeAutoDaily = false;
+    changed = true;
+  }
+  if (changed) {
+    try { saveState(true); } catch {}
+    if (typeof updateMainHeaderBtnVisual === 'function') { try { updateMainHeaderBtnVisual(); } catch {} }
+    if (typeof _applyChatModeBg === 'function') { try { _applyChatModeBg(); } catch {} }
+    if (typeof _refreshAllMsgAvatars === 'function') { try { _refreshAllMsgAvatars(); } catch {} }
+  }
+}
+
 function selectChatMode(mode) {
   if (!mode || (mode !== 'daily' && mode !== 'inquiry' && mode !== 'vent')) return;
   if (!state) return;
@@ -196,6 +227,9 @@ function selectChatMode(mode) {
   // V4 사용자 명시 2026-05-23 — 같은 모드 재선택 = deselect (null 로 복귀, 기본 상태). 토스트 silent.
   const next = (prev === mode) ? null : mode;
   state.chatMode = next;
+  // V4 사용자 명시 2026-05-28 — 수동 선택 = 자동-daily 추적 해제 (시간대 벗어나도 복귀 X, 사용자 명시 의도 보존).
+  if (!state.preferences) state.preferences = {};
+  state.preferences._chatModeAutoDaily = false;
   // V4 fix (사용자 보고 2026-05-25 ultrathink) — force=true: 강제 새로고침 시 mode 풀림 방지.
   //   debounce (local 400ms idle / cloud 1s) 안에 reload 떨어지면 미저장 → null 복귀. force 면 즉시 동기 flush + cloud PATCH 발사.
   try { saveState(true); } catch {}

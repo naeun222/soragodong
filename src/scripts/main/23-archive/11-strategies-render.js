@@ -32,7 +32,7 @@ function renderLensStrategies() {
     html += `
       <div class="ys-empty-card">
         <div class="ys-empty-icon">🌿</div>
-        <div class="ys-empty-title">양생방 - 아직 비어있어요.</div>
+        <div class="ys-empty-title">키움 - 아직 비어있어요.</div>
         <div class="ys-empty-body">여기는 전략들이 자라는 곳.</div>
         <button class="ys-empty-cta" onclick="showYangsaengGrowthDiagram()">어떻게 자라는지 궁금해</button>
       </div>
