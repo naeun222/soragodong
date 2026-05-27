@@ -219,7 +219,9 @@ function renderScheduleCalendarGrid(targetId, fullscreen) {
         ink: _SCHED_CAL_TASK_INK
       }))
     ];
-    const display = allItems.slice(0, _SCHED_CAL_MAX_ITEMS);
+    // 사용자 명시 2026-05-28: 전체화면은 셀이 커서 4개까지, 인라인은 좁아 3개. 초과분 +N.
+    const _maxItems = fullscreen ? 4 : _SCHED_CAL_MAX_ITEMS;
+    const display = allItems.slice(0, _maxItems);
     const remaining = allItems.length - display.length;
 
     // 날짜 라벨 — 오늘 = 둥근 강조 박스. 공휴일 = 초록 숫자 (구글 캘린더식). 다른 달 = 흐리게.
