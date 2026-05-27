@@ -382,9 +382,21 @@ function _schedDayEmptyTap(e) {
   // 초안이 docked 시트 위쪽(보이는 영역)에 오도록 스크롤 — 시트가 하단을 덮으므로.
   const scrollEl = document.querySelector('#schedDayTimelineOverlay .sched-day-scroll');
   if (scrollEl) scrollEl.scrollTop = Math.max(0, (start / 60) * _SCHED_DAY_HOUR_H - _SCHED_DAY_HOUR_H);
+  // 시트 떠 있는 동안 시트·초안·확인창 밖 어디를 탭해도 → 삭제(취소) 확인 (구글 패턴).
+  document.addEventListener('click', _schedDayDraftOutsideTap, true);
   if (typeof openScheduleSheet === 'function') {
     openScheduleSheet({ type: 'schedule', date: _schedDayTimelineDate, startMin: start, endMin: end, docked: true });
   }
+}
+
+// 작성 시트가 떠 있을 때 시트/초안/확인창 밖 탭 가로채기 → 삭제 확인.
+function _schedDayDraftOutsideTap(e) {
+  if (!_schedDayDraft || !document.getElementById('schedSheetOverlay')) return;
+  const t = e.target;
+  if (t && t.closest && (t.closest('#schedSheetOverlay') || t.closest('.sched-day-draft') || t.closest('#schedDiscardConfirm'))) return;
+  e.stopPropagation();
+  if (e.cancelable) e.preventDefault();
+  if (typeof _schedSheetTryDiscard === 'function') _schedSheetTryDiscard();
 }
 
 function _schedDayRenderDraft() {
@@ -416,6 +428,7 @@ function _schedDayClearDraft() {
   _schedDayDraft = null;
   const el = document.getElementById('schedDayDraftBlock');
   if (el) el.remove();
+  document.removeEventListener('click', _schedDayDraftOutsideTap, true);
 }
 
 function _schedDayHandleDown(e) {
