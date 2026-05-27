@@ -261,27 +261,71 @@ function renderScheduleCalendarGrid(targetId, fullscreen) {
 // ─────────────────────────────────────────────────────────────────────────────
 let _schedCalFsCooldown = false;
 
+// 사용자 명시 2026-05-27 ultrathink (빡빡하게): 바닥 도달만으론 X — 바닥에서 한 번 더 당기는(오버스크롤) 제스처가 있어야 풀스크린.
+//   touch: 바닥 닿은 뒤 손가락을 추가로 70px 더 위로 끌면 (= 아래로 더 스크롤 시도) 발동.
+//   wheel(데스크톱): 바닥에서 아래 휠 누적 180 넘으면 발동.
+let _schedCalBottomAnchorY = null;
+let _schedCalWheelAccum = 0;
+const _SCHED_CAL_PULL_PX = 70;
+const _SCHED_CAL_WHEEL_PX = 180;
+
 function _schedCalBindScrollTrigger() {
   if (window._schedCalScrollBound) return;
   const screen = document.getElementById('screen-archive');
   if (!screen) return;
-  screen.addEventListener('scroll', _schedCalOnScroll, { passive: true });
+  screen.addEventListener('touchstart', _schedCalTouchStart, { passive: true });
+  screen.addEventListener('touchmove', _schedCalTouchMove, { passive: true });
+  screen.addEventListener('touchend', _schedCalTouchEnd, { passive: true });
+  screen.addEventListener('wheel', _schedCalWheel, { passive: true });
   window._schedCalScrollBound = true;
 }
 
-function _schedCalOnScroll() {
-  if (_schedCalFsCooldown) return;
-  if (document.getElementById('schedCalFsOverlay')) return;          // 이미 열림
-  if (typeof _currentLens === 'undefined' || _currentLens !== 'execute') return;
-  if (typeof _libView === 'undefined' || _libView !== 'grid') return;
+function _schedCalCanTrigger(screen) {
+  if (_schedCalFsCooldown) return false;
+  if (document.getElementById('schedCalFsOverlay')) return false;
+  if (typeof _currentLens === 'undefined' || _currentLens !== 'execute') return false;
+  if (typeof _libView === 'undefined' || _libView !== 'grid') return false;
+  if (!screen || !document.getElementById('libExecuteGrid')) return false;
+  if (screen.scrollHeight - screen.clientHeight < 120) return false;  // 짧은 페이지 가드
+  return true;
+}
+
+function _schedCalAtBottom(screen) {
+  return screen.scrollTop + screen.clientHeight >= screen.scrollHeight - 8;
+}
+
+function _schedCalTouchStart() {
+  _schedCalBottomAnchorY = null;
+}
+
+function _schedCalTouchMove(e) {
   const screen = document.getElementById('screen-archive');
-  if (!screen || !document.getElementById('libExecuteGrid')) return;
-  // 스크롤 여지가 충분해야 (짧은 페이지 insta-trigger 방지)
-  if (screen.scrollHeight - screen.clientHeight < 120) return;
-  // 사용자 명시 2026-05-27 ultrathink: '캘린더 윗변 닿음' 기준 폐기 (캘린더가 커서 아랫부분이 안 보임).
-  //   캘린더 전체 + 범례 + 하단 여백까지 다 지나 페이지 맨 밑에 닿으면 풀스크린 → '다 내리고 더 밑으로' 제스처.
-  if (screen.scrollTop + screen.clientHeight >= screen.scrollHeight - 8) {
+  if (!_schedCalCanTrigger(screen)) { _schedCalBottomAnchorY = null; return; }
+  const y = (e.touches && e.touches[0]) ? e.touches[0].clientY : null;
+  if (y == null) return;
+  if (!_schedCalAtBottom(screen)) { _schedCalBottomAnchorY = null; return; }
+  // 바닥 도달 — 그 순간 Y anchor. 거기서 추가로 위로 끈 양(아래로 더 스크롤 시도) 측정.
+  if (_schedCalBottomAnchorY == null) { _schedCalBottomAnchorY = y; return; }
+  if (_schedCalBottomAnchorY - y > _SCHED_CAL_PULL_PX) {
+    _schedCalBottomAnchorY = null;
     openScheduleCalendarFullscreen();
+  }
+}
+
+function _schedCalTouchEnd() {
+  _schedCalBottomAnchorY = null;
+}
+
+function _schedCalWheel(e) {
+  const screen = document.getElementById('screen-archive');
+  if (!_schedCalCanTrigger(screen)) { _schedCalWheelAccum = 0; return; }
+  if (!_schedCalAtBottom(screen)) { _schedCalWheelAccum = 0; return; }
+  if (e.deltaY > 0) {
+    _schedCalWheelAccum += e.deltaY;
+    if (_schedCalWheelAccum > _SCHED_CAL_WHEEL_PX) {
+      _schedCalWheelAccum = 0;
+      openScheduleCalendarFullscreen();
+    }
   }
 }
 
