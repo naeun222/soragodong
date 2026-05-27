@@ -8975,11 +8975,13 @@
   .cal-grid-wrap.cal-month-slide-next { animation: cal-slide-next 0.32s ease; }
 
   /* 사용자 명시 2026-05-27 ultrathink — 일정 lens 캘린더.
-     인라인 = 컴팩트 (minmax 자연 높이, sticky X). 더 아래로 스크롤해 캘린더가 화면 상단 근처 오면 풀스크린 오버레이 자동 open. */
+     인라인 = 억지로 늘린 tall 캘린더 (7ea5091). 월/요일 헤더 sticky + 그리드 viewport 높이 (6행 1fr). 더 아래로 스크롤해 캘린더가 화면 맨 위에 닿으면 풀스크린 오버레이 자동 open. */
   .cal-grid-wrap.sched-cal-wrap { padding: 0; background: transparent; border: none; border-radius: 0; margin: 0 0 18px; }
-  /* 풀스크린 오버레이 (fixed inset:0) 안 캘린더 — 월/요일 헤더 sticky + flex 로 viewport 가득 (6행 1fr) */
+  .sched-cal-wrap .sched-cal-sticky { position: sticky; top: 0; z-index: 6; background: var(--bg); padding: 6px 0 4px; }
+  .sched-cal-monthgrid { height: calc(100dvh - 188px); min-height: 430px; }
+  /* 풀스크린 오버레이 (fixed inset:0) 안 캘린더 — flex 로 viewport 가득 (인라인 calc 높이 덮음) */
   .sched-cal-wrap-fs { display: flex; flex-direction: column; height: 100%; margin: 0; }
-  .sched-cal-wrap-fs .sched-cal-sticky { position: sticky; top: 0; z-index: 6; background: var(--bg); padding: 2px 0 4px; }
+  .sched-cal-wrap-fs .sched-cal-sticky { padding: 2px 0 4px; }
   .sched-cal-monthgrid-fs { height: auto; flex: 1; min-height: 0; }
   .sched-cal-fs-overlay { animation: sched-cal-fs-in 0.16s ease; }
   @keyframes sched-cal-fs-in { from { opacity: 0; } to { opacity: 1; } }
@@ -56511,10 +56513,10 @@ function renderScheduleCalendarGrid(targetId, fullscreen) {
   }
 
   // 외곽 + 헤더 + 요일
-  // 사용자 명시 2026-05-27 ultrathink (인라인 컴팩트 + 풀스크린):
-  //   인라인 = 컴팩트 캘린더 (minmax 자연 높이, sticky X). 더 아래로 스크롤해 캘린더가 화면 상단 근처 오면 _schedCalOnScroll 가 풀스크린 오버레이를 엶.
-  //   fullscreen = fixed inset:0 레이어 안에서 flex 로 viewport 전체 (6행 1fr, 앱 헤더·하단탭까지 덮음).
-  const gridRows = fullscreen ? 'repeat(6, 1fr)' : 'repeat(6, minmax(58px, auto))';
+  // 사용자 명시 2026-05-27 ultrathink (인라인 = 7ea5091 tall + 풀스크린):
+  //   인라인 = 억지로 늘린 tall 캘린더 (viewport 높이, 6행 1fr, 월/요일 sticky, 셀 안 일정 제목). 더 아래로 스크롤해 캘린더가 화면 맨 위에 닿으면 _schedCalOnScroll 가 풀스크린 오버레이를 엶.
+  //   fullscreen = fixed inset:0 레이어 안에서 flex 로 viewport 전체 (앱 헤더·하단탭까지 덮음).
+  const gridRows = 'repeat(6, 1fr)';
   const gridCls  = fullscreen ? 'sched-cal-monthgrid sched-cal-monthgrid-fs' : 'sched-cal-monthgrid';
   let html = `
     <div class="cal-grid-wrap sched-cal-wrap${fullscreen ? ' sched-cal-wrap-fs' : ''}">
@@ -56635,8 +56637,8 @@ function _schedCalOnScroll() {
   if (screen.scrollTop <= 30) return;                                 // 실제 스크롤 down 했을 때만
   const gTop = grid.getBoundingClientRect().top;
   const sTop = screen.getBoundingClientRect().top;
-  // 사용자 명시 2026-05-27 ultrathink (더 쉽게): 캘린더가 화면 상단 근처(48px) 오면 바로 풀스크린 — 정확히 끝까지 안 내려도 됨.
-  if (gTop - sTop <= 48) openScheduleCalendarFullscreen();
+  // 사용자 명시 2026-05-27 ultrathink (살짝 더 둔하게): 캘린더가 화면 맨 위에 완전히 닿아야(<=0) 풀스크린 — 48px 일찍 뜨던 거 폐기.
+  if (gTop - sTop <= 0) openScheduleCalendarFullscreen();
 }
 
 function openScheduleCalendarFullscreen() {
@@ -72141,7 +72143,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.294-schedule-cal-inline-compact';
+const APP_VERSION = 'v4.0.295-schedule-cal-tall-trigger-dull';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 

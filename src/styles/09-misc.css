@@ -8814,11 +8814,13 @@
   .cal-grid-wrap.cal-month-slide-next { animation: cal-slide-next 0.32s ease; }
 
   /* 사용자 명시 2026-05-27 ultrathink — 일정 lens 캘린더.
-     인라인 = 컴팩트 (minmax 자연 높이, sticky X). 더 아래로 스크롤해 캘린더가 화면 상단 근처 오면 풀스크린 오버레이 자동 open. */
+     인라인 = 억지로 늘린 tall 캘린더 (7ea5091). 월/요일 헤더 sticky + 그리드 viewport 높이 (6행 1fr). 더 아래로 스크롤해 캘린더가 화면 맨 위에 닿으면 풀스크린 오버레이 자동 open. */
   .cal-grid-wrap.sched-cal-wrap { padding: 0; background: transparent; border: none; border-radius: 0; margin: 0 0 18px; }
-  /* 풀스크린 오버레이 (fixed inset:0) 안 캘린더 — 월/요일 헤더 sticky + flex 로 viewport 가득 (6행 1fr) */
+  .sched-cal-wrap .sched-cal-sticky { position: sticky; top: 0; z-index: 6; background: var(--bg); padding: 6px 0 4px; }
+  .sched-cal-monthgrid { height: calc(100dvh - 188px); min-height: 430px; }
+  /* 풀스크린 오버레이 (fixed inset:0) 안 캘린더 — flex 로 viewport 가득 (인라인 calc 높이 덮음) */
   .sched-cal-wrap-fs { display: flex; flex-direction: column; height: 100%; margin: 0; }
-  .sched-cal-wrap-fs .sched-cal-sticky { position: sticky; top: 0; z-index: 6; background: var(--bg); padding: 2px 0 4px; }
+  .sched-cal-wrap-fs .sched-cal-sticky { padding: 2px 0 4px; }
   .sched-cal-monthgrid-fs { height: auto; flex: 1; min-height: 0; }
   .sched-cal-fs-overlay { animation: sched-cal-fs-in 0.16s ease; }
   @keyframes sched-cal-fs-in { from { opacity: 0; } to { opacity: 1; } }

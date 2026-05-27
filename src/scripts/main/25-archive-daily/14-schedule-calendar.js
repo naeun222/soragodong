@@ -156,10 +156,10 @@ function renderScheduleCalendarGrid(targetId, fullscreen) {
   }
 
   // 외곽 + 헤더 + 요일
-  // 사용자 명시 2026-05-27 ultrathink (인라인 컴팩트 + 풀스크린):
-  //   인라인 = 컴팩트 캘린더 (minmax 자연 높이, sticky X). 더 아래로 스크롤해 캘린더가 화면 상단 근처 오면 _schedCalOnScroll 가 풀스크린 오버레이를 엶.
-  //   fullscreen = fixed inset:0 레이어 안에서 flex 로 viewport 전체 (6행 1fr, 앱 헤더·하단탭까지 덮음).
-  const gridRows = fullscreen ? 'repeat(6, 1fr)' : 'repeat(6, minmax(58px, auto))';
+  // 사용자 명시 2026-05-27 ultrathink (인라인 = 7ea5091 tall + 풀스크린):
+  //   인라인 = 억지로 늘린 tall 캘린더 (viewport 높이, 6행 1fr, 월/요일 sticky, 셀 안 일정 제목). 더 아래로 스크롤해 캘린더가 화면 맨 위에 닿으면 _schedCalOnScroll 가 풀스크린 오버레이를 엶.
+  //   fullscreen = fixed inset:0 레이어 안에서 flex 로 viewport 전체 (앱 헤더·하단탭까지 덮음).
+  const gridRows = 'repeat(6, 1fr)';
   const gridCls  = fullscreen ? 'sched-cal-monthgrid sched-cal-monthgrid-fs' : 'sched-cal-monthgrid';
   let html = `
     <div class="cal-grid-wrap sched-cal-wrap${fullscreen ? ' sched-cal-wrap-fs' : ''}">
@@ -280,8 +280,8 @@ function _schedCalOnScroll() {
   if (screen.scrollTop <= 30) return;                                 // 실제 스크롤 down 했을 때만
   const gTop = grid.getBoundingClientRect().top;
   const sTop = screen.getBoundingClientRect().top;
-  // 사용자 명시 2026-05-27 ultrathink (더 쉽게): 캘린더가 화면 상단 근처(48px) 오면 바로 풀스크린 — 정확히 끝까지 안 내려도 됨.
-  if (gTop - sTop <= 48) openScheduleCalendarFullscreen();
+  // 사용자 명시 2026-05-27 ultrathink (살짝 더 둔하게): 캘린더가 화면 맨 위에 완전히 닿아야(<=0) 풀스크린 — 48px 일찍 뜨던 거 폐기.
+  if (gTop - sTop <= 0) openScheduleCalendarFullscreen();
 }
 
 function openScheduleCalendarFullscreen() {
