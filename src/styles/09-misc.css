@@ -5025,6 +5025,8 @@
   .todo-action:active { transform: scale(0.92); }
   /* 사용자 명시 2026-05-27: 삭제(파괴적) 버튼 — hover/active 시 danger 톤 (체크와 멀리 배치 + 색 구분) */
   .todo-action.danger:hover, .todo-action.danger:active { color: var(--danger); }
+  /* 사용자 명시 2026-05-27: 행 맨 왼쪽 ☰ 더보기 — 메뉴 진입 affordance */
+  .todo-more { opacity: 0.9; font-size: 15px; }
   /* V4-1u-d: 할 일에 적용된 시간 라벨 */
   .todo-sched-label {
     margin-left: 8px;

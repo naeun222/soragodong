@@ -146,13 +146,11 @@ function renderExecute() {
       // 사용자 명시 2026-05-27 ultrathink (3단계): task.dueDate 있으면 마감 라벨 표시.
       const dueLabel = task.dueDate ? `<span style="font-size:10px; color:#d8ac63; margin-left:6px; padding:1px 5px; background:#d8ac631f; border-radius:3px; white-space:nowrap;">📅 ${escapeHtml(task.dueDate)}${task.dueTime ? ' ' + escapeHtml(task.dueTime) : ''}</span>` : '';
       // 사용자 명시 2026-05-27: ⏰(일정 적용) 버튼 제거. demote 버튼 ↩ → ↓ (서랍장 ↑ 와 같은 css).
-      // 사용자 명시 2026-05-27: 체크 동그라미 맨 오른쪽 / 삭제는 클러스터 맨 왼쪽 (체크와 멀리 → 오타 방지). 순서: 제목 · 삭제 · 편집 · 서랍장 · 체크.
+      // 사용자 명시 2026-05-27: 행 맨 왼쪽 ☰ 더보기 → 메뉴(수정/서랍장으로 내리기/삭제). 체크 동그라미는 맨 오른쪽.
       html += `
         <div class="todo-item${isDone ? ' completed' : ''}" data-task-id="${task.id}">
+          <button class="todo-action todo-more" onclick="_todayTaskMenu('${task.id}')" title="더보기" aria-label="더보기">☰</button>
           <span class="todo-title">${escapeHtml(task.title)}${schedLabel}${dueLabel}</span>
-          <button class="todo-action danger" onclick="deleteTask('${task.id}')" title="삭제" aria-label="삭제">✕</button>
-          ${isDone ? '' : `<button class="todo-action" onclick="editTaskCard('${task.id}')" title="수정" aria-label="수정">✎</button>`}
-          ${isDone ? '' : `<button class="drawer-row-action down" onclick="demoteFromToday('${task.id}')" title="서랍장으로" aria-label="서랍장으로">↓</button>`}
           <button class="todo-check${isDone ? ' checked' : ''}" onclick="toggleQuestComplete('${task.id}')" aria-label="${isDone ? '되살리기' : '완료'}" title="${isDone ? '되살리기' : '완료'}">${isDone ? '✓' : ''}</button>
         </div>
       `;
@@ -573,6 +571,43 @@ function _todayDragCleanup() {
   const d = _todayDrag;
   _todayDrag = null;
   _todayDragDetach(d);
+}
+
+// === 오늘 할 일 ☰ 더보기 메뉴 (사용자 명시 2026-05-27) — 수정 / 서랍장으로 내리기 / 삭제 ===
+function _todayTaskMenu(taskId) {
+  const task = (state.tasks || []).find(t => t.id === taskId);
+  if (!task) return;
+  const isDone = task.status === 'done';
+  const ex = document.getElementById('todayTaskMenuOverlay');
+  if (ex) ex.remove();
+  const btn = 'width:100%; padding:14px; border-radius:12px; font-size:14px; font-family:inherit; cursor:pointer; border:1px solid var(--border); background:var(--surface); color:var(--text); text-align:center; font-weight:500;';
+  const dangerBtn = btn + ' color:var(--danger);';
+  const softBtn = btn + ' color:var(--text-soft);';
+  const actions = isDone
+    ? `<button onclick="_todayTaskMenuAction('${taskId}','delete')" style="${dangerBtn}">🗑 삭제</button>`
+    : `<button onclick="_todayTaskMenuAction('${taskId}','edit')" style="${btn}">✎ 수정</button>
+       <button onclick="_todayTaskMenuAction('${taskId}','demote')" style="${btn}">↓ 서랍장으로 내리기</button>
+       <button onclick="_todayTaskMenuAction('${taskId}','delete')" style="${dangerBtn}">🗑 삭제</button>`;
+  const html = `
+    <div id="todayTaskMenuOverlay" onclick="if(event.target===this) this.remove();" style="position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:10001; display:flex; align-items:flex-end; justify-content:center;">
+      <div onclick="event.stopPropagation();" style="background:var(--bg); border-top-left-radius:18px; border-top-right-radius:18px; width:100%; max-width:520px; padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px)); box-sizing:border-box;">
+        <div style="font-size:14px; font-weight:600; color:var(--text); margin-bottom:14px;${isDone ? ' text-decoration:line-through; opacity:0.6;' : ''}">${escapeHtml(task.title || '')}</div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          ${actions}
+          <button onclick="document.getElementById('todayTaskMenuOverlay').remove()" style="${softBtn}">닫기</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function _todayTaskMenuAction(taskId, action) {
+  const ov = document.getElementById('todayTaskMenuOverlay');
+  if (ov) ov.remove();
+  if (action === 'edit' && typeof editTaskCard === 'function') return editTaskCard(taskId);
+  if (action === 'demote' && typeof demoteFromToday === 'function') return demoteFromToday(taskId);
+  if (action === 'delete' && typeof deleteTask === 'function') return deleteTask(taskId);
 }
 
 // === SHELL REWARD SYSTEM (V3.1) ===
