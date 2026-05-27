@@ -7,7 +7,7 @@
     "build": "node build.mjs",
     "watch": "node watch.mjs",
     "verify": "node build.mjs --verify",
-    "deploy": "npm run build && wrangler pages deploy public --project-name=soragodong --branch=main --commit-dirty=true",
+    "deploy": "npm run build && wrangler pages deploy public --project-name=soragodong --branch=main --commit-dirty=true --commit-message=\"manual deploy\"",
     "build:android": "npm run build && npx cap sync android",
     "cap:sync": "npx cap sync android",
     "cap:open:android": "npx cap open android"
