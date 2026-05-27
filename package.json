@@ -7,6 +7,7 @@
     "build": "node build.mjs",
     "watch": "node watch.mjs",
     "verify": "node build.mjs --verify",
+    "deploy": "npm run build && wrangler pages deploy public --project-name=soragodong --branch=main --commit-dirty=true",
     "build:android": "npm run build && npx cap sync android",
     "cap:sync": "npx cap sync android",
     "cap:open:android": "npx cap open android"
@@ -15,7 +16,8 @@
     "@capacitor/android": "^8.3.4",
     "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^8.3.4",
-    "@capacitor/core": "^8.3.4"
+    "@capacitor/core": "^8.3.4",
+    "wrangler": "^4.95.0"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.0",
