@@ -232,30 +232,23 @@ function renderWeeklyStoryReview(reviewData, opts) {
     </div>
   `;
 
-  // 사용자 보고 2026-05-28 ultrathink: root cause — .app 의 stacking context (position:relative + z-index:1 + max-width:520px).
-  //   그 안 fixed inset:0 + z-index:9999 도 .app 안에서만 작동 → PWA 헤더가 위에 덮임 + 좁은 컬럼만 차지.
-  //   해결: portal — rstory-container 를 body 직접 자식으로 만들어 .app 의 stacking 떠남.
-  //   screen-review 는 dataset 만 박힌 채 빈 placeholder 유지 (옵션 1 토글 시 다시 렌더).
-  screen.innerHTML = '';  // 옵션 1 잔재 제거 (dataset 은 그대로)
-  let portal = document.getElementById('rstoryPortal');
-  if (!portal) {
-    portal = document.createElement('div');
-    portal.id = 'rstoryPortal';
-    document.body.appendChild(portal);
-  }
-  portal.innerHTML = html;
+  // 사용자 명시 2026-05-29: 풀스크린 = 헤더/탭 빼고 남은 영역 (.screen) 안에서.
+  //   .screen 가 이미 .screens (flex:1) 안 absolute inset:0 + padding 4px 24px 160px + overflow-y auto.
+  //   옵션 2 활성 = .screen 에 .rstory-active 클래스 추가 → padding/overflow 무효화. portal 폐기 (이전 d42e8bd 의 .app stacking 해결책은 헤더/탭도 덮어버려 사용자 의도와 반대).
+  screen.classList.add('rstory-active');
+  screen.innerHTML = html;
 
   // entry 사진 비동기 hydrate (신 photoStorageKey path).
   try {
     if (typeof hydrateDiaryPhotos === 'function') {
-      hydrateDiaryPhotos(portal);
+      hydrateDiaryPhotos(screen);
     }
   } catch (e) { console.warn('[story] hydrateDiaryPhotos:', e); }
 
   // pearl 사진 비동기 hydrate (신 pearl.storageKey path).
   try {
     if (typeof hydratePearlMedia === 'function') {
-      hydratePearlMedia(portal);
+      hydratePearlMedia(screen);
     }
   } catch (e) { console.warn('[story] hydratePearlMedia:', e); }
 
@@ -417,9 +410,11 @@ function _updateStoryProgress() {
 
 function closeWeeklyStoryReview() {
   _stopStoryAudio();
-  // portal cleanup (사용자 보고 2026-05-28: stacking context root cause fix).
-  const portal = document.getElementById('rstoryPortal');
-  if (portal) portal.innerHTML = '';
+  const screen = document.getElementById('screen-review');
+  if (screen) {
+    screen.classList.remove('rstory-active');
+    screen.innerHTML = '';
+  }
   if (typeof showScreen === 'function') showScreen('archive-reviews');
 }
 
@@ -588,11 +583,11 @@ function toggleWeeklyReviewLayout() {
   const cur = state.preferences.weeklyReviewLayout || 'classic';
   state.preferences.weeklyReviewLayout = (cur === 'story') ? 'classic' : 'story';
   try { if (typeof saveState === 'function') saveState(); } catch {}
-  // story → classic 토글 시 audio + portal cleanup
+  // story → classic 토글 시 audio cleanup + rstory-active 클래스 제거 (.screen padding 복원)
   if (cur === 'story') {
     _stopStoryAudio();
-    const portal = document.getElementById('rstoryPortal');
-    if (portal) portal.innerHTML = '';
+    const _sc = document.getElementById('screen-review');
+    if (_sc) _sc.classList.remove('rstory-active');
   }
   // archive inline 출신이고 story→classic 인 경우 모음으로 복귀
   if (cur === 'story' && _storyFromInline) {
