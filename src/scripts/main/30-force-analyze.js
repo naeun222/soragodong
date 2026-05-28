@@ -2126,6 +2126,12 @@ async function maybeRunChapterCleanup() {
   if (typeof maybeRunDailyInsightDiscover === 'function') {
     maybeRunDailyInsightDiscover().catch(e => console.warn('[auto-insight]', e));
   }
+
+  // ─── step F: synthesis 주기 자동 (사용자 명시 2026-05-29 연결·통합 §3 G2) ────────
+  //   첫 실행은 수동 버튼만 (품질 검증 전 Opus 낭비 방지). 이후 주1회 + 신규 20개 누적 시 silent 갱신.
+  if (!isGuest && typeof maybeRunSynthesisAuto === 'function') {
+    maybeRunSynthesisAuto().catch(e => console.warn('[synthesis auto]', e));
+  }
 }
 
 // V4 (사용자 명시 2026-05-25 ultrathink): 옛 함수명 alias — 옛 호출처 호환 (07-init / 35-bg-fetch).

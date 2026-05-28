@@ -243,3 +243,21 @@ function _renderCoreNodesSection() {
   </div></div>`;
   return html;
 }
+
+// 주기 자동 synthesis (§3 G2: 주1회 + 신규 20개 누적). silent (ADHD noise ↓).
+//   ★ 첫 실행은 수동 버튼만 — lastSynthesisAt 없으면 auto X. 품질 검증(사용자가 1회 돌려봄) 전 Opus 낭비 방지.
+//   maybeRunChapterCleanup step F 에서 fire-and-forget 호출.
+async function maybeRunSynthesisAuto() {
+  if (typeof _canAI !== 'function' || !_canAI()) return;
+  if (state.preferences && state.preferences.testerMode) return;
+  if (!state.lastSynthesisAt) return;  // 첫 실행은 수동만
+  const items = _collectSynthesisItems();
+  if (items.length < _SYNTH_MIN_ITEMS) return;
+  const meta = state.coreNodesMeta || {};
+  const weeklyDue = (typeof _shouldRunSchedule === 'function' && typeof _lastWeekly4amCutoff === 'function')
+    ? _shouldRunSchedule(state.lastSynthesisAt, _lastWeekly4amCutoff()) : false;
+  const newItems = items.length - (typeof meta.sourceCount === 'number' ? meta.sourceCount : 0);
+  const accumDue = newItems >= 20;
+  if (!weeklyDue && !accumDue) return;
+  await runSynthesis({ auto: true });
+}
