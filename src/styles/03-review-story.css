@@ -1,0 +1,386 @@
+/* ═══════════════════════════════════════════════════════════════
+   주간 리뷰 옵션 2 — Story Mode (풀스크린 3 페이지)
+   사용자 요청 2026-05-28: classic (옵션 1) 와 토글로 swap.
+   monochrome (deep navy + cream) + sky 액센트 1. 한국 시집 톤.
+   ═══════════════════════════════════════════════════════════════ */
+
+.rstory-container {
+  position: fixed;
+  inset: 0;
+  background: #0a0e14;
+  color: #e8e3d8;
+  z-index: 90;
+  font-family: 'Pretendard', 'Noto Sans KR', system-ui, -apple-system, sans-serif;
+  overflow: hidden;
+  outline: none;
+}
+
+/* 상단 progress bar — instagram story 톤 */
+.rstory-progress {
+  position: absolute;
+  top: calc(env(safe-area-inset-top, 0px) + 12px);
+  left: 16px;
+  right: 16px;
+  display: flex;
+  gap: 4px;
+  z-index: 10;
+}
+.rstory-progress-bar {
+  flex: 1;
+  height: 2px;
+  background: rgba(232, 227, 216, 0.15);
+  border-radius: 1px;
+  overflow: hidden;
+  position: relative;
+}
+.rstory-progress-bar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(232, 227, 216, 0.78);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.4s ease-out;
+}
+.rstory-progress-bar.done::after { transform: scaleX(1); }
+.rstory-progress-bar.current::after { transform: scaleX(1); }
+
+/* 좌상단 ↺ Classic 토글 / 우상단 ✕ 닫기 */
+.rstory-toggle,
+.rstory-close {
+  position: absolute;
+  top: calc(env(safe-area-inset-top, 0px) + 24px);
+  background: transparent;
+  border: 0;
+  color: rgba(232, 227, 216, 0.65);
+  padding: 6px 10px;
+  cursor: pointer;
+  z-index: 11;
+  font-family: inherit;
+  letter-spacing: 0.04em;
+  transition: color 0.2s;
+}
+.rstory-toggle:hover,
+.rstory-close:hover { color: rgba(232, 227, 216, 0.95); }
+.rstory-toggle {
+  left: 12px;
+  font-size: 11px;
+}
+.rstory-close {
+  right: 12px;
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* 페이지 — 동시 absolute, active 만 visible */
+.rstory-page {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 32px calc(env(safe-area-inset-bottom, 0px) + 60px);
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease-out;
+}
+.rstory-page.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* meta — 상단 라벨 (날짜 / 페이지) */
+.rstory-meta {
+  font-family: 'IBM Plex Mono', ui-monospace, 'SF Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(232, 227, 216, 0.5);
+  margin-bottom: 36px;
+}
+
+/* one_word — 큰 손글씨 */
+.rstory-oneword {
+  font-family: 'Gowun Batang', serif;
+  font-size: clamp(48px, 14vw, 72px);
+  font-weight: 400;
+  color: #7ec8e3;
+  letter-spacing: 0.04em;
+  line-height: 1.1;
+  margin-bottom: 24px;
+  animation: rstoryFadeUp 0.85s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both;
+}
+@keyframes rstoryFadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* momentum_line — 한 줄 시 */
+.rstory-momentum {
+  font-family: 'Gowun Batang', serif;
+  font-size: 17px;
+  line-height: 1.7;
+  color: rgba(232, 227, 216, 0.92);
+  max-width: 320px;
+  margin-bottom: 36px;
+  animation: rstoryFadeUp 0.7s ease-out 0.4s both;
+}
+
+/* mood arc — 라벨 X, 곡선 only */
+.rstory-moodarc {
+  width: 240px;
+  height: 50px;
+  opacity: 0.72;
+  animation: rstoryFadeUp 0.7s ease-out 0.6s both;
+}
+.rstory-moodarc svg { width: 100%; height: 100%; display: block; }
+
+/* hint — 살짝 위 ↕ */
+.rstory-hint {
+  position: absolute;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 36px);
+  font-size: 10.5px;
+  color: rgba(232, 227, 216, 0.32);
+  letter-spacing: 0.1em;
+  animation: rstoryHintBob 2.4s ease-in-out infinite;
+}
+@keyframes rstoryHintBob {
+  0%, 100% { transform: translateY(0); opacity: 0.32; }
+  50% { transform: translateY(-3px); opacity: 0.55; }
+}
+
+/* ───── Page 2 — Scenes carousel ───── */
+.rstory-scenes-carousel {
+  position: relative;
+  width: 100%;
+  max-width: 360px;
+  min-height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.rstory-scene {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.45s ease-in-out;
+}
+.rstory-scene.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.rstory-scene-when {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  color: rgba(126, 200, 227, 0.72);
+  margin-bottom: 22px;
+  text-transform: uppercase;
+}
+.rstory-scene-what {
+  font-family: 'Gowun Batang', serif;
+  font-size: 20px;
+  line-height: 1.55;
+  color: #e8e3d8;
+  max-width: 300px;
+  margin-bottom: 14px;
+}
+.rstory-scene-feeling {
+  font-family: 'Gowun Batang', serif;
+  font-style: italic;
+  font-size: 13px;
+  color: rgba(232, 227, 216, 0.55);
+}
+
+.rstory-scene-dots {
+  position: absolute;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 60px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  z-index: 5;
+}
+.rstory-scene-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(232, 227, 216, 0.25);
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  transition: background 0.2s, width 0.25s ease-out;
+}
+.rstory-scene-dot.active {
+  background: rgba(126, 200, 227, 0.9);
+  width: 18px;
+  border-radius: 3px;
+}
+
+/* ───── Page 3 — Reflection ───── */
+.rstory-page-reflect {
+  justify-content: flex-start;
+  padding-top: 76px;
+}
+.rstory-flow {
+  font-family: 'Gowun Batang', serif;
+  font-size: 16px;
+  line-height: 1.78;
+  color: rgba(232, 227, 216, 0.92);
+  max-width: 320px;
+  margin-bottom: 28px;
+  text-align: center;
+}
+.rstory-cycles {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 26px;
+  width: 100%;
+  max-width: 320px;
+}
+.rstory-cycle {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: rgba(232, 227, 216, 0.82);
+  text-align: left;
+}
+.rstory-cycle-k {
+  min-width: 32px;
+  color: rgba(126, 200, 227, 0.7);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding-top: 3px;
+  flex-shrink: 0;
+}
+.rstory-cycle-v { flex: 1; }
+
+.rstory-notice {
+  font-family: 'Gowun Batang', serif;
+  font-size: 14.5px;
+  line-height: 1.7;
+  color: rgba(232, 227, 216, 0.9);
+  background: rgba(126, 200, 227, 0.06);
+  border: 1px solid rgba(126, 200, 227, 0.18);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 22px;
+  max-width: 320px;
+  text-align: center;
+}
+
+.rstory-pearl {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  margin-bottom: 18px;
+  padding: 12px 14px;
+  border-left: 2px solid rgba(126, 200, 227, 0.5);
+  max-width: 320px;
+  text-align: left;
+}
+.rstory-pearl-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(126, 200, 227, 0.7);
+}
+.rstory-pearl-content {
+  font-family: 'Gowun Batang', serif;
+  font-size: 14px;
+  line-height: 1.6;
+  color: rgba(232, 227, 216, 0.9);
+}
+
+.rstory-chapters-label {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: rgba(232, 227, 216, 0.45);
+  margin-bottom: 20px;
+}
+
+.rstory-actions {
+  position: absolute;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 32px);
+  left: 0;
+  right: 0;
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  padding: 0 24px;
+}
+.rstory-action-secondary {
+  background: transparent;
+  border: 1px solid rgba(232, 227, 216, 0.22);
+  color: rgba(232, 227, 216, 0.82);
+  border-radius: 24px;
+  font-size: 12px;
+  padding: 10px 22px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.2s, color 0.2s;
+}
+.rstory-action-secondary:hover {
+  background: rgba(232, 227, 216, 0.08);
+  color: #e8e3d8;
+}
+
+.rstory-empty {
+  font-family: 'Gowun Batang', serif;
+  font-size: 14px;
+  color: rgba(232, 227, 216, 0.5);
+  font-style: italic;
+  margin: 40px 0;
+}
+
+/* reduced-motion — 모든 transform 제거 fade only */
+@media (prefers-reduced-motion: reduce) {
+  .rstory-page,
+  .rstory-oneword,
+  .rstory-momentum,
+  .rstory-moodarc,
+  .rstory-scene,
+  .rstory-hint { animation: none !important; }
+  .rstory-page { transition: opacity 0.15s ease !important; }
+  .rstory-hint { opacity: 0.45 !important; }
+}
+
+/* ───── Classic mode 마지막의 Story 시도 toggle hint ───── */
+.review-layout-hint {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  padding: 10px 14px;
+  background: transparent;
+  border: 1px dashed rgba(126, 200, 227, 0.32);
+  border-radius: 10px;
+  color: rgba(126, 200, 227, 0.78);
+  font-size: 11.5px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: center;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.review-layout-hint:hover {
+  background: rgba(126, 200, 227, 0.05);
+  border-color: rgba(126, 200, 227, 0.5);
+  color: rgba(126, 200, 227, 0.95);
+}

@@ -4,6 +4,21 @@ function renderReviewScreen(type, reviewData, opts) {
   const screen = document.getElementById('screen-review');
   if (!screen) return;  // FIX BUG-1: null guard
 
+  // V4 (사용자 요청 2026-05-28): weekly 만 옵션 2 (Story mode) 토글 진입점.
+  //   state.preferences.weeklyReviewLayout = 'classic' (기본) | 'story'. 토글로 즉시 swap.
+  //   dataset 미리 박아서 토글 시 같은 review 재렌더 가능 (saveReview 도 dataset 으로 읽음 — 위치 옮김만).
+  try {
+    screen.dataset.reviewData = JSON.stringify(reviewData);
+    screen.dataset.reviewType = type;
+    screen.dataset.reviewReadonly = readonly ? '1' : '';
+  } catch {}
+  if (type === 'weekly'
+      && state && state.preferences && state.preferences.weeklyReviewLayout === 'story'
+      && typeof renderWeeklyStoryReview === 'function') {
+    renderWeeklyStoryReview(reviewData, opts);
+    return;
+  }
+
   // periodLabel — readonly 모드면 review 자체의 weekKey/monthKey/quarterKey 사용 (실제 그 기간)
   let periodLabel;
   if (readonly && type === 'weekly' && reviewData.weekKey) {
@@ -381,6 +396,18 @@ function renderReviewScreen(type, reviewData, opts) {
   screen.innerHTML = html;
   screen.dataset.reviewData = JSON.stringify(reviewData);
   screen.dataset.reviewType = type;
+  screen.dataset.reviewReadonly = readonly ? '1' : '';
+
+  // V4 (사용자 요청 2026-05-28): weekly classic 마지막 — Story mode (옵션 2) 시도 토글 1줄.
+  //   monthly/quarterly/annual = 토글 없음 (weekly 만 재설계 대상).
+  if (type === 'weekly' && typeof toggleWeeklyReviewLayout === 'function') {
+    const _btn = document.createElement('button');
+    _btn.className = 'review-layout-hint';
+    _btn.type = 'button';
+    _btn.textContent = '✦ Story mode 로 보기 (옵션 2 · 실험)';
+    _btn.onclick = toggleWeeklyReviewLayout;
+    screen.appendChild(_btn);
+  }
 }
 
 function saveReview(type) {
