@@ -2002,24 +2002,28 @@
   .chat-mode-sheet-close:hover { background: var(--surface2); color: var(--text); }
   .chat-mode-sheet-cards { display: flex; flex-direction: column; gap: 10px; }
   /* V4 사용자 요청 2026-05-25 ultrathink — 챗 탭 배경 모드별 atmospheric halo.
-     사용자 명시 2026-05-29 — halo 위치 상단 → 하단 (입력창에서 위로 퍼지는 인상).
-     입력창 = 화면 하단 fixed 라 at 50% 100% = 입력창 자리. 그 자리에서 모드 색이 위로 fountain 처럼 번짐.
-     다크 base 유지 → muddy 회피, 메시지 영역 가독성 안전.
-     daily = 살구 와이드 (입력창에서 아침 햇살), inquiry = 보라 좁게 (저녁 램프), vent = amber 따뜻 (벽난로).
-     null = 색 X (default). gradient transition 안 됨 — class 전환 시 snap, 의도된 동작. */
+     사용자 명시 2026-05-29 — 위치 상단 → 하단 (입력창에서 위로 fountain) + 강도 훨씬 ↑.
+     2-layer: inner hot spot (입력창 위 진한 발광체) + outer wide wash (위로 fade).
+     입력창 = 화면 하단 fixed 라 at 50% 100% = 입력창 자리.
+     daily = 살구 (아침 햇살), inquiry = 보라 (저녁 램프), vent = amber (벽난로).
+     null = 색 X (default). gradient transition 안 됨 — class 전환 시 snap, 의도된 동작.
+     메시지 영역 가독성 — bubble 자체가 dark surface 라 안전. */
   #screen-chat.chat-bg-daily {
     background:
-      radial-gradient(ellipse 80% 50% at 50% 100%, rgba(244,183,141,0.34), transparent 70%),
+      radial-gradient(ellipse 55% 32% at 50% 100%, rgba(244,183,141,0.78), transparent 72%),
+      radial-gradient(ellipse 100% 60% at 50% 100%, rgba(244,183,141,0.40), transparent 78%),
       var(--bg);
   }
   #screen-chat.chat-bg-inquiry {
     background:
-      radial-gradient(ellipse 60% 45% at 50% 100%, rgba(120,90,180,0.38), transparent 72%),
+      radial-gradient(ellipse 45% 30% at 50% 100%, rgba(140,100,200,0.85), transparent 70%),
+      radial-gradient(ellipse 85% 55% at 50% 100%, rgba(120,90,180,0.46), transparent 76%),
       var(--bg);
   }
   #screen-chat.chat-bg-vent {
     background:
-      radial-gradient(ellipse 70% 55% at 50% 100%, rgba(218,165,32,0.34), transparent 70%),
+      radial-gradient(ellipse 50% 34% at 50% 100%, rgba(218,165,32,0.75), transparent 70%),
+      radial-gradient(ellipse 95% 65% at 50% 100%, rgba(218,165,32,0.40), transparent 78%),
       var(--bg);
   }
   .chat-mode-card {
@@ -75097,7 +75101,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.359-chat-halo-from-input';
+const APP_VERSION = 'v4.0.360-chat-halo-2x-strong';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 
