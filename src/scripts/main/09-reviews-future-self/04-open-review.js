@@ -32,7 +32,8 @@ async function openReview(type) {
       saveState();
       if (typeof renderReviewPrompts === 'function') renderReviewPrompts();
     }
-    if (typeof renderReviewScreen === 'function') renderReviewScreen(type, existing, { readonly: true });
+    // V4 (사용자 명시 2026-05-29): 홈 진입 weekly = Story 풀스크린.
+    if (typeof renderReviewScreen === 'function') renderReviewScreen(type, existing, { readonly: true, story: type === 'weekly' });
     showScreen('review');
     return;
   }
@@ -49,7 +50,8 @@ async function openReview(type) {
 
   try {
     const reviewData = await generateReview(type);
-    renderReviewScreen(type, reviewData);
+    // V4 (사용자 명시 2026-05-29): 홈 진입 weekly 새 생성 = Story 풀스크린.
+    renderReviewScreen(type, reviewData, { story: type === 'weekly' });
   } catch (err) {
     screen.innerHTML = `
       <div class="screen-title">${type === 'weekly' ? '🌙 주간 리뷰' : '📅 월간 리뷰'}</div>

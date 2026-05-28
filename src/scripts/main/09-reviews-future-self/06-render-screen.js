@@ -4,16 +4,19 @@ function renderReviewScreen(type, reviewData, opts) {
   const screen = document.getElementById('screen-review');
   if (!screen) return;  // FIX BUG-1: null guard
 
-  // V4 (사용자 요청 2026-05-28): weekly 만 옵션 2 (Story mode) 토글 진입점.
-  //   state.preferences.weeklyReviewLayout = 'classic' (기본) | 'story'. 토글로 즉시 swap.
-  //   dataset 미리 박아서 토글 시 같은 review 재렌더 가능 (saveReview 도 dataset 으로 읽음 — 위치 옮김만).
+  // V4 (사용자 요청 2026-05-28): weekly 만 옵션 2 (Story mode) 진입점.
+  // V4 (사용자 명시 2026-05-29): preference 시스템 폐기. 진입 경로별 명시 (opts.story).
+  //   홈 진입 (openReview / _rcOpenFreshReview / openSavedReview from preview) = opts.story:true → Story 직진
+  //   모음 진입 (_toggleWeeklyInlineExpand) = inline 펼침 classic
+  //   모음 inline 의 "Story로 보기" hint click = opts.story:true + fromInline:true → Story + Classic 버튼 표시
+  //   dataset 미리 박아서 같은 review 재렌더 가능.
   try {
     screen.dataset.reviewData = JSON.stringify(reviewData);
     screen.dataset.reviewType = type;
     screen.dataset.reviewReadonly = readonly ? '1' : '';
   } catch {}
   if (type === 'weekly'
-      && state && state.preferences && state.preferences.weeklyReviewLayout === 'story'
+      && opts && opts.story === true
       && typeof renderWeeklyStoryReview === 'function') {
     renderWeeklyStoryReview(reviewData, opts);
     return;

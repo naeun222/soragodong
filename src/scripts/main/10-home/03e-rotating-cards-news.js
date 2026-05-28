@@ -135,19 +135,17 @@ function _rcOpenFreshReview(type, reviewId, key, completedAt) {
   }
   // 화면 이동 — type 별 분기
   if (type === 'weekly') {
-    // 사용자 보고 2026-05-10: 옛 코드 = 도서관 (`archive`) 까지만 + switchLibraryCat('reviews') = 카테고리 fallback 'diary'.
-    //   fix: '리뷰 모음' = 별도 screen ('archive-reviews'). showArchiveReviews() 함수 우선, 없으면 showScreen.
-    if (typeof showArchiveReviews === 'function') {
-      showArchiveReviews();
+    // V4 (사용자 명시 2026-05-29): 홈 회전 카드 weekly click = Story 풀스크린 직진.
+    //   옛: 모음 + inline 펼침 trigger (2026-05-10 fix) → 폐기.
+    //   진입 경로별 위계: 홈 = Story 몰입, 모음 = inline classic.
+    if (target && typeof renderReviewScreen === 'function') {
+      renderReviewScreen('weekly', target, { readonly: true, story: true });
+      if (typeof showScreen === 'function') showScreen('review');
+    } else if (typeof showArchiveReviews === 'function') {
+      showArchiveReviews();  // fallback (target 못 찾음)
     } else if (typeof showScreen === 'function') {
       showScreen('archive-reviews');
     }
-    // 카드 펼침 trigger (renderArchiveReviews 후 wid-X element 생성 확인)
-    setTimeout(() => {
-      if (typeof _toggleWeeklyInlineExpand === 'function' && reviewId) {
-        try { _toggleWeeklyInlineExpand(reviewId); } catch {}
-      }
-    }, 350);
   } else if (type === 'annual') {
     if (typeof openAnnualReview === 'function') {
       const _yr = key && key !== 'null' ? parseInt(key, 10) : (target && target.year);

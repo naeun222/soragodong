@@ -22,6 +22,9 @@ let _storyAudio = null;
 function renderWeeklyStoryReview(reviewData, opts) {
   opts = opts || {};
   const readonly = !!opts.readonly;
+  // V4 (사용자 명시 2026-05-29): 진입 출처 마크 — fromInline true 면 모음 출신 = ↺ Classic 버튼 표시.
+  //   홈 진입 (openReview / _rcOpenFreshReview / preview) = fromInline false → Classic 버튼 hidden, ✕ 닫기만.
+  _storyFromInline = !!opts.fromInline;
   const screen = document.getElementById('screen-review');
   if (!screen) return;
 
@@ -170,7 +173,7 @@ function renderWeeklyStoryReview(reviewData, opts) {
         <div class="rstory-progress-bar" data-step="1"></div>
         <div class="rstory-progress-bar" data-step="2"></div>
       </div>
-      <button class="rstory-toggle" type="button" onclick="toggleWeeklyReviewLayout()" aria-label="Classic 으로 돌아가기">↺ Classic</button>
+      ${_storyFromInline ? `<button class="rstory-toggle" type="button" onclick="toggleWeeklyReviewLayout()" aria-label="Classic 으로 돌아가기">↺ Classic</button>` : ''}
       <button class="rstory-close" type="button" onclick="closeWeeklyStoryReview()" aria-label="닫기">✕</button>
 
       <div class="rstory-page rstory-page-hero active" data-page="0" role="region" aria-label="이번 주 한 단어">
@@ -567,54 +570,31 @@ function _renderStoryPearlContent(p) {
   `;
 }
 
-// 토글 — Story ↔ Classic 즉시 swap. 같은 review 다시 렌더.
-//   archive-reviews inline 출신 (_storyFromInline=true) 이면 story → classic 시 모음으로 복귀 (사용자 mental model 자연).
-//   풀스크린 진입 출신 = 같은 review 풀스크린 classic 재렌더.
+// ↺ Classic 버튼 click — 모음 inline 출신만 보이는 버튼. 모음 화면으로 복귀.
+//   사용자 명시 2026-05-29: preference 시스템 폐기. 단순히 닫고 모음으로.
 function toggleWeeklyReviewLayout() {
-  if (!state.preferences) state.preferences = {};
-  const cur = state.preferences.weeklyReviewLayout || 'classic';
-  state.preferences.weeklyReviewLayout = (cur === 'story') ? 'classic' : 'story';
-  try { if (typeof saveState === 'function') saveState(); } catch {}
-  // story → classic 토글 시 audio cleanup + rstory-active 클래스 제거 (.screen padding 복원)
-  if (cur === 'story') {
-    _stopStoryAudio();
-    const _sc = document.getElementById('screen-review');
-    if (_sc) _sc.classList.remove('rstory-active');
+  _stopStoryAudio();
+  const _sc = document.getElementById('screen-review');
+  if (_sc) {
+    _sc.classList.remove('rstory-active');
+    _sc.innerHTML = '';
   }
-  // archive inline 출신이고 story→classic 인 경우 모음으로 복귀
-  if (cur === 'story' && _storyFromInline) {
-    _storyFromInline = false;
-    if (typeof showScreen === 'function') showScreen('archive-reviews');
-    return;
-  }
-  const screen = document.getElementById('screen-review');
-  if (!screen) return;
-  let reviewData = {};
-  try { reviewData = JSON.parse(screen.dataset.reviewData || '{}'); } catch {}
-  const type = screen.dataset.reviewType || 'weekly';
-  const readonly = screen.dataset.reviewReadonly === '1';
-  if (typeof renderReviewScreen === 'function') {
-    renderReviewScreen(type, reviewData, { readonly });
-  }
+  _storyFromInline = false;
+  if (typeof showScreen === 'function') showScreen('archive-reviews');
 }
 
-// archive-reviews inline 출신 — 풀스크린 story 진입. preference 'story' set + saveState.
-//   13-quarter-deep-dive.js inline 펼침 hint 가 호출.
+// archive-reviews inline 출신 — "Story로 보기" hint click. 풀스크린 story 진입.
+//   13-quarter-deep-dive.js 의 inline 펼침 hint 가 호출.
 function _switchToStoryFromInline(reviewId) {
-  if (!state.preferences) state.preferences = {};
-  state.preferences.weeklyReviewLayout = 'story';
-  try { if (typeof saveState === 'function') saveState(); } catch {}
   _openWeeklyAsStoryFromCard(reviewId, true);
 }
 
-// preference 'story' 인 사용자가 archive-reviews 의 weekly 카드 click 시 inline 펼침 대신 풀스크린 story 직진.
-//   _toggleWeeklyInlineExpand 와 같은 위치에서 분기 (13-quarter-deep-dive.js line 217 부근).
+// 풀스크린 story 진입 (id 로 review lookup). fromInline true 면 ↺ Classic 버튼 표시.
 function _openWeeklyAsStoryFromCard(reviewId, fromInline) {
   const review = (state.weeklyReviews || []).find(r => r && r.id === reviewId);
   if (!review) { if (typeof showToast === 'function') showToast('해당 주간 리뷰를 찾을 수 없어'); return; }
-  _storyFromInline = !!fromInline;
   if (typeof renderReviewScreen === 'function') {
-    renderReviewScreen('weekly', review, { readonly: true });
+    renderReviewScreen('weekly', review, { readonly: true, story: true, fromInline: !!fromInline });
   }
   if (typeof showScreen === 'function') showScreen('review');
 }

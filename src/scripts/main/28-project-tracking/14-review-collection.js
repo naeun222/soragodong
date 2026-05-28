@@ -20,7 +20,9 @@ function openSavedReview(type, key, completedAt) {
   }
 
   showScreen('review');
-  renderReviewScreen(type, review, { readonly: true });
+  // V4 (사용자 명시 2026-05-29): 홈 review preview → openSavedReview 진입 = Story 풀스크린.
+  //   모음 카드 click 은 _toggleWeeklyInlineExpand 가 처리 (이 함수 안 거침).
+  renderReviewScreen(type, review, { readonly: true, story: type === 'weekly' });
   // 위로 스크롤
   const screen = document.getElementById('screen-review');
   if (screen) screen.scrollTop = 0;

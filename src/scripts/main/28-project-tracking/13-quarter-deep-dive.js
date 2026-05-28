@@ -211,12 +211,12 @@ function renderArchiveReviews() {
     const reviewKey = r.weekKey || r.monthKey || r.quarterKey || '';
     const completedAtJs = r.completedAt ? `'${r.completedAt}'` : 'null';
     // 사용자 명시 2026-05-10 (큐 8): weekly 만 inline 펼침. 다른 type 은 옛 화면 전환.
-    // V4 (사용자 보고 2026-05-28 — 옵션 2 Story mode): preference 'story' 시 weekly 카드 click 도 풀스크린 story 직진.
-    const _weeklyStoryMode = !!(state.preferences && state.preferences.weeklyReviewLayout === 'story');
+    // V4 (사용자 명시 2026-05-29): preference 시스템 폐기 — 모음 진입 = 항상 inline classic.
+    //   Story 보고 싶으면 inline 의 "Story로 보기" hint click.
     const onClickJs = r.type === 'annual'
       ? `openAnnualReview(${r.year || 'null'})`
       : r.type === 'weekly'
-        ? (_weeklyStoryMode ? `_openWeeklyAsStoryFromCard('${r.id}', true)` : `_toggleWeeklyInlineExpand('${r.id}')`)
+        ? `_toggleWeeklyInlineExpand('${r.id}')`
         : `openSavedReview('${r.type}', '${escapeHtml(reviewKey)}', ${completedAtJs})`;
     const _isWeekly = r.type === 'weekly';
     const _ctaText = _isWeekly ? '▾ 펼쳐보기' : '▶ 같이 보자';
@@ -361,7 +361,7 @@ function _toggleWeeklyInlineExpand(reviewId) {
           <button class="wid-btn-close" type="button" onclick="event.stopPropagation(); _toggleWeeklyInlineExpand('${reviewId}')">접기</button>
           <button class="wid-btn-delete" type="button" onclick="event.stopPropagation(); deleteReview('weekly', '${escape(r.weekKey || '')}', '${r.completedAt || ''}')">🗑 삭제</button>
         </div>
-        ${(typeof _switchToStoryFromInline === 'function') ? `<button class="review-layout-hint" type="button" onclick="event.stopPropagation(); _switchToStoryFromInline('${reviewId}')">✦ Story mode 로 보기 (옵션 2 · 실험)</button>` : ''}
+        ${(typeof _switchToStoryFromInline === 'function') ? `<button class="review-layout-hint" type="button" onclick="event.stopPropagation(); _switchToStoryFromInline('${reviewId}')">Story로 보기</button>` : ''}
       </div>
     `;
     detail.style.display = 'block';
