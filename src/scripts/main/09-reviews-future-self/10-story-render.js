@@ -90,7 +90,8 @@ function renderWeeklyStoryReview(reviewData, opts) {
       return d >= _cutoff && d < _cutoffEnd;
     }).length;
 
-  const cycleLabel = (k) => k === 'sleep' ? '잠' : k === 'mode' ? '모드' : '·';
+  // 사용자 명시 2026-05-28: 옵션 1 inline 펼침 톤 — 😴/⚡/🌙 이모티콘 + 한국어.
+  const cycleLabel = (k) => k === 'sleep' ? '😴 수면' : k === 'mode' ? '⚡ 모드' : '🌙 외부';
 
   // one_word 글자 stagger fade — Spotify Wrapped 톤 + 한국 손글씨 *그어지는* 톤.
   //   각 글자 <span> + animation-delay (80ms × index). reduced-motion 시 한 번에 fade.
@@ -208,7 +209,7 @@ function renderWeeklyStoryReview(reviewData, opts) {
           ${pearlsThisWeek.length > 0 ? `
             <div class="rstory-pearl">
               <div class="rstory-pearl-label">이 주의 진주</div>
-              <div class="rstory-pearl-content">${escapeHtml(String(pearlsThisWeek[0].content || pearlsThisWeek[0].note || '').slice(0, 120))}</div>
+              ${_renderStoryPearlContent(pearlsThisWeek[0])}
             </div>
           ` : ''}
           ${chaptersCount > 0 ? `<div class="rstory-chapters-label"><span class="rstory-chip">챕터 <span class="rstory-num">${chaptersCount}</span></span></div>` : ''}
@@ -229,6 +230,13 @@ function renderWeeklyStoryReview(reviewData, opts) {
       hydrateDiaryPhotos(screen);
     }
   } catch (e) { console.warn('[story] hydrateDiaryPhotos:', e); }
+
+  // pearl 사진 비동기 hydrate (신 pearl.storageKey path).
+  try {
+    if (typeof hydratePearlMedia === 'function') {
+      hydratePearlMedia(screen);
+    }
+  } catch (e) { console.warn('[story] hydratePearlMedia:', e); }
 
   // 음악 state 초기화 — 페이지마다 다른 곡 + mute 토글.
   _storyMusicTracks = _weekMusicTracks;
@@ -446,6 +454,92 @@ function _updateMuteBtnUI() {
   if (!btn) return;
   btn.textContent = _storyMusicMuted ? '🔇' : '🔊';
   btn.setAttribute('aria-pressed', _storyMusicMuted ? 'false' : 'true');
+}
+
+// pearl 카테고리별 컨텐츠 렌더 — 음악(album art) / 사진(thumbnail) / 티켓 / 장소 / 텍스트.
+//   pearlImgHtml(pearl, 'photo') + hydratePearlMedia 가 신/옛 path 처리.
+function _renderStoryPearlContent(p) {
+  if (!p) return '<div class="rstory-pearl-note">(빈 진주)</div>';
+  const note = String(p.note || p.content || '').slice(0, 140);
+  // 음악
+  if (p.category === '음악' && p.track) {
+    const t = p.track;
+    return `
+      <div class="rstory-pearl-music">
+        ${t.artworkUrl ? `<img src="${escapeHtml(t.artworkUrl)}" alt="" class="rstory-pearl-art" loading="lazy" decoding="async">` : '<div class="rstory-pearl-art rstory-pearl-art-placeholder">♫</div>'}
+        <div class="rstory-pearl-music-meta">
+          ${t.title ? `<div class="rstory-pearl-music-title">${escapeHtml(t.title)}</div>` : ''}
+          ${t.artist ? `<div class="rstory-pearl-music-artist">${escapeHtml(t.artist)}</div>` : ''}
+          ${note ? `<div class="rstory-pearl-note rstory-pearl-note-tight">${escapeHtml(note)}</div>` : ''}
+        </div>
+      </div>
+    `;
+  }
+  // 사진 (신/옛 path)
+  if (typeof pearlHasMedia === 'function' && pearlHasMedia(p, 'photo')) {
+    const imgHtml = (typeof pearlImgHtml === 'function')
+      ? pearlImgHtml(p, 'photo', { cls: 'rstory-pearl-thumb' })
+      : '';
+    return `
+      <div class="rstory-pearl-photo-row">
+        <div class="rstory-pearl-thumb-wrap">${imgHtml}</div>
+        ${note ? `<div class="rstory-pearl-note rstory-pearl-note-tight">${escapeHtml(note)}</div>` : ''}
+      </div>
+    `;
+  }
+  // 비디오
+  if (typeof pearlHasMedia === 'function' && pearlHasMedia(p, 'videoThumbnail')) {
+    const imgHtml = (typeof pearlImgHtml === 'function')
+      ? pearlImgHtml(p, 'videoThumbnail', { cls: 'rstory-pearl-thumb' })
+      : '';
+    return `
+      <div class="rstory-pearl-photo-row">
+        <div class="rstory-pearl-thumb-wrap rstory-pearl-video-wrap">
+          ${imgHtml}
+          <span class="rstory-pearl-play">▶</span>
+        </div>
+        ${note ? `<div class="rstory-pearl-note rstory-pearl-note-tight">${escapeHtml(note)}</div>` : ''}
+      </div>
+    `;
+  }
+  // 티켓
+  if (p.category === '티켓') {
+    let dtStr = '';
+    if (p.eventDate) {
+      const d = new Date(p.eventDate);
+      if (!isNaN(d)) dtStr = d.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', weekday: 'short' });
+    }
+    return `
+      <div class="rstory-pearl-ticket">
+        <div class="rstory-pearl-ticket-icon" aria-hidden="true">🎫</div>
+        <div class="rstory-pearl-ticket-body">
+          ${p.venue ? `<div class="rstory-pearl-ticket-venue">${escapeHtml(p.venue)}</div>` : ''}
+          ${dtStr ? `<div class="rstory-pearl-ticket-date">${escapeHtml(dtStr)}</div>` : ''}
+          ${note ? `<div class="rstory-pearl-note rstory-pearl-note-tight">${escapeHtml(note)}</div>` : ''}
+        </div>
+      </div>
+    `;
+  }
+  // 장소
+  if (p.category === '장소') {
+    return `
+      <div class="rstory-pearl-place">
+        <span class="rstory-pearl-place-pin" aria-hidden="true">📍</span>
+        <div class="rstory-pearl-place-body">
+          ${p.venue ? `<div class="rstory-pearl-place-venue">${escapeHtml(p.venue)}</div>` : ''}
+          ${note ? `<div class="rstory-pearl-note rstory-pearl-note-tight">${escapeHtml(note)}</div>` : ''}
+        </div>
+      </div>
+    `;
+  }
+  // 텍스트 (음식·사람·순간·기타) — 작은 카테고리 mark
+  const catEmoji = ({ '음식': '🍴', '사람': '🫂', '순간': '✨' })[p.category] || '✦';
+  return `
+    <div class="rstory-pearl-text">
+      <span class="rstory-pearl-cat-mark" aria-hidden="true">${catEmoji}</span>
+      <span class="rstory-pearl-note">${escapeHtml(note || '(빈 진주)')}</span>
+    </div>
+  `;
 }
 
 function _toggleStoryMute() {
