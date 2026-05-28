@@ -172,10 +172,22 @@
    monochrome (deep navy + cream) + sky 액센트. Gowun Batang 손글씨체.
    ═══════════════════════════════════════════════════════════════ */
 
+/* ---- portal — body 직접 자식, .app stacking 떠남 ---- */
+#rstoryPortal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: auto;
+}
+#rstoryPortal:empty {
+  pointer-events: none;
+  display: none;
+}
+
 /* ---- 색·간격 토큰 ---- */
 .rstory-container {
   /* color */
-  --rs-bg: #0a0e14;
+  --rs-bg: #131829;
   --rs-bg-elev: rgba(232, 227, 216, 0.025);
   --rs-ink: #e8e3d8;
   --rs-ink-soft: rgba(232, 227, 216, 0.62);
@@ -197,16 +209,18 @@
 
   position: fixed;
   inset: 0;
-  /* 사용자 보고 2026-05-28: 앱 헤더 위로 떠야 ✕/🔇 보임. z-index 압도. */
-  z-index: 9999;
+  width: 100%;
+  height: 100%;
+  /* portal 자체가 z-index 9999 라 여기는 1 로 충분 */
+  z-index: 1;
   background:
-    /* sky orb top-left */
-    radial-gradient(ellipse 72% 52% at 14% 18%, rgba(126, 200, 227, 0.18) 0%, transparent 58%),
-    /* purple-ish orb bottom-right */
-    radial-gradient(ellipse 64% 50% at 88% 84%, rgba(168, 156, 214, 0.14) 0%, transparent 62%),
-    /* warm gold mid-left subtle */
-    radial-gradient(circle 38% at 8% 60%, rgba(201, 169, 110, 0.06) 0%, transparent 60%),
-    /* base navy */
+    /* sky orb top-left — 더 진하게 */
+    radial-gradient(ellipse 80% 55% at 12% 16%, rgba(126, 200, 227, 0.28) 0%, transparent 60%),
+    /* purple-ish orb bottom-right — 더 진하게 */
+    radial-gradient(ellipse 70% 55% at 88% 86%, rgba(168, 156, 214, 0.22) 0%, transparent 64%),
+    /* warm gold mid-left */
+    radial-gradient(circle 42% at 6% 58%, rgba(201, 169, 110, 0.10) 0%, transparent 60%),
+    /* base navy — 밝게 (#0a0e14 → #131829) */
     var(--rs-bg);
   color: var(--rs-ink);
   font-family: 'Pretendard', 'Noto Sans KR', system-ui, -apple-system, sans-serif;
@@ -232,14 +246,16 @@
   z-index: 0;
 }
 
-/* ---- 깊이감 vignette + soft inner spotlight (atmosphere layer 2) ---- */
+/* ---- 깊이감 — vignette 약화 + soft inner spotlight (atmosphere layer 2) ---- */
 .rstory-container::after {
   content: '';
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse 90% 65% at 50% 38%, rgba(232, 227, 216, 0.04) 0%, transparent 60%),
-    radial-gradient(ellipse at center, transparent 28%, rgba(0, 0, 0, 0.55) 100%);
+    /* soft top spotlight — 밝게 (read 가능성 ↑) */
+    radial-gradient(ellipse 95% 60% at 50% 32%, rgba(232, 227, 216, 0.06) 0%, transparent 65%),
+    /* vignette — 0.55 → 0.32 약화 */
+    radial-gradient(ellipse at center, transparent 40%, rgba(0, 0, 0, 0.32) 100%);
   pointer-events: none;
   z-index: 0;
 }
@@ -527,9 +543,11 @@
   border-radius: 1px;
   outline: 1px solid rgba(0, 0, 0, 0.08);
   outline-offset: -1px;
+  opacity: 1;
+  transition: opacity 0.3s ease;
 }
 .rstory-scene-photo.diary-loading {
-  background: rgba(0, 0, 0, 0.15);
+  opacity: 0;
 }
 .rstory-scene-photo.diary-load-fail {
   display: none;
@@ -810,7 +828,8 @@
   border-radius: 6px;
   overflow: hidden;
   flex-shrink: 0;
-  background: rgba(0, 0, 0, 0.25);
+  /* 어둠 원인 — background 제거. img hydrate 후 자체 색감 그대로. */
+  background: rgba(232, 227, 216, 0.05);
   outline: 1px solid rgba(255, 255, 255, 0.10);
   outline-offset: -1px;
   position: relative;
@@ -820,14 +839,16 @@
   height: 100%;
   object-fit: cover;
   display: block;
+  opacity: 1;
+  transition: opacity 0.25s ease;
 }
 .rstory-pearl-thumb.pearl-loading,
 .rstory-pearl-thumb.diary-loading {
-  opacity: 0.4;
+  opacity: 0;  /* 로드 전 = 완전 투명 (background tint 만 보임). hydrate 후 자동 1 (transition) */
 }
 .rstory-pearl-thumb.pearl-load-fail,
 .rstory-pearl-thumb.diary-load-fail {
-  opacity: 0.2;
+  opacity: 0.3;
 }
 .rstory-pearl-video-wrap .rstory-pearl-play {
   position: absolute;
@@ -31203,14 +31224,25 @@ function renderWeeklyStoryReview(reviewData, opts) {
     ? _renderReviewMoodChartInline(entriesForArc)
     : '';
 
-  // 이 주의 진주 1개 — 본인이 ✦한 것 중 가장 최근
+  // 이 주의 진주 1개 — 컨텐츠 풍부한 진주 우선 (음악 > 사진/비디오 > 티켓/장소 > 텍스트).
+  //   같은 priority 면 최근 순. 사용자 보고 2026-05-28: album art 보일 확률 ↑.
+  const _pearlPriority = (p) => {
+    if (p.category === '음악' && p.track && p.track.artworkUrl) return 1;
+    if (typeof pearlHasMedia === 'function' && (pearlHasMedia(p, 'photo') || pearlHasMedia(p, 'videoThumbnail'))) return 2;
+    if (p.category === '티켓' || p.category === '장소') return 3;
+    return 4;
+  };
   const pearlsThisWeek = (state.pearls || [])
     .filter(p => {
       if (p._deleted || !p.createdAt) return false;
       const d = new Date(p.createdAt);
       return d >= _cutoff && d < _cutoffEnd;
     })
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .sort((a, b) => {
+      const _p = _pearlPriority(a) - _pearlPriority(b);
+      if (_p !== 0) return _p;
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    })
     .slice(0, 1);
 
   // 챕터 수 — 작게 (1줄 표시만)
@@ -31354,20 +31386,30 @@ function renderWeeklyStoryReview(reviewData, opts) {
     </div>
   `;
 
-  screen.innerHTML = html;
-  // dataset 은 진입부에서 이미 박힘 — 토글/save 가 그걸 읽음.
+  // 사용자 보고 2026-05-28 ultrathink: root cause — .app 의 stacking context (position:relative + z-index:1 + max-width:520px).
+  //   그 안 fixed inset:0 + z-index:9999 도 .app 안에서만 작동 → PWA 헤더가 위에 덮임 + 좁은 컬럼만 차지.
+  //   해결: portal — rstory-container 를 body 직접 자식으로 만들어 .app 의 stacking 떠남.
+  //   screen-review 는 dataset 만 박힌 채 빈 placeholder 유지 (옵션 1 토글 시 다시 렌더).
+  screen.innerHTML = '';  // 옵션 1 잔재 제거 (dataset 은 그대로)
+  let portal = document.getElementById('rstoryPortal');
+  if (!portal) {
+    portal = document.createElement('div');
+    portal.id = 'rstoryPortal';
+    document.body.appendChild(portal);
+  }
+  portal.innerHTML = html;
 
   // entry 사진 비동기 hydrate (신 photoStorageKey path).
   try {
     if (typeof hydrateDiaryPhotos === 'function') {
-      hydrateDiaryPhotos(screen);
+      hydrateDiaryPhotos(portal);
     }
   } catch (e) { console.warn('[story] hydrateDiaryPhotos:', e); }
 
   // pearl 사진 비동기 hydrate (신 pearl.storageKey path).
   try {
     if (typeof hydratePearlMedia === 'function') {
-      hydratePearlMedia(screen);
+      hydratePearlMedia(portal);
     }
   } catch (e) { console.warn('[story] hydratePearlMedia:', e); }
 
@@ -31529,6 +31571,9 @@ function _updateStoryProgress() {
 
 function closeWeeklyStoryReview() {
   _stopStoryAudio();
+  // portal cleanup (사용자 보고 2026-05-28: stacking context root cause fix).
+  const portal = document.getElementById('rstoryPortal');
+  if (portal) portal.innerHTML = '';
   if (typeof showScreen === 'function') showScreen('archive-reviews');
 }
 
@@ -31599,7 +31644,7 @@ function _renderStoryPearlContent(p) {
     const t = p.track;
     return `
       <div class="rstory-pearl-music">
-        ${t.artworkUrl ? `<img src="${escapeHtml(t.artworkUrl)}" alt="" class="rstory-pearl-art" loading="lazy" decoding="async">` : '<div class="rstory-pearl-art rstory-pearl-art-placeholder">♫</div>'}
+        ${t.artworkUrl ? `<img src="${escapeHtml(t.artworkUrl)}" alt="" class="rstory-pearl-art" decoding="async">` : '<div class="rstory-pearl-art rstory-pearl-art-placeholder">♫</div>'}
         <div class="rstory-pearl-music-meta">
           ${t.title ? `<div class="rstory-pearl-music-title">${escapeHtml(t.title)}</div>` : ''}
           ${t.artist ? `<div class="rstory-pearl-music-artist">${escapeHtml(t.artist)}</div>` : ''}
@@ -31697,8 +31742,12 @@ function toggleWeeklyReviewLayout() {
   const cur = state.preferences.weeklyReviewLayout || 'classic';
   state.preferences.weeklyReviewLayout = (cur === 'story') ? 'classic' : 'story';
   try { if (typeof saveState === 'function') saveState(); } catch {}
-  // story → classic 토글 시 audio cleanup
-  if (cur === 'story') _stopStoryAudio();
+  // story → classic 토글 시 audio + portal cleanup
+  if (cur === 'story') {
+    _stopStoryAudio();
+    const portal = document.getElementById('rstoryPortal');
+    if (portal) portal.innerHTML = '';
+  }
   // archive inline 출신이고 story→classic 인 경우 모음으로 복귀
   if (cur === 'story' && _storyFromInline) {
     _storyFromInline = false;
@@ -75105,7 +75154,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.351-weekly-story-pearl-atmosphere';
+const APP_VERSION = 'v4.0.352-weekly-story-portal-fix';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 

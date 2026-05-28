@@ -70,14 +70,25 @@ function renderWeeklyStoryReview(reviewData, opts) {
     ? _renderReviewMoodChartInline(entriesForArc)
     : '';
 
-  // 이 주의 진주 1개 — 본인이 ✦한 것 중 가장 최근
+  // 이 주의 진주 1개 — 컨텐츠 풍부한 진주 우선 (음악 > 사진/비디오 > 티켓/장소 > 텍스트).
+  //   같은 priority 면 최근 순. 사용자 보고 2026-05-28: album art 보일 확률 ↑.
+  const _pearlPriority = (p) => {
+    if (p.category === '음악' && p.track && p.track.artworkUrl) return 1;
+    if (typeof pearlHasMedia === 'function' && (pearlHasMedia(p, 'photo') || pearlHasMedia(p, 'videoThumbnail'))) return 2;
+    if (p.category === '티켓' || p.category === '장소') return 3;
+    return 4;
+  };
   const pearlsThisWeek = (state.pearls || [])
     .filter(p => {
       if (p._deleted || !p.createdAt) return false;
       const d = new Date(p.createdAt);
       return d >= _cutoff && d < _cutoffEnd;
     })
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .sort((a, b) => {
+      const _p = _pearlPriority(a) - _pearlPriority(b);
+      if (_p !== 0) return _p;
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    })
     .slice(0, 1);
 
   // 챕터 수 — 작게 (1줄 표시만)
@@ -221,20 +232,30 @@ function renderWeeklyStoryReview(reviewData, opts) {
     </div>
   `;
 
-  screen.innerHTML = html;
-  // dataset 은 진입부에서 이미 박힘 — 토글/save 가 그걸 읽음.
+  // 사용자 보고 2026-05-28 ultrathink: root cause — .app 의 stacking context (position:relative + z-index:1 + max-width:520px).
+  //   그 안 fixed inset:0 + z-index:9999 도 .app 안에서만 작동 → PWA 헤더가 위에 덮임 + 좁은 컬럼만 차지.
+  //   해결: portal — rstory-container 를 body 직접 자식으로 만들어 .app 의 stacking 떠남.
+  //   screen-review 는 dataset 만 박힌 채 빈 placeholder 유지 (옵션 1 토글 시 다시 렌더).
+  screen.innerHTML = '';  // 옵션 1 잔재 제거 (dataset 은 그대로)
+  let portal = document.getElementById('rstoryPortal');
+  if (!portal) {
+    portal = document.createElement('div');
+    portal.id = 'rstoryPortal';
+    document.body.appendChild(portal);
+  }
+  portal.innerHTML = html;
 
   // entry 사진 비동기 hydrate (신 photoStorageKey path).
   try {
     if (typeof hydrateDiaryPhotos === 'function') {
-      hydrateDiaryPhotos(screen);
+      hydrateDiaryPhotos(portal);
     }
   } catch (e) { console.warn('[story] hydrateDiaryPhotos:', e); }
 
   // pearl 사진 비동기 hydrate (신 pearl.storageKey path).
   try {
     if (typeof hydratePearlMedia === 'function') {
-      hydratePearlMedia(screen);
+      hydratePearlMedia(portal);
     }
   } catch (e) { console.warn('[story] hydratePearlMedia:', e); }
 
@@ -396,6 +417,9 @@ function _updateStoryProgress() {
 
 function closeWeeklyStoryReview() {
   _stopStoryAudio();
+  // portal cleanup (사용자 보고 2026-05-28: stacking context root cause fix).
+  const portal = document.getElementById('rstoryPortal');
+  if (portal) portal.innerHTML = '';
   if (typeof showScreen === 'function') showScreen('archive-reviews');
 }
 
@@ -466,7 +490,7 @@ function _renderStoryPearlContent(p) {
     const t = p.track;
     return `
       <div class="rstory-pearl-music">
-        ${t.artworkUrl ? `<img src="${escapeHtml(t.artworkUrl)}" alt="" class="rstory-pearl-art" loading="lazy" decoding="async">` : '<div class="rstory-pearl-art rstory-pearl-art-placeholder">♫</div>'}
+        ${t.artworkUrl ? `<img src="${escapeHtml(t.artworkUrl)}" alt="" class="rstory-pearl-art" decoding="async">` : '<div class="rstory-pearl-art rstory-pearl-art-placeholder">♫</div>'}
         <div class="rstory-pearl-music-meta">
           ${t.title ? `<div class="rstory-pearl-music-title">${escapeHtml(t.title)}</div>` : ''}
           ${t.artist ? `<div class="rstory-pearl-music-artist">${escapeHtml(t.artist)}</div>` : ''}
@@ -564,8 +588,12 @@ function toggleWeeklyReviewLayout() {
   const cur = state.preferences.weeklyReviewLayout || 'classic';
   state.preferences.weeklyReviewLayout = (cur === 'story') ? 'classic' : 'story';
   try { if (typeof saveState === 'function') saveState(); } catch {}
-  // story → classic 토글 시 audio cleanup
-  if (cur === 'story') _stopStoryAudio();
+  // story → classic 토글 시 audio + portal cleanup
+  if (cur === 'story') {
+    _stopStoryAudio();
+    const portal = document.getElementById('rstoryPortal');
+    if (portal) portal.innerHTML = '';
+  }
   // archive inline 출신이고 story→classic 인 경우 모음으로 복귀
   if (cur === 'story' && _storyFromInline) {
     _storyFromInline = false;
