@@ -29777,7 +29777,7 @@ function _buildReviewPrompt(type, data) {
   "one_word_weekly": "이번 주 momentum 한 단어 — 운동·진행 어휘 (예: \\"정착중\\", \\"가속중\\", \\"회복중\\", \\"휘청중\\", \\"재정비\\", \\"몰입\\", \\"숨고르기\\"). 한 단어.",
   "momentum_line": "MOMENTUM 한 단어 보충 한 문장 — 소라고동 톤. 그 한 단어가 어떻게 드러났나 짧게. 살짝 격려 톤 OK. 예: '활력이 바닥일 때 오히려 제일 많이 만들어냈어 — 그 자체로 대단해' / '자고 일어나면 다시 출발선이라 휘청대도 OK, 일주일 끌고 왔어'. 분석가 X 친구 톤.",
   "scenes": [
-    "이번 주 장면 1 (30-50자, 일기 톤, when + what + feeling 자연 한 문장. 예: '월요일 저녁 엄마 통화 후 30분 멍 — 울컥')",
+    "이번 주 장면 1 (30-50자, 일기 톤, when + what + feeling 자연 한 문장. 예: '월요일 저녁 엄마 통화 후 30분 멍 — 울컥'). [선택 우선순위 — 사용자 명시 2026-05-29] 내용 중요도가 비슷한 entry 들 중에선 '사진있음:true' 인 entry 의 일을 우선 선택 (Story mode 가 폴라로이드 시각 surface 로 회고). 단 사진이 있다는 이유만으로 더 중요한 entry (mood drop / 큰 사건 / 핵심 결정 등) 를 빠뜨리지 말 것 — 사진 = 동률 시 tiebreaker 일 뿐.",
     "이번 주 장면 2",
     "이번 주 장면 3"
   ],
@@ -29862,7 +29862,16 @@ JSON 객체 하나만 반환. markdown code fence X. 다른 글 X. 모든 필수
     const dt = new Date(+mm[1], +mm[2] - 1, +mm[3]);
     return isNaN(dt.getTime()) ? '' : _krDow[dt.getDay()] + '요일';
   };
-  const _entriesForPrompt = entriesInRange.map(e => ({ 요일: _dowLabel(e.date), ...e }));
+  // 사용자 명시 2026-05-29: 사진 있는 entry 를 scene tiebreaker 로 쓰기 위해 '사진있음' boolean 주입.
+  //   원본 photo / photos / photoStorageKeys 는 strip — dataURL 박혀있으면 prompt 폭증 위험.
+  //   boolean 만 보내도 AI 가 우선순위 판단 가능.
+  const _entriesForPrompt = entriesInRange.map(e => {
+    const _hasPhoto = (Array.isArray(e.photoStorageKeys) && e.photoStorageKeys.length > 0)
+      || (Array.isArray(e.photos) && e.photos.length > 0)
+      || !!e.photo;
+    const { photo, photos, photoStorageKeys, ...rest } = e;
+    return { 요일: _dowLabel(e.date), 사진있음: _hasPhoto, ...rest };
+  });
   const volatile = `[기간 데이터]
 [중요 — 요일] 아래 각 체크인/챕터의 '요일' 필드를 그대로 써. date 문자열로 요일을 직접 계산하지 마 (요일 계산은 틀리기 쉬움). 장면·패턴에서 요일을 언급할 땐 반드시 '요일' 필드 기준.
 체크인: ${JSON.stringify(_entriesForPrompt, null, 2).slice(0, 4000)}
@@ -75101,7 +75110,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.356-story-polaroid-220-text-down';
+const APP_VERSION = 'v4.0.357-weekly-scene-photo-tiebreaker';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 
