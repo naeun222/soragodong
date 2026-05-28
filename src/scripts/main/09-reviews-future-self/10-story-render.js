@@ -5,18 +5,18 @@
 //
 //   Page 1 Hero: one_word_weekly + momentum_line + mood arc (라벨 X, 곡선 only)
 //   Page 2 Scenes: scenes 3개 carousel (좌우 swipe / dot)
-//   Page 3 Reflection: flow + cycles 1-2개 + soft_notice + 이 주의 진주 1 + 챕터 수 + 행동 버튼
+//   Page 3 Reflection: flow + cycles 1-2개 + soft_notice + 이 주의 진주 1 + 행동 버튼
 //
 //   인터랙션: 좌우 swipe / tap 좌우 edge / 위 swipe = 다음. dot tap = 직접 jump.
-//   토글: 우상단 ↺ Classic — 즉시 옵션 1 로 복귀 (state.preferences.weeklyReviewLayout).
+//   마지막 페이지에서 다음 = 자동 닫기 (사용자 명시 2026-05-29).
+//   음악 = 항상 ON, 사용자 환경 mute 토글 폐기 (사용자 명시 2026-05-29).
 
 let _storyPageIdx = 0;
 let _storySceneIdx = 0;
 // V4 (사용자 보고 2026-05-28): archive-reviews inline 출신 표시 — ↺ Classic 시 모음으로 복귀 (풀스크린 classic 진입 대신).
 let _storyFromInline = false;
-// V4 (사용자 요청 2026-05-28): 페이지별 음악 자동 재생.
+// V4 (사용자 요청 2026-05-28): 페이지별 음악 자동 재생. 사용자 명시 2026-05-29: mute X, 항상 ON.
 let _storyMusicTracks = [];
-let _storyMusicMuted = true;
 let _storyAudio = null;
 
 function renderWeeklyStoryReview(reviewData, opts) {
@@ -91,16 +91,6 @@ function renderWeeklyStoryReview(reviewData, opts) {
     })
     .slice(0, 1);
 
-  // 챕터 수 — 작게 (1줄 표시만)
-  const chaptersCount = (state.chatArchive || [])
-    .filter(c => {
-      if (c._deleted || c.isSimulation) return false;
-      const dt = c.generatedAt || c.createdAt || (c.date ? c.date + 'T12:00:00' : null);
-      if (!dt) return false;
-      const d = new Date(dt);
-      return d >= _cutoff && d < _cutoffEnd;
-    }).length;
-
   // 사용자 명시 2026-05-28: 옵션 1 inline 펼침 톤 — 😴/⚡/🌙 이모티콘 + 한국어.
   const cycleLabel = (k) => k === 'sleep' ? '😴 수면' : k === 'mode' ? '⚡ 모드' : '🌙 외부';
 
@@ -113,15 +103,17 @@ function renderWeeklyStoryReview(reviewData, opts) {
       }).join('')
     : '';
 
-  // 사용자 명시 2026-05-28: scene.when 의 한국어 요일 → 그 요일 entry 매칭 → 사진 표시.
-  //   70-80% 정확. diaryImgHtml 가 신/옛 photo path 다 처리. hydrateDiaryPhotos 가 비동기 hydrate.
+  // 사용자 명시 2026-05-29: scene → entry 매칭 보강.
+  //   1) scene.when 안 한국어 요일 매칭 (신 schema, object)
+  //   2) scene.what 안 한국어 요일 매칭 (옛 schema, string normalize 후 when 비어있음)
+  //   3) 둘 다 매칭 실패면 → 사진 있는 entry 중 sceneIdx 위치 fallback (순서대로)
+  //   diaryImgHtml 이 신/옛 photo path 다 처리 (photoStorageKeys / photos / photo).
+  //   사진 3장 이상 entry 도 idx=0 = 첫 사진.
   const _KR_DAYS = ['일', '월', '화', '수', '목', '금', '토'];
-  const _entryForScene = (scene) => {
-    const when = String((scene && scene.when) || '');
-    if (!when) return null;
+  const _findEntryByDayKeyword = (text) => {
+    if (!text) return null;
     for (let i = 0; i < _KR_DAYS.length; i++) {
-      // '월요일' / '월요' / '월' 시작 매칭
-      if (when.includes(_KR_DAYS[i] + '요일') || when.includes(_KR_DAYS[i] + '요') || when.startsWith(_KR_DAYS[i])) {
+      if (text.includes(_KR_DAYS[i] + '요일') || text.includes(_KR_DAYS[i] + '요') || text.startsWith(_KR_DAYS[i])) {
         const matched = entriesForArc.find(e => {
           const d = new Date(e.date + 'T12:00:00');
           return d.getDay() === i;
@@ -131,29 +123,44 @@ function renderWeeklyStoryReview(reviewData, opts) {
     }
     return null;
   };
-  const _scenePhotoHtml = (scene) => {
-    const ent = _entryForScene(scene);
+  // 사진 있는 entry 만 모음 (fallback 용)
+  const _entriesWithPhoto = entriesForArc.filter(e => (typeof diaryEntryHasPhoto === 'function' && diaryEntryHasPhoto(e, 0)));
+  const _entryForScene = (scene, sceneIdx) => {
+    // 1) when 요일 매칭
+    const fromWhen = _findEntryByDayKeyword(String((scene && scene.when) || ''));
+    if (fromWhen) return fromWhen;
+    // 2) what 안 요일 매칭 (string scenes — when 비어있을 때)
+    const fromWhat = _findEntryByDayKeyword(String((scene && scene.what) || ''));
+    if (fromWhat) return fromWhat;
+    // 3) 사진 있는 entry 중 sceneIdx 위치 fallback
+    if (_entriesWithPhoto[sceneIdx]) return _entriesWithPhoto[sceneIdx];
+    return null;
+  };
+  const _scenePhotoHtml = (scene, sceneIdx) => {
+    const ent = _entryForScene(scene, sceneIdx);
     if (!ent) return '';
     if (typeof diaryEntryHasPhoto !== 'function' || !diaryEntryHasPhoto(ent, 0)) return '';
     if (typeof diaryImgHtml !== 'function') return '';
     return diaryImgHtml(ent, 0, { cls: 'rstory-scene-photo', alt: '' });
   };
 
-  // 사용자 명시 2026-05-28: 음악 자동 재생 — 그 주 entry.music + 음악 pearl 모음. 디폴트 muted.
+  // 사용자 명시 2026-05-29: 음악 자동 재생 — 그 주 음악 진주 우선 → entry.music. 항상 ON (mute X).
   //   페이지 이동 시 곡 전환. 음악 1 = 모든 페이지 같은 곡 / 2 = 1곡: page1 / 2곡: page2-3 / 3+ = idx 매핑.
   const _weekMusicTracks = [];
-  entriesForArc.forEach(e => {
-    if (e.music && e.music.previewUrl) _weekMusicTracks.push(e.music);
-  });
+  // 1) 음악 pearl 먼저 — 사용자가 명시 의도로 저장한 것이라 우선도 ↑
   (state.pearls || []).forEach(p => {
     if (p._deleted || p.category !== '음악') return;
     if (!p.track || !p.track.previewUrl) return;
     if (!p.createdAt) return;
     const d = new Date(p.createdAt);
     if (d < _cutoff || d >= _cutoffEnd) return;
-    // 중복 id 제거
-    if (_weekMusicTracks.some(t => t.id === p.track.id || t.previewUrl === p.track.previewUrl)) return;
     _weekMusicTracks.push(p.track);
+  });
+  // 2) entry.music — pearl 에 없는 것만
+  entriesForArc.forEach(e => {
+    if (!e.music || !e.music.previewUrl) return;
+    if (_weekMusicTracks.some(t => t.id === e.music.id || t.previewUrl === e.music.previewUrl)) return;
+    _weekMusicTracks.push(e.music);
   });
 
   const html = `
@@ -164,7 +171,6 @@ function renderWeeklyStoryReview(reviewData, opts) {
         <div class="rstory-progress-bar" data-step="2"></div>
       </div>
       <button class="rstory-toggle" type="button" onclick="toggleWeeklyReviewLayout()" aria-label="Classic 으로 돌아가기">↺ Classic</button>
-      ${_weekMusicTracks.length > 0 ? `<button class="rstory-mute" id="rstoryMuteBtn" type="button" onclick="_toggleStoryMute()" aria-label="음악 켜기/끄기" title="이 주 음악 ${_weekMusicTracks.length}곡">🔇</button>` : ''}
       <button class="rstory-close" type="button" onclick="closeWeeklyStoryReview()" aria-label="닫기">✕</button>
 
       <div class="rstory-page rstory-page-hero active" data-page="0" role="region" aria-label="이번 주 한 단어">
@@ -184,7 +190,7 @@ function renderWeeklyStoryReview(reviewData, opts) {
         ` : `
           <div class="rstory-scenes-carousel">
             ${scenes.map((s, i) => {
-              const _photo = _scenePhotoHtml(s);
+              const _photo = _scenePhotoHtml(s, i);
               return `
               <div class="rstory-scene ${i === 0 ? 'active' : ''}" data-scene="${i}">
                 ${s.when ? `<div class="rstory-scene-when">${escapeHtml(s.when)}</div>` : ''}
@@ -223,7 +229,6 @@ function renderWeeklyStoryReview(reviewData, opts) {
               ${_renderStoryPearlContent(pearlsThisWeek[0])}
             </div>
           ` : ''}
-          ${chaptersCount > 0 ? `<div class="rstory-chapters-label"><span class="rstory-chip">챕터 <span class="rstory-num">${chaptersCount}</span></span></div>` : ''}
         </div>
         <div class="rstory-actions">
           <button class="rstory-action-secondary" type="button" onclick="closeWeeklyStoryReview()">← 모음으로</button>
@@ -252,12 +257,11 @@ function renderWeeklyStoryReview(reviewData, opts) {
     }
   } catch (e) { console.warn('[story] hydratePearlMedia:', e); }
 
-  // 음악 state 초기화 — 페이지마다 다른 곡 + mute 토글.
+  // 음악 state 초기화 — 페이지마다 다른 곡. 항상 ON (사용자 명시 2026-05-29).
+  //   진입 = "✦ Story mode 로 보기" / 카드 click 의 user gesture context 결과라 autoplay 가능.
+  //   못 켜져도 (모바일 stricter) 첫 swipe / tap 에서 자동 재시도.
   _storyMusicTracks = _weekMusicTracks;
-  _storyMusicMuted = !!(state.preferences && state.preferences.weeklyStoryMuted !== false);
-  // 디폴트 muted = true (사용자 환경 부담 회피). 키 weeklyStoryMuted !== false 면 muted.
-  _updateMuteBtnUI();
-  // 첫 진입 = Page 1 (autoplay 정책: user gesture 없으므로 mute 일 땐 src 만 set, play X)
+  _playStoryAudioForPage(0);
 
   _initStoryReviewInteractions();
 }
@@ -343,7 +347,7 @@ function _initStoryReviewInteractions() {
     document.addEventListener('visibilitychange', () => {
       if (document.hidden && _storyAudio && !_storyAudio.paused) {
         try { _storyAudio.pause(); } catch {}
-      } else if (!document.hidden && !_storyMusicMuted && document.getElementById('rstoryContainer')) {
+      } else if (!document.hidden && document.getElementById('rstoryContainer')) {
         _playStoryAudioForPage(_storyPageIdx);
       }
     });
@@ -353,9 +357,12 @@ function _initStoryReviewInteractions() {
 }
 
 // dx < 0 = 다음 (왼쪽으로 swipe). dx > 0 = 이전.
+//   사용자 명시 2026-05-29: 마지막 페이지에서 '다음' = 자동 닫기.
 function _storySwipeHorizontal(dx) {
   const container = document.getElementById('rstoryContainer');
   if (!container) return;
+  const pages = container.querySelectorAll('.rstory-page');
+  const lastIdx = pages.length - 1;
   if (_storyPageIdx === 1) {
     const scenes = container.querySelectorAll('.rstory-scene');
     if (dx < 0) {
@@ -366,8 +373,13 @@ function _storySwipeHorizontal(dx) {
       else _storyGotoPage(_storyPageIdx - 1);
     }
   } else {
-    if (dx < 0) _storyGotoPage(_storyPageIdx + 1);
-    else _storyGotoPage(_storyPageIdx - 1);
+    if (dx < 0) {
+      // 마지막 페이지에서 '다음' = 자동 닫기
+      if (_storyPageIdx >= lastIdx) { closeWeeklyStoryReview(); return; }
+      _storyGotoPage(_storyPageIdx + 1);
+    } else {
+      _storyGotoPage(_storyPageIdx - 1);
+    }
   }
 }
 
@@ -375,7 +387,9 @@ function _storyGotoPage(next) {
   const container = document.getElementById('rstoryContainer');
   if (!container) return;
   const pages = container.querySelectorAll('.rstory-page');
-  if (next < 0 || next >= pages.length) return;
+  // 마지막 페이지 + 1 = 자동 닫기 (사용자 명시 2026-05-29)
+  if (next >= pages.length) { closeWeeklyStoryReview(); return; }
+  if (next < 0) return;
   if (pages[_storyPageIdx]) pages[_storyPageIdx].classList.remove('active');
   _storyPageIdx = next;
   if (pages[_storyPageIdx]) pages[_storyPageIdx].classList.add('active');
@@ -442,7 +456,6 @@ function _ensureStoryAudio() {
 }
 
 function _playStoryAudioForPage(pageIdx) {
-  if (_storyMusicMuted) return;
   if (!_storyMusicTracks || _storyMusicTracks.length === 0) return;
   const idx = _trackIdxForPage(pageIdx, _storyMusicTracks.length);
   if (idx < 0) return;
@@ -466,13 +479,6 @@ function _stopStoryAudio() {
   if (!_storyAudio) return;
   try { _storyAudio.pause(); } catch {}
   try { _storyAudio.src = ''; } catch {}
-}
-
-function _updateMuteBtnUI() {
-  const btn = document.getElementById('rstoryMuteBtn');
-  if (!btn) return;
-  btn.textContent = _storyMusicMuted ? '🔇' : '🔊';
-  btn.setAttribute('aria-pressed', _storyMusicMuted ? 'false' : 'true');
 }
 
 // pearl 카테고리별 컨텐츠 렌더 — 음악(album art) / 사진(thumbnail) / 티켓 / 장소 / 텍스트.
@@ -559,20 +565,6 @@ function _renderStoryPearlContent(p) {
       <span class="rstory-pearl-note">${escapeHtml(note || '(빈 진주)')}</span>
     </div>
   `;
-}
-
-function _toggleStoryMute() {
-  _storyMusicMuted = !_storyMusicMuted;
-  if (!state.preferences) state.preferences = {};
-  // muted=true 면 weeklyStoryMuted=true 저장. unmuted 면 false.
-  state.preferences.weeklyStoryMuted = _storyMusicMuted;
-  try { if (typeof saveState === 'function') saveState(); } catch {}
-  _updateMuteBtnUI();
-  if (_storyMusicMuted) {
-    if (_storyAudio) { try { _storyAudio.pause(); } catch {} }
-  } else {
-    _playStoryAudioForPage(_storyPageIdx);
-  }
 }
 
 // 토글 — Story ↔ Classic 즉시 swap. 같은 review 다시 렌더.

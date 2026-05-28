@@ -13,26 +13,27 @@
 
 /* ---- 색·간격 토큰 ---- */
 .rstory-container {
-  /* color */
-  --rs-bg: #131829;
-  --rs-bg-elev: rgba(232, 227, 216, 0.025);
-  --rs-ink: #e8e3d8;
-  --rs-ink-soft: rgba(232, 227, 216, 0.62);
-  --rs-ink-mute: rgba(232, 227, 216, 0.38);
-  --rs-ink-dim: rgba(232, 227, 216, 0.18);
-  --rs-line: rgba(232, 227, 216, 0.10);
-  --rs-accent: #7ec8e3;
-  --rs-accent-soft: rgba(126, 200, 227, 0.62);
-  --rs-accent-mute: rgba(126, 200, 227, 0.22);
-  --rs-accent-wash: rgba(126, 200, 227, 0.06);
+  /* color — 사용자 명시 2026-05-29: Moonpaper 톤. base 더 밝게 (#131829 → #2a2e44 indigo).
+     달밤 cream-on-navy 종이 느낌. vignette 거의 제거, noise 약화 (자극 ↓ ADHD 친화). */
+  --rs-bg: #2a2e44;
+  --rs-bg-elev: rgba(232, 227, 216, 0.04);
+  --rs-ink: #ece3d4;
+  --rs-ink-soft: rgba(236, 227, 212, 0.66);
+  --rs-ink-mute: rgba(236, 227, 212, 0.42);
+  --rs-ink-dim: rgba(236, 227, 212, 0.20);
+  --rs-line: rgba(236, 227, 212, 0.12);
+  --rs-accent: #8fd2ea;
+  --rs-accent-soft: rgba(143, 210, 234, 0.66);
+  --rs-accent-mute: rgba(143, 210, 234, 0.26);
+  --rs-accent-wash: rgba(143, 210, 234, 0.08);
   /* radius */
   --rs-r-card: 14px;
   --rs-r-pill: 999px;
   --rs-r-chip: 8px;
   /* shadow */
-  --rs-shadow-card: 0 1px 0 rgba(232, 227, 216, 0.04) inset,
-                     0 18px 32px -24px rgba(0, 0, 0, 0.7),
-                     0 4px 8px -4px rgba(0, 0, 0, 0.4);
+  --rs-shadow-card: 0 1px 0 rgba(236, 227, 212, 0.05) inset,
+                     0 18px 32px -24px rgba(0, 0, 0, 0.55),
+                     0 4px 8px -4px rgba(0, 0, 0, 0.3);
 
   /* 사용자 명시 2026-05-29: .screen 안 absolute (헤더/탭 사이 영역 fill). fixed X. */
   position: absolute;
@@ -41,13 +42,13 @@
   height: 100%;
   z-index: 1;
   background:
-    /* sky orb top-left — 더 진하게 */
-    radial-gradient(ellipse 80% 55% at 12% 16%, rgba(126, 200, 227, 0.28) 0%, transparent 60%),
-    /* purple-ish orb bottom-right — 더 진하게 */
-    radial-gradient(ellipse 70% 55% at 88% 86%, rgba(168, 156, 214, 0.22) 0%, transparent 64%),
+    /* sky orb top-left — 살짝 약화 (base 자체가 밝아져서) */
+    radial-gradient(ellipse 80% 55% at 12% 16%, rgba(143, 210, 234, 0.22) 0%, transparent 60%),
+    /* purple-ish orb bottom-right */
+    radial-gradient(ellipse 70% 55% at 88% 86%, rgba(168, 156, 214, 0.18) 0%, transparent 64%),
     /* warm gold mid-left */
     radial-gradient(circle 42% at 6% 58%, rgba(201, 169, 110, 0.10) 0%, transparent 60%),
-    /* base navy — 밝게 (#0a0e14 → #131829) */
+    /* base indigo — Moonpaper */
     var(--rs-bg);
   color: var(--rs-ink);
   font-family: 'Pretendard', 'Noto Sans KR', system-ui, -apple-system, sans-serif;
@@ -60,29 +61,29 @@
   isolation: isolate;
 }
 
-/* ---- 오래된 종이 noise (atmosphere layer 1) ---- */
+/* ---- 오래된 종이 noise (atmosphere layer 1) — Moonpaper 약화 (자극 ↓ ADHD 친화) ---- */
 .rstory-container::before {
   content: '';
   position: absolute;
   inset: 0;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='4'/><feColorMatrix values='0 0 0 0 0.91 0 0 0 0 0.89 0 0 0 0 0.85 0 0 0 0.05 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>");
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='4'/><feColorMatrix values='0 0 0 0 0.93 0 0 0 0 0.89 0 0 0 0 0.83 0 0 0 0.04 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>");
   background-size: 200px 200px;
   pointer-events: none;
-  opacity: 0.55;
+  opacity: 0.35;
   mix-blend-mode: screen;
   z-index: 0;
 }
 
-/* ---- 깊이감 — vignette 약화 + soft inner spotlight (atmosphere layer 2) ---- */
+/* ---- 깊이감 — vignette 거의 제거 (Moonpaper) + soft top spotlight ---- */
 .rstory-container::after {
   content: '';
   position: absolute;
   inset: 0;
   background:
-    /* soft top spotlight — 밝게 (read 가능성 ↑) */
-    radial-gradient(ellipse 95% 60% at 50% 32%, rgba(232, 227, 216, 0.06) 0%, transparent 65%),
-    /* vignette — 0.55 → 0.32 약화 */
-    radial-gradient(ellipse at center, transparent 40%, rgba(0, 0, 0, 0.32) 100%);
+    /* soft top spotlight — 종이 펼친 듯 */
+    radial-gradient(ellipse 95% 60% at 50% 28%, rgba(236, 227, 212, 0.08) 0%, transparent 68%),
+    /* vignette — 0.32 → 0.16 더 약화 */
+    radial-gradient(ellipse at center, transparent 45%, rgba(0, 0, 0, 0.16) 100%);
   pointer-events: none;
   z-index: 0;
 }
@@ -154,46 +155,21 @@
 .rstory-toggle { left: 12px; font-size: 11px; }
 .rstory-close { right: 12px; font-size: 16px; line-height: 1; }
 
-/* mute toggle — 우상단 ✕ 옆 (right: 52px). 음악 0 = 박힘 X */
-.rstory-mute {
-  position: absolute;
-  top: calc(env(safe-area-inset-top, 0px) + 24px);
-  right: 52px;
-  background: transparent;
-  border: 0;
-  color: var(--rs-ink-soft);
-  padding: 10px 12px;
-  font-size: 14px;
-  min-height: 40px;
-  min-width: 40px;
-  cursor: pointer;
-  z-index: 11;
-  -webkit-tap-highlight-color: transparent;
-  transition-property: color, opacity, transform;
-  transition-duration: 0.2s;
-  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
-}
-.rstory-mute:hover { color: var(--rs-ink); }
-.rstory-mute:active { transform: scale(0.92); }
-.rstory-mute:focus-visible {
-  outline: 1px solid var(--rs-accent-mute);
-  outline-offset: 4px;
-  border-radius: 6px;
-}
-.rstory-mute[aria-pressed="true"] { color: var(--rs-accent); }
-
 /* ---- 페이지 ---- */
+/* 사용자 명시 2026-05-29: 콘텐츠 아래 쏠림 → 위쪽 정렬 통일.
+   page 1, 2, 3 다 padding-top 84px + flex-start. 위에서부터 호흡. */
 .rstory-page {
   position: absolute;
   inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 88px 32px calc(env(safe-area-inset-bottom, 0px) + 64px);
+  justify-content: flex-start;
+  padding: 84px 32px calc(env(safe-area-inset-bottom, 0px) + 80px);
   text-align: center;
   opacity: 0;
   pointer-events: none;
+  overflow-y: auto;
   transition-property: opacity;
   transition-duration: 0.42s;
   transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
@@ -444,10 +420,7 @@
 }
 
 /* ───── Page 3 — Reflection ───── */
-.rstory-page-reflect {
-  justify-content: flex-start;
-  padding-top: 84px;
-}
+/* 기본 .rstory-page 가 이미 flex-start + padding-top 84px (사용자 명시 2026-05-29 통일) */
 .rstory-reflect-stack {
   display: flex;
   flex-direction: column;
@@ -746,32 +719,6 @@
   flex-shrink: 0;
   padding-top: 2px;
   color: var(--rs-accent);
-}
-
-/* chapters chip */
-.rstory-chapters-label {
-  display: flex;
-  justify-content: center;
-}
-.rstory-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 12px;
-  border-radius: var(--rs-r-pill);
-  border: 1px solid var(--rs-line);
-  background: transparent;
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--rs-ink-soft);
-  font-variant-numeric: tabular-nums;
-}
-.rstory-num {
-  color: var(--rs-accent);
-  font-weight: 600;
 }
 
 /* actions */
