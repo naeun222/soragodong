@@ -130,7 +130,7 @@ function renderModel() {
   // 사용자 명시 2026-05-06 ultrathink: task 평균 시간 기능 주석 — empty state / details 둘 다 노출 X.
   const timeCardHtml = '';  // renderTimeUsageCard() 호출 안 함
   const guestNudgeHtml = _renderGuestNudgeBanner();
-  if (!_traitsForRender.length && !_patternsForRender.length && !_valuesForRender.length) {
+  if (!_traitsForRender.length && !_patternsForRender.length && !_valuesForRender.length && !(state.coreNodes && state.coreNodes.length)) {
     // 사용자 요청 2026-04-29 (Q2): 모델 비어있어도 더 깊은 나 입력은 시작 가능 — Q2 섹션 같이 노출.
     container.innerHTML = guestNudgeHtml + timeCardHtml + `<div class="model-empty">
       <div style="font-size:32px; margin-bottom:12px;">🐚</div>
@@ -229,6 +229,11 @@ function renderModel() {
     return inner;
   };
 
+  // PR5 (사용자 명시 2026-05-29): formulation(핵심 노드) 헤드라인을 나 탭 맨 위로. 평면 항목(values/패턴/cf)은 '원자 보기'로 접어 backing.
+  const _pr5HasCore = !!(state.coreNodes && state.coreNodes.length);
+  if (typeof _renderCoreNodesSection === 'function') { try { html += _renderCoreNodesSection(); } catch {} }
+  if (_pr5HasCore) html += '<details class="model-atoms-collapse" style="margin-top:6px;"><summary class="model-section-title" style="cursor:pointer; opacity:0.6; list-style:none;">▾ 원자 — 핵심을 이루는 조각들</summary>';
+
   // ── 1. 정체성 — 네가 중시하는 것 (values) + 핵심 작동 패턴 (traits ∪ patterns 통합) ──
   // 사용자 명시 2026-05-10 (큐 10): 시뮬 추출 항목 (extractedFrom='simulation') 은 hide.
   // 사용자 명시 2026-05-26 ultrathink: 4 클러스터 양식 통합 — traits + patterns 한 섹션.
@@ -237,9 +242,6 @@ function renderModel() {
     { cat: 'traits', arr: _traitsForRender, badge: '🌿' },
     { cat: 'patterns', arr: _patternsForRender, badge: '🌀' }
   ]);
-
-  // 사용자 명시 2026-05-29 (연결·통합 §4): synthesis 핵심 노드 섹션 (overlay, ≤8). 없으면 생성 prompt 또는 ''.
-  if (typeof _renderCoreNodesSection === 'function') { try { html += _renderCoreNodesSection(); } catch {} }
 
   // ── 2. 분석 — 통합 분석 + 작동 중인 패턴 (mid, 큰 그림 가끔) ──
   // 사용자 보고 2026-05-05: 신규 사용자 (caseFormulation.version=0) 한테 '통합 분석' 섹션 자체가 안 떠서 존재 모르던 문제 — placeholder 추가.
@@ -330,6 +332,7 @@ function renderModel() {
     html += cfSection('다루어야 할 것', '', state.caseFormulation.problems, 'problems');
     html += '</div>';
   }
+  if (_pr5HasCore) html += '</details>';  // PR5: '원자 보기' 닫기
 
   // 사용자 보고 2026-05-05: 이름 변경 (의료법 회피) + 기존 사용자한테도 항상 노출.
   // 옛 '작동 중인 패턴' → '잘 안 풀릴 때' (위 '보이는 패턴' 단어 중복 회피, '진단' 의료 단어 회피).

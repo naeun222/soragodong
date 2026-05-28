@@ -209,11 +209,15 @@ function _renderCoreNodesSection() {
     const srcHtml = (n.source_names && n.source_names.length)
       ? `<details class="cf-more"><summary>여기 모인 것 ${n.source_names.length}개</summary><div style="font-size:11px; color:var(--text-dim); line-height:1.7; padding:4px 0;">${n.source_names.map(s => '· ' + _esc(s)).join('<br>')}</div></details>`
       : '';
+    // PR5 (2B): 연결 = 한 줄 문장, 노드당 ≤2. 한국어 조사 회피 위해 라벨형.
+    const _connLine = (c) => {
+      const to = _esc(c.to);
+      if (c.type === 'tension') return `⚡ ${to} — 자주 부딪치는`;
+      if (c.type === 'facet_of') return `⊃ ${to} — 같은 뿌리`;
+      return `→ ${to} — 키우는 쪽`;
+    };
     const connHtml = (n.connections && n.connections.length)
-      ? `<div style="font-size:10.5px; color:var(--text-soft); margin-top:6px; line-height:1.6;">${n.connections.map(c => {
-          const arrow = c.type === 'tension' ? '⚡↔' : (c.type === 'facet_of' ? '⊃' : '→');
-          return `${arrow} ${_esc(c.to)}${c.why ? ' <span style="color:var(--text-dim);">(' + _esc(c.why) + ')</span>' : ''}`;
-        }).join('<br>')}</div>`
+      ? `<div style="font-size:11px; color:var(--text-soft); margin-top:6px; line-height:1.6;">${n.connections.slice(0, 2).map(_connLine).join('<br>')}</div>`
       : '';
     return `<div class="model-item" style="margin-bottom:10px;">
       <div class="model-item-name">${_typeBadge[n.type] || '•'} ${_esc(n.name)}</div>
