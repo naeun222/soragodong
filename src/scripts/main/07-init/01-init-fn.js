@@ -100,7 +100,28 @@ async function init() {
   // V3.13.x: 1분마다 갱신 + 앱이 다시 보일 때 즉시 갱신
   setInterval(refreshHeaderDate, 60 * 1000);
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) { refreshHeaderDate(); applyNightMode(); }
+    if (!document.hidden) {
+      refreshHeaderDate();
+      applyNightMode();
+      // V4 fix (사용자 보고 2026-05-28 ultrathink — batch 누적 stuck):
+      //   페이지 백그라운드 → foreground 복귀 시 pending batch 즉시 회수 시도.
+      //   submit-self-arm (5/15/30분) 과 보완 — submit 후 한참 백그라운드였다 돌아왔을 때 더 빠른 회수.
+      //   탭 깜박임 spam 방지로 1분 throttle.
+      try {
+        const _now = Date.now();
+        if (!window._lastBatchVisibilityResume || _now - window._lastBatchVisibilityResume > 60000) {
+          window._lastBatchVisibilityResume = _now;
+          if (state && state.pendingChapterCleanupBatch && state.pendingChapterCleanupBatch.batch_id
+              && typeof _resumeChapterCleanupBatch === 'function') {
+            _resumeChapterCleanupBatch().catch(e => console.warn('[visibility cleanup resume]', e));
+          }
+          if (state && state.pendingReviewBatch && state.pendingReviewBatch.batch_id
+              && typeof _resumeReviewChainBatch === 'function') {
+            _resumeReviewChainBatch().catch(e => console.warn('[visibility review resume]', e));
+          }
+        }
+      } catch (e) { console.warn('[visibility batch resume]', e); }
+    }
   });
 
   // V4 사용자 요청 2026-04-29: Service Worker 등록 (오프라인 + 설치 배너 + 푸시 인프라 ready)

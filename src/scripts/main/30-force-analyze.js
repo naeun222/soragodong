@@ -1296,6 +1296,18 @@ async function submitChapterCleanupBatch(unprocessed) {
     try { if (typeof saveToCloudNow === 'function') await saveToCloudNow(); } catch (e) { console.warn('[cleanup batch] batch_id cloud flush:', e); }
     console.log(`[cleanup batch] submitted: ${data.id}`);
     if (typeof renderChatArchiveModal === 'function') renderChatArchiveModal();
+    // V4 fix (사용자 보고 2026-05-28 ultrathink — batch 누적 stuck):
+    //   submit 직후 폴링 자기-arm. 이전엔 다음 maybeRunChapterCleanup 진입 (= page reload init 4초 후 / bg-fetch wake)
+    //   이전까지 결과 fetch 0회 → 같은 세션 내내 batch 결과 영원히 stuck → 다음 날 같은 diary date 재제출 → 누적.
+    //   resume path (line 1947) 의 arming pattern 과 동일하게 5/15/30분 후 _resumeChapterCleanupBatch 호출.
+    window._pendingCleanupBatchPollingFor = data.id;
+    [300000, 900000, 1800000].forEach(ms => {
+      setTimeout(() => {
+        if (state.pendingChapterCleanupBatch && state.pendingChapterCleanupBatch.batch_id === data.id) {
+          _resumeChapterCleanupBatch().catch(e => console.warn('[cleanup submit polling]', e));
+        }
+      }, ms);
+    });
   } catch (e) {
     console.warn('[cleanup batch] submit fail — fallback 일반 API:', e);
     // V4 (사용자 명시 2026-05-25 ultrathink): _pendingDiarySummary 마커 자체 X — diary 는 다음 4AM cutoff 까지 자연 대기.
@@ -1633,6 +1645,17 @@ async function submitReviewChainBatch(missingReviews) {
     try { if (typeof saveToCloudNow === 'function') await saveToCloudNow(); } catch (e) { console.warn('[review chain batch] batch_id cloud flush:', e); }
     console.log(`[review chain batch] submitted: ${data.id} — ${missingReviews.length} reviews + ${hasWeekly ? 1 : 0} insight`);
     if (typeof renderReviewPrompts === 'function') renderReviewPrompts();
+    // V4 fix (사용자 보고 2026-05-28 ultrathink — batch 누적 stuck):
+    //   submit 직후 폴링 자기-arm. cleanup batch 와 동일 race — 다음 maybeRunChapterCleanup 진입 기다리지 말고
+    //   같은 세션 내 5/15/30분 후 _resumeReviewChainBatch 자동 호출.
+    window._pendingReviewBatchPollingFor = data.id;
+    [300000, 900000, 1800000].forEach(ms => {
+      setTimeout(() => {
+        if (state.pendingReviewBatch && state.pendingReviewBatch.batch_id === data.id) {
+          _resumeReviewChainBatch().catch(e => console.warn('[review submit polling]', e));
+        }
+      }, ms);
+    });
   } catch (e) {
     console.warn('[review chain batch] submit fail:', e);
   }

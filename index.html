@@ -22915,7 +22915,28 @@ async function init() {
   // V3.13.x: 1분마다 갱신 + 앱이 다시 보일 때 즉시 갱신
   setInterval(refreshHeaderDate, 60 * 1000);
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) { refreshHeaderDate(); applyNightMode(); }
+    if (!document.hidden) {
+      refreshHeaderDate();
+      applyNightMode();
+      // V4 fix (사용자 보고 2026-05-28 ultrathink — batch 누적 stuck):
+      //   페이지 백그라운드 → foreground 복귀 시 pending batch 즉시 회수 시도.
+      //   submit-self-arm (5/15/30분) 과 보완 — submit 후 한참 백그라운드였다 돌아왔을 때 더 빠른 회수.
+      //   탭 깜박임 spam 방지로 1분 throttle.
+      try {
+        const _now = Date.now();
+        if (!window._lastBatchVisibilityResume || _now - window._lastBatchVisibilityResume > 60000) {
+          window._lastBatchVisibilityResume = _now;
+          if (state && state.pendingChapterCleanupBatch && state.pendingChapterCleanupBatch.batch_id
+              && typeof _resumeChapterCleanupBatch === 'function') {
+            _resumeChapterCleanupBatch().catch(e => console.warn('[visibility cleanup resume]', e));
+          }
+          if (state && state.pendingReviewBatch && state.pendingReviewBatch.batch_id
+              && typeof _resumeReviewChainBatch === 'function') {
+            _resumeReviewChainBatch().catch(e => console.warn('[visibility review resume]', e));
+          }
+        }
+      } catch (e) { console.warn('[visibility batch resume]', e); }
+    }
   });
 
   // V4 사용자 요청 2026-04-29: Service Worker 등록 (오프라인 + 설치 배너 + 푸시 인프라 ready)
@@ -67516,6 +67537,18 @@ async function submitChapterCleanupBatch(unprocessed) {
     try { if (typeof saveToCloudNow === 'function') await saveToCloudNow(); } catch (e) { console.warn('[cleanup batch] batch_id cloud flush:', e); }
     console.log(`[cleanup batch] submitted: ${data.id}`);
     if (typeof renderChatArchiveModal === 'function') renderChatArchiveModal();
+    // V4 fix (사용자 보고 2026-05-28 ultrathink — batch 누적 stuck):
+    //   submit 직후 폴링 자기-arm. 이전엔 다음 maybeRunChapterCleanup 진입 (= page reload init 4초 후 / bg-fetch wake)
+    //   이전까지 결과 fetch 0회 → 같은 세션 내내 batch 결과 영원히 stuck → 다음 날 같은 diary date 재제출 → 누적.
+    //   resume path (line 1947) 의 arming pattern 과 동일하게 5/15/30분 후 _resumeChapterCleanupBatch 호출.
+    window._pendingCleanupBatchPollingFor = data.id;
+    [300000, 900000, 1800000].forEach(ms => {
+      setTimeout(() => {
+        if (state.pendingChapterCleanupBatch && state.pendingChapterCleanupBatch.batch_id === data.id) {
+          _resumeChapterCleanupBatch().catch(e => console.warn('[cleanup submit polling]', e));
+        }
+      }, ms);
+    });
   } catch (e) {
     console.warn('[cleanup batch] submit fail — fallback 일반 API:', e);
     // V4 (사용자 명시 2026-05-25 ultrathink): _pendingDiarySummary 마커 자체 X — diary 는 다음 4AM cutoff 까지 자연 대기.
@@ -67853,6 +67886,17 @@ async function submitReviewChainBatch(missingReviews) {
     try { if (typeof saveToCloudNow === 'function') await saveToCloudNow(); } catch (e) { console.warn('[review chain batch] batch_id cloud flush:', e); }
     console.log(`[review chain batch] submitted: ${data.id} — ${missingReviews.length} reviews + ${hasWeekly ? 1 : 0} insight`);
     if (typeof renderReviewPrompts === 'function') renderReviewPrompts();
+    // V4 fix (사용자 보고 2026-05-28 ultrathink — batch 누적 stuck):
+    //   submit 직후 폴링 자기-arm. cleanup batch 와 동일 race — 다음 maybeRunChapterCleanup 진입 기다리지 말고
+    //   같은 세션 내 5/15/30분 후 _resumeReviewChainBatch 자동 호출.
+    window._pendingReviewBatchPollingFor = data.id;
+    [300000, 900000, 1800000].forEach(ms => {
+      setTimeout(() => {
+        if (state.pendingReviewBatch && state.pendingReviewBatch.batch_id === data.id) {
+          _resumeReviewChainBatch().catch(e => console.warn('[review submit polling]', e));
+        }
+      }, ms);
+    });
   } catch (e) {
     console.warn('[review chain batch] submit fail:', e);
   }
@@ -73554,7 +73598,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.344-force-analyze-local-tz';
+const APP_VERSION = 'v4.0.345-batch-self-poll';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 
