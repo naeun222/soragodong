@@ -12,6 +12,8 @@
 
 let _storyPageIdx = 0;
 let _storySceneIdx = 0;
+// V4 (사용자 보고 2026-05-28): archive-reviews inline 출신 표시 — ↺ Classic 시 모음으로 복귀 (풀스크린 classic 진입 대신).
+let _storyFromInline = false;
 
 function renderWeeklyStoryReview(reviewData, opts) {
   opts = opts || {};
@@ -287,11 +289,19 @@ function closeWeeklyStoryReview() {
 }
 
 // 토글 — Story ↔ Classic 즉시 swap. 같은 review 다시 렌더.
+//   archive-reviews inline 출신 (_storyFromInline=true) 이면 story → classic 시 모음으로 복귀 (사용자 mental model 자연).
+//   풀스크린 진입 출신 = 같은 review 풀스크린 classic 재렌더.
 function toggleWeeklyReviewLayout() {
   if (!state.preferences) state.preferences = {};
   const cur = state.preferences.weeklyReviewLayout || 'classic';
   state.preferences.weeklyReviewLayout = (cur === 'story') ? 'classic' : 'story';
   try { if (typeof saveState === 'function') saveState(); } catch {}
+  // archive inline 출신이고 story→classic 인 경우 모음으로 복귀
+  if (cur === 'story' && _storyFromInline) {
+    _storyFromInline = false;
+    if (typeof showScreen === 'function') showScreen('archive-reviews');
+    return;
+  }
   const screen = document.getElementById('screen-review');
   if (!screen) return;
   let reviewData = {};
@@ -301,4 +311,25 @@ function toggleWeeklyReviewLayout() {
   if (typeof renderReviewScreen === 'function') {
     renderReviewScreen(type, reviewData, { readonly });
   }
+}
+
+// archive-reviews inline 출신 — 풀스크린 story 진입. preference 'story' set + saveState.
+//   13-quarter-deep-dive.js inline 펼침 hint 가 호출.
+function _switchToStoryFromInline(reviewId) {
+  if (!state.preferences) state.preferences = {};
+  state.preferences.weeklyReviewLayout = 'story';
+  try { if (typeof saveState === 'function') saveState(); } catch {}
+  _openWeeklyAsStoryFromCard(reviewId, true);
+}
+
+// preference 'story' 인 사용자가 archive-reviews 의 weekly 카드 click 시 inline 펼침 대신 풀스크린 story 직진.
+//   _toggleWeeklyInlineExpand 와 같은 위치에서 분기 (13-quarter-deep-dive.js line 217 부근).
+function _openWeeklyAsStoryFromCard(reviewId, fromInline) {
+  const review = (state.weeklyReviews || []).find(r => r && r.id === reviewId);
+  if (!review) { if (typeof showToast === 'function') showToast('해당 주간 리뷰를 찾을 수 없어'); return; }
+  _storyFromInline = !!fromInline;
+  if (typeof renderReviewScreen === 'function') {
+    renderReviewScreen('weekly', review, { readonly: true });
+  }
+  if (typeof showScreen === 'function') showScreen('review');
 }
