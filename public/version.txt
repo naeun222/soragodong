@@ -1,1 +1,1 @@
-v4.0.358-weekly-entry-path-split
+v4.0.359-chat-halo-from-input
