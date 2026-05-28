@@ -1,1 +1,1 @@
-v4.0.360-chat-halo-2x-strong
+v4.0.361-chat-halo-luminous-core
