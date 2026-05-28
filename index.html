@@ -180,15 +180,16 @@
 
 /* ---- 색·간격 토큰 ---- */
 .rstory-container {
-  /* color — 사용자 명시 2026-05-29: Moonpaper 톤. base 더 밝게 (#131829 → #2a2e44 indigo).
-     달밤 cream-on-navy 종이 느낌. vignette 거의 제거, noise 약화 (자극 ↓ ADHD 친화). */
-  --rs-bg: #2a2e44;
-  --rs-bg-elev: rgba(232, 227, 216, 0.04);
-  --rs-ink: #ece3d4;
-  --rs-ink-soft: rgba(236, 227, 212, 0.66);
-  --rs-ink-mute: rgba(236, 227, 212, 0.42);
-  --rs-ink-dim: rgba(236, 227, 212, 0.20);
-  --rs-line: rgba(236, 227, 212, 0.12);
+  /* color — 사용자 명시 2026-05-29 (2차 폴리시): Moonpaper 톤 강화.
+     base 한 단계 더 밝게 + lavender-tinted (#2a2e44 → #3a385a). 종이/잉크/달빛 톤 가시화.
+     vignette 더 약화, ink elev 더 명확. */
+  --rs-bg: #3a385a;
+  --rs-bg-elev: rgba(236, 227, 212, 0.06);
+  --rs-ink: #efe5d4;
+  --rs-ink-soft: rgba(239, 229, 212, 0.70);
+  --rs-ink-mute: rgba(239, 229, 212, 0.46);
+  --rs-ink-dim: rgba(239, 229, 212, 0.22);
+  --rs-line: rgba(239, 229, 212, 0.14);
   --rs-accent: #8fd2ea;
   --rs-accent-soft: rgba(143, 210, 234, 0.66);
   --rs-accent-mute: rgba(143, 210, 234, 0.26);
@@ -209,13 +210,13 @@
   height: 100%;
   z-index: 1;
   background:
-    /* sky orb top-left — 살짝 약화 (base 자체가 밝아져서) */
-    radial-gradient(ellipse 80% 55% at 12% 16%, rgba(143, 210, 234, 0.22) 0%, transparent 60%),
-    /* purple-ish orb bottom-right */
-    radial-gradient(ellipse 70% 55% at 88% 86%, rgba(168, 156, 214, 0.18) 0%, transparent 64%),
-    /* warm gold mid-left */
-    radial-gradient(circle 42% at 6% 58%, rgba(201, 169, 110, 0.10) 0%, transparent 60%),
-    /* base indigo — Moonpaper */
+    /* sky orb top-left — Moonpaper 강화 (사용자 명시 2026-05-29 2차) */
+    radial-gradient(ellipse 80% 55% at 12% 16%, rgba(160, 215, 235, 0.20) 0%, transparent 60%),
+    /* warm gold orb bottom-right — 달빛 따뜻함 */
+    radial-gradient(ellipse 70% 55% at 88% 86%, rgba(220, 195, 145, 0.16) 0%, transparent 64%),
+    /* cream orb mid-left — 종이 결 */
+    radial-gradient(circle 42% at 6% 58%, rgba(239, 229, 212, 0.10) 0%, transparent 60%),
+    /* base lavender-indigo — Moonpaper 종이 야간 */
     var(--rs-bg);
   color: var(--rs-ink);
   font-family: 'Pretendard', 'Noto Sans KR', system-ui, -apple-system, sans-serif;
@@ -241,16 +242,16 @@
   z-index: 0;
 }
 
-/* ---- 깊이감 — vignette 거의 제거 (Moonpaper) + soft top spotlight ---- */
+/* ---- 깊이감 — vignette 거의 제거 (Moonpaper 2차) + soft top spotlight ---- */
 .rstory-container::after {
   content: '';
   position: absolute;
   inset: 0;
   background:
-    /* soft top spotlight — 종이 펼친 듯 */
-    radial-gradient(ellipse 95% 60% at 50% 28%, rgba(236, 227, 212, 0.08) 0%, transparent 68%),
-    /* vignette — 0.32 → 0.16 더 약화 */
-    radial-gradient(ellipse at center, transparent 45%, rgba(0, 0, 0, 0.16) 100%);
+    /* soft top spotlight — 종이 펼친 듯 더 밝게 */
+    radial-gradient(ellipse 95% 60% at 50% 28%, rgba(239, 229, 212, 0.10) 0%, transparent 70%),
+    /* vignette — 0.16 → 0.08 거의 제거 */
+    radial-gradient(ellipse at center, transparent 50%, rgba(0, 0, 0, 0.08) 100%);
   pointer-events: none;
   z-index: 0;
 }
@@ -451,7 +452,7 @@
   position: relative;
   width: 100%;
   max-width: 360px;
-  min-height: 260px;
+  min-height: 320px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -491,17 +492,17 @@
   text-transform: uppercase;
 }
 
-/* scene 사진 — 폴라로이드 mini (있을 때만 표시) */
+/* scene 사진 — 폴라로이드 (사용자 명시 2026-05-29 2차: mini 116 → 160 크기 ↑) */
 .rstory-scene-photo-wrap {
-  width: 116px;
-  height: 116px;
-  margin: 0 auto 18px;
-  padding: 6px 6px 16px;
-  background: rgba(232, 227, 216, 0.96);
+  width: 160px;
+  height: 160px;
+  margin: 0 auto 20px;
+  padding: 8px 8px 22px;
+  background: rgba(239, 229, 212, 0.96);
   border-radius: 3px;
   box-shadow:
-    0 2px 4px -2px rgba(0, 0, 0, 0.6),
-    0 12px 24px -12px rgba(0, 0, 0, 0.7);
+    0 2px 4px -2px rgba(0, 0, 0, 0.55),
+    0 14px 28px -14px rgba(0, 0, 0, 0.6);
   transform: rotate(1.2deg);
   position: relative;
 }
@@ -75082,7 +75083,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.354-story-moonpaper-polish';
+const APP_VERSION = 'v4.0.355-story-moonpaper2-photo-up';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 
