@@ -334,44 +334,9 @@ function renderModel() {
   }
   if (_pr5HasCore) html += '</details>';  // PR5: '원자 보기' 닫기
 
-  // 사용자 보고 2026-05-05: 이름 변경 (의료법 회피) + 기존 사용자한테도 항상 노출.
-  // 옛 '작동 중인 패턴' → '잘 안 풀릴 때' (위 '보이는 패턴' 단어 중복 회피, '진단' 의료 단어 회피).
-  // disclaimer 도 '의료 진단' → '의료 조언' 으로 워딩 정정.
-  const visibleDiags = (state.diagnoses || []).filter(d => d.status === 'active' || d.status === 'shown');
-  const diagLabels = {
-    weak_tool: '도구 약함',
-    wrong_layer: '가지 안 맞음',
-    value_clash: '가치 상충',
-    avoidance: '회피',
-    willpower_cap: '의지 임계'
-  };
-  if (visibleDiags.length > 0) {
-    html += `<div class="model-section">
-      <div class="model-section-title">잘 안 풀릴 때</div>
-      <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px; line-height:1.6;">시도가 막히는 결 — 결과 쌓이면 갱신돼.</div>
-      ${visibleDiags.sort((a,b) => (b.confidence || 0) - (a.confidence || 0)).map(d => `
-        <div class="model-item" style="border-left: 3px solid var(--purple); padding-left: 12px;">
-          <div class="model-item-name">${diagLabels[d.type] || d.type}</div>
-          <div class="model-item-desc" style="font-size:12px; line-height:1.6;">${escapeHtml(d.evidence || '')}</div>
-          <div class="model-item-meta">
-            <span class="conf">신뢰도 ${Math.round((d.confidence || 0.5) * 100)}%</span>
-            ${d.status === 'shown' ? '<span style="color:var(--text-soft);">대화에서 한 번 인용됨</span>' : '<span style="color:#8fc88f;">발견됨</span>'}
-          </div>
-        </div>
-      `).join('')}
-      <div style="font-size:10px; color:var(--text-soft); margin-top:10px; line-height:1.55; opacity:0.7;">의료 조언 아님 — 마음이 힘들면 전문가 상담 권장.</div>
-    </div>`;
-  } else {
-    // visibleDiags 없을 때 — strategy 유무 따라 분기 placeholder. 둘 다 항상 노출.
-    const stratCount = (state.topicCards || []).filter(c => c.category === 'strategy').length;
-    const placeholderText = stratCount === 0
-      ? '데이터가 쌓이면 보여줄게.'
-      : '지금은 잘 흘러가는 중';
-    html += `<div class="model-section">
-      <div class="model-section-title">잘 안 풀릴 때</div>
-      <div style="font-size:11.5px; color:var(--text-soft); line-height:1.7; padding:10px 12px; background:rgba(255,255,255,0.02); border-radius:8px; border-left:2px solid rgba(255,255,255,0.06);">${placeholderText}</div>
-    </div>`;
-  }
+  // 사용자 명시 2026-05-29: '잘 안 풀릴 때'(관찰 5종 diagnoses) 나 탭 표시 제거.
+  //   이유: formulation 의 '다루어야 할 것'(growth_area)과 중복 + 신뢰도 % 노출(PR5 §4A 위반).
+  //   detectDiagnoses / 챗 인용(markDiagnosisShown) / updateDiagnosisConfidence(전략 신뢰도)는 그대로 유지 — 표시만 뺌.
 
   // ── 3. 메타 — task 평균 (collapse default 닫힘) + 더 깊은 나 (collapse default 닫힘) ──
   // 사용자 명시 2026-05-06 ultrathink: 추적 항목 (projectsSection) 실행 탭으로 이동.

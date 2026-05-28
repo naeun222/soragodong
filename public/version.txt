@@ -1,1 +1,1 @@
-v4.0.372-me-tab-render-pr5
+v4.0.373-me-tab-hide-diagnoses
