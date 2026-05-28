@@ -25,6 +25,8 @@
     try { analysis = JSON.parse(jm[0]); } catch { return; }
     if (!analysis || typeof analysis !== 'object') return;
 
+    // PR2a (사용자 명시 2026-05-29 §14): sync 처리 전 새 신호 임베딩 — 코사인 attach 용 (enabled 아니면 noop).
+    await _embedAnalysisItems(analysis);
     const touched = _processExtractChapterAnalysis(analysis, {
       source: source || 'chapter',
       threshold: 0.65,
@@ -155,6 +157,8 @@ function _processExtractChapterAnalysis(analysis, opts) {
     if (typeof item.significance_reason === 'string' && item.significance_reason.trim() && !exists.significance_reason) exists.significance_reason = item.significance_reason.trim();
     if (typeof item.connects_to === 'string' && item.connects_to.trim() && !exists.connects_to) exists.connects_to = item.connects_to.trim();
     if (typeof item.type === 'string' && item.type.trim() && !exists.type) exists.type = item.type.trim();
+    // PR2a (사용자 명시 2026-05-29 §14): attach 시 기존 항목에 embedding 없으면 새 신호 것으로 채움 (backfill 보조).
+    if (Array.isArray(item.embedding) && item.embedding.length && !(Array.isArray(exists.embedding) && exists.embedding.length)) exists.embedding = item.embedding;
   };
   // 사용자 명시 2026-05-26 ultrathink: opts.source override 가능 (P1 = 'reflection'/'magic_help'/'mutation').
   const _extractedFrom = opts.source || (_isSim ? 'simulation' : 'chapter');
@@ -191,7 +195,8 @@ function _processExtractChapterAnalysis(analysis, opts) {
         if (!t || typeof t.name !== 'string' || !t.name.trim()) return;
         const conf = typeof t.confidence === 'number' ? t.confidence : 0.5;
         const exists = (state.traits || []).find(e => similarText(e.name, t.name))
-                    || _findFuzzyTrait(t.name);
+                    || _findFuzzyTrait(t.name)
+                    || _findEmbedMatch(t, state.traits);
         if (!exists) {
           if (conf < _typeThreshold(t)) return;
           state.traits = state.traits || [];
@@ -203,6 +208,7 @@ function _processExtractChapterAnalysis(analysis, opts) {
             type: (typeof t.type === 'string' ? t.type.trim() : '') || null,
             significance_reason: (typeof t.significance_reason === 'string' ? t.significance_reason.trim() : '') || null,
             connects_to: (typeof t.connects_to === 'string' ? t.connects_to.trim() : '') || null,
+            embedding: (Array.isArray(t.embedding) && t.embedding.length) ? t.embedding : null,
             confidence: conf, user_verified: false, evidence_count: 1,
             extractedFrom: _extractedFrom,
             created_at: new Date().toISOString()
@@ -222,7 +228,8 @@ function _processExtractChapterAnalysis(analysis, opts) {
         if (!v || typeof v.name !== 'string' || !v.name.trim()) return;
         const conf = typeof v.confidence === 'number' ? v.confidence : 0.5;
         const exists = (state.values || []).find(e => similarText(e.name, v.name))
-                    || _findFuzzyValue(v.name);
+                    || _findFuzzyValue(v.name)
+                    || _findEmbedMatch(v, state.values);
         if (!exists) {
           if (conf < _typeThreshold(v)) return;
           state.values = state.values || [];
@@ -234,6 +241,7 @@ function _processExtractChapterAnalysis(analysis, opts) {
             type: (typeof v.type === 'string' ? v.type.trim() : '') || null,
             significance_reason: (typeof v.significance_reason === 'string' ? v.significance_reason.trim() : '') || null,
             connects_to: (typeof v.connects_to === 'string' ? v.connects_to.trim() : '') || null,
+            embedding: (Array.isArray(v.embedding) && v.embedding.length) ? v.embedding : null,
             confidence: conf, user_verified: false, evidence_count: 1,
             sdt_need: v.sdt_need || null,
             extractedFrom: _extractedFrom,
@@ -254,7 +262,8 @@ function _processExtractChapterAnalysis(analysis, opts) {
         if (!p || typeof p.name !== 'string' || !p.name.trim()) return;
         const conf = typeof p.confidence === 'number' ? p.confidence : 0.5;
         const exists = (state.patterns || []).find(e => similarText(e.name, p.name))
-                    || _findFuzzyPattern(p.name);
+                    || _findFuzzyPattern(p.name)
+                    || _findEmbedMatch(p, state.patterns);
         if (!exists) {
           if (conf < _typeThreshold(p)) return;
           state.patterns = state.patterns || [];
@@ -268,6 +277,7 @@ function _processExtractChapterAnalysis(analysis, opts) {
             type: (typeof p.type === 'string' ? p.type.trim() : '') || null,
             significance_reason: (typeof p.significance_reason === 'string' ? p.significance_reason.trim() : '') || null,
             connects_to: (typeof p.connects_to === 'string' ? p.connects_to.trim() : '') || null,
+            embedding: (Array.isArray(p.embedding) && p.embedding.length) ? p.embedding : null,
             confidence: conf, user_verified: false, evidence_count: 1,
             extractedFrom: _extractedFrom,
             created_at: new Date().toISOString()

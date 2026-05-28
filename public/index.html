@@ -34719,6 +34719,8 @@ async function extractAndApplyInsightToModel(insightText, userMsg, source) {
     try { analysis = JSON.parse(jm[0]); } catch { return; }
     if (!analysis || typeof analysis !== 'object') return;
 
+    // PR2a (사용자 명시 2026-05-29 §14): sync 처리 전 새 신호 임베딩 — 코사인 attach 용 (enabled 아니면 noop).
+    await _embedAnalysisItems(analysis);
     const touched = _processExtractChapterAnalysis(analysis, {
       source: source || 'chapter',
       threshold: 0.65,
@@ -34849,6 +34851,8 @@ function _processExtractChapterAnalysis(analysis, opts) {
     if (typeof item.significance_reason === 'string' && item.significance_reason.trim() && !exists.significance_reason) exists.significance_reason = item.significance_reason.trim();
     if (typeof item.connects_to === 'string' && item.connects_to.trim() && !exists.connects_to) exists.connects_to = item.connects_to.trim();
     if (typeof item.type === 'string' && item.type.trim() && !exists.type) exists.type = item.type.trim();
+    // PR2a (사용자 명시 2026-05-29 §14): attach 시 기존 항목에 embedding 없으면 새 신호 것으로 채움 (backfill 보조).
+    if (Array.isArray(item.embedding) && item.embedding.length && !(Array.isArray(exists.embedding) && exists.embedding.length)) exists.embedding = item.embedding;
   };
   // 사용자 명시 2026-05-26 ultrathink: opts.source override 가능 (P1 = 'reflection'/'magic_help'/'mutation').
   const _extractedFrom = opts.source || (_isSim ? 'simulation' : 'chapter');
@@ -34885,7 +34889,8 @@ function _processExtractChapterAnalysis(analysis, opts) {
         if (!t || typeof t.name !== 'string' || !t.name.trim()) return;
         const conf = typeof t.confidence === 'number' ? t.confidence : 0.5;
         const exists = (state.traits || []).find(e => similarText(e.name, t.name))
-                    || _findFuzzyTrait(t.name);
+                    || _findFuzzyTrait(t.name)
+                    || _findEmbedMatch(t, state.traits);
         if (!exists) {
           if (conf < _typeThreshold(t)) return;
           state.traits = state.traits || [];
@@ -34897,6 +34902,7 @@ function _processExtractChapterAnalysis(analysis, opts) {
             type: (typeof t.type === 'string' ? t.type.trim() : '') || null,
             significance_reason: (typeof t.significance_reason === 'string' ? t.significance_reason.trim() : '') || null,
             connects_to: (typeof t.connects_to === 'string' ? t.connects_to.trim() : '') || null,
+            embedding: (Array.isArray(t.embedding) && t.embedding.length) ? t.embedding : null,
             confidence: conf, user_verified: false, evidence_count: 1,
             extractedFrom: _extractedFrom,
             created_at: new Date().toISOString()
@@ -34916,7 +34922,8 @@ function _processExtractChapterAnalysis(analysis, opts) {
         if (!v || typeof v.name !== 'string' || !v.name.trim()) return;
         const conf = typeof v.confidence === 'number' ? v.confidence : 0.5;
         const exists = (state.values || []).find(e => similarText(e.name, v.name))
-                    || _findFuzzyValue(v.name);
+                    || _findFuzzyValue(v.name)
+                    || _findEmbedMatch(v, state.values);
         if (!exists) {
           if (conf < _typeThreshold(v)) return;
           state.values = state.values || [];
@@ -34928,6 +34935,7 @@ function _processExtractChapterAnalysis(analysis, opts) {
             type: (typeof v.type === 'string' ? v.type.trim() : '') || null,
             significance_reason: (typeof v.significance_reason === 'string' ? v.significance_reason.trim() : '') || null,
             connects_to: (typeof v.connects_to === 'string' ? v.connects_to.trim() : '') || null,
+            embedding: (Array.isArray(v.embedding) && v.embedding.length) ? v.embedding : null,
             confidence: conf, user_verified: false, evidence_count: 1,
             sdt_need: v.sdt_need || null,
             extractedFrom: _extractedFrom,
@@ -34948,7 +34956,8 @@ function _processExtractChapterAnalysis(analysis, opts) {
         if (!p || typeof p.name !== 'string' || !p.name.trim()) return;
         const conf = typeof p.confidence === 'number' ? p.confidence : 0.5;
         const exists = (state.patterns || []).find(e => similarText(e.name, p.name))
-                    || _findFuzzyPattern(p.name);
+                    || _findFuzzyPattern(p.name)
+                    || _findEmbedMatch(p, state.patterns);
         if (!exists) {
           if (conf < _typeThreshold(p)) return;
           state.patterns = state.patterns || [];
@@ -34962,6 +34971,7 @@ function _processExtractChapterAnalysis(analysis, opts) {
             type: (typeof p.type === 'string' ? p.type.trim() : '') || null,
             significance_reason: (typeof p.significance_reason === 'string' ? p.significance_reason.trim() : '') || null,
             connects_to: (typeof p.connects_to === 'string' ? p.connects_to.trim() : '') || null,
+            embedding: (Array.isArray(p.embedding) && p.embedding.length) ? p.embedding : null,
             confidence: conf, user_verified: false, evidence_count: 1,
             extractedFrom: _extractedFrom,
             created_at: new Date().toISOString()
@@ -35242,6 +35252,8 @@ async function extractChapterCaseAnalysis(messages, opts) {
       }
     }
 
+    // PR2a (사용자 명시 2026-05-29 §14): sync 처리 전 새 신호 임베딩 — 코사인 attach 용 (enabled 아니면 noop).
+    await _embedAnalysisItems(analysis);
     const touched = _processExtractChapterAnalysis(analysis, { isSimulation: _isSim });
 
     // 사용자 명시 2026-05-09 (재정정): 시뮬 통합 추출 폐기 — 시뮬 _extracted mark 부분 제거.
@@ -42908,6 +42920,8 @@ function _dismissGuestNudge() {
 }
 
 function renderModel() {
+  // PR2a (사용자 명시 2026-05-29 §14): 모델 항목 embedding lazy backfill (게이트 OFF / 완료 시 noop). 코사인 attach 토대.
+  try { if (typeof _modelEmbedBackfillAll === 'function') _modelEmbedBackfillAll(); } catch {}
   const container = document.getElementById('modelContent');
   if (!container) return;  // FIX BUG-1: null guard
   // 사용자 명시 2026-05-10 (큐 10): traits/values/patterns 의 extractedFrom='simulation' 항목은 나 탭 표시 X (도서관 시뮬 영역 별도).
@@ -44924,6 +44938,102 @@ function _collectSemanticDedupCandidates() {
     });
   }
   return out;
+}
+// 사용자 명시 2026-05-29 (연결·통합 §2 + §14): 임베딩 기반 write-time attach.
+//   문제: 현재 attach 후보 검색이 문자열 유사도(similarText / _modelSimilarity)만 써서
+//         "글자 다른데 같은 뿌리"(예: "인간적 호감 기반 교류" ↔ "관계에서 이해·인정 욕구", 글자 겹침 0)를
+//         못 잡고 둘 다 new 로 push → 원자화 지속.
+//   해법: 모델 항목에 BGE 임베딩(1024dim) 저장 + 새 신호를 코사인으로 기존 노드에 attach.
+//   게이트: _ragIsEnabled() (Plus/Premium + useRag ON, RAG/전략카드와 동일). 그 외엔 noop → 문자열 dedup 그대로(현행).
+//   안티-thrash(§2/§6): write-time 은 *attach 만*. 노드↔노드 병합은 synthesis 패스(별도). 여기선 새 신호→기존 노드만.
+
+// 코사인 ≥ 이 값이면 같은 뿌리로 보고 auto-attach. τ≈0.8(§11)보다 높게 — LLM 드라이버 검증(§2 b/PR2b) 없는
+//   write-time 단계라 보수적 고임계(false merge 회피). 0.8~0.85 중간대는 그냥 new 로 두고 synthesis 가 LLM 검증 후 병합.
+const _MODEL_EMBED_ATTACH_TAU = 0.85;
+// 1회 backfill 시 최대 임베딩 호출 (free tier 100K/일 보호, serial).
+const _MODEL_EMBED_BACKFILL_CAP = 60;
+
+// 임베딩 켜졌나 — RAG 게이트(plan ∈ {Plus, Premium} + useRag ON) 재사용.
+function _modelEmbedEnabled() {
+  return typeof _ragIsEnabled === 'function' && _ragIsEnabled() && typeof _ragEmbedText === 'function';
+}
+
+// 항목 → 임베딩용 텍스트 (name + description + trigger/sequence, ≤400자).
+function _modelItemEmbedText(item) {
+  if (!item) return '';
+  const parts = [item.name, item.description, item.trigger, item.sequence]
+    .filter(s => s && typeof s === 'string').map(s => s.trim());
+  return parts.join(' / ').slice(0, 400);
+}
+
+// 항목 1개 embedding 채움 (이미 있으면 skip). 반환: 채웠으면 true.
+async function _modelEmbedItem(item) {
+  if (!item || (Array.isArray(item.embedding) && item.embedding.length)) return false;
+  if (!_modelEmbedEnabled()) return false;
+  const text = _modelItemEmbedText(item);
+  if (!text || text.length < 4) return false;
+  try {
+    const vec = await _ragEmbedText(text);
+    if (!Array.isArray(vec) || !vec.length) return false;
+    item.embedding = vec;
+    return true;
+  } catch { return false; }
+}
+
+// analysis 의 새 항목들 embedding 미리 채움 — sync _processExtractChapterAnalysis / force merge 전에 호출.
+//   new_* (챕터 추출) 와 traits/values/patterns (force_analyze) 두 스키마 모두 처리. enabled 아니면 즉시 return.
+async function _embedAnalysisItems(analysis) {
+  if (!analysis || !_modelEmbedEnabled()) return;
+  const lists = [
+    analysis.new_traits, analysis.new_values, analysis.new_patterns,
+    analysis.traits, analysis.values, analysis.patterns
+  ];
+  for (const arr of lists) {
+    if (!Array.isArray(arr)) continue;
+    for (const it of arr) {
+      if (!it || typeof it.name !== 'string' || !it.name.trim()) continue;
+      try { await _modelEmbedItem(it); } catch {}
+    }
+  }
+}
+
+// 기존 모델 항목 중 embedding 없는 것 lazy backfill (serial, cap). 게이트 OFF 면 noop.
+//   renderModel 에서 fire-and-forget. running flag 로 재진입 차단, 전부 채워지면 사실상 no-op.
+let _modelEmbedBackfillRunning = false;
+async function _modelEmbedBackfillAll() {
+  if (_modelEmbedBackfillRunning || !_modelEmbedEnabled()) return;
+  _modelEmbedBackfillRunning = true;
+  try {
+    const all = [].concat(state.traits || [], state.values || [], state.patterns || [])
+      .filter(it => it && !it._deleted && typeof it.name === 'string' && it.name.trim()
+                 && !(Array.isArray(it.embedding) && it.embedding.length));
+    let done = 0;
+    for (const it of all) {
+      if (done >= _MODEL_EMBED_BACKFILL_CAP) break;
+      const ok = await _modelEmbedItem(it);
+      if (ok) done++;
+    }
+    if (done) { try { saveState(); } catch {} }
+  } finally {
+    _modelEmbedBackfillRunning = false;
+  }
+}
+
+// 임베딩 코사인 후보 매칭 — item.embedding(precomputed) vs arr[].embedding(backfilled) 중 최고 ≥ τ 반환.
+//   item 또는 후보에 embedding 없으면 null (문자열 fallback 으로 흘러감). _processExtractChapterAnalysis / force 의
+//   exists 후보 체인 끝에 붙임.
+function _findEmbedMatch(item, arr, tau) {
+  if (!item || !Array.isArray(item.embedding) || !item.embedding.length) return null;
+  if (!Array.isArray(arr) || typeof _ragCosine !== 'function') return null;
+  const t = (typeof tau === 'number') ? tau : _MODEL_EMBED_ATTACH_TAU;
+  let best = null, bestSim = t;
+  for (const e of arr) {
+    if (!e || e._deleted || e === item) continue;
+    if (!Array.isArray(e.embedding) || e.embedding.length !== item.embedding.length) continue;
+    const sim = _ragCosine(item.embedding, e.embedding);
+    if (sim >= bestSim) { bestSim = sim; best = e; }
+  }
+  return best;
 }
 // ═══════════════════════════════════════════════════════════════
 // CHAT
@@ -68076,6 +68186,8 @@ async function _processForceAnalyzeResult(text, isAuto) {
       }
     }
 
+    // PR2a (사용자 명시 2026-05-29 §14): merge 전 새 항목 임베딩 — 코사인 attach 용 (enabled 아니면 noop).
+    await _embedAnalysisItems(analysis);
     const _rcPrevIds = {
       traits: new Set((state.traits || []).map(x => x.id)),
       values: new Set((state.values || []).map(x => x.id)),
@@ -68092,6 +68204,7 @@ async function _processForceAnalyzeResult(text, isAuto) {
       if (typeof incoming.type === 'string' && incoming.type.trim() && !existing.type) existing.type = incoming.type.trim();
       if (typeof incoming.significance_reason === 'string' && incoming.significance_reason.trim() && !existing.significance_reason) existing.significance_reason = incoming.significance_reason.trim();
       if (typeof incoming.connects_to === 'string' && incoming.connects_to.trim() && !existing.connects_to) existing.connects_to = incoming.connects_to.trim();
+      if (Array.isArray(incoming.embedding) && incoming.embedding.length && !(Array.isArray(existing.embedding) && existing.embedding.length)) existing.embedding = incoming.embedding;
     };
     const NEW_THRESHOLD = 0.65;
     const FUZZY_MERGE_THRESHOLD = 0.6;
@@ -68109,7 +68222,9 @@ async function _processForceAnalyzeResult(text, isAuto) {
         let exist = state.traits.find(e => similarText(e.name, t.name))
                  || _findFuzzyMatch(state.traits, t.name)
                  || state.patterns.find(e => similarText(e.name, t.name))
-                 || _findFuzzyMatch(state.patterns, t.name);
+                 || _findFuzzyMatch(state.patterns, t.name)
+                 || _findEmbedMatch(t, state.traits)
+                 || _findEmbedMatch(t, state.patterns);
         if (exist) mergeModelItem(exist, t);
         else {
           const conf = typeof t.confidence === 'number' ? t.confidence : 0.5;
@@ -68122,7 +68237,8 @@ async function _processForceAnalyzeResult(text, isAuto) {
       analysis.values.forEach(v => {
         if (!v || typeof v.name !== 'string' || !v.name.trim()) return;
         let exist = state.values.find(e => similarText(e.name, v.name))
-                 || _findFuzzyMatch(state.values, v.name);
+                 || _findFuzzyMatch(state.values, v.name)
+                 || _findEmbedMatch(v, state.values);
         if (exist) mergeModelItem(exist, v);
         else {
           const conf = typeof v.confidence === 'number' ? v.confidence : 0.5;
@@ -68137,7 +68253,9 @@ async function _processForceAnalyzeResult(text, isAuto) {
         let exist = state.patterns.find(e => similarText(e.name, p.name))
                  || _findFuzzyMatch(state.patterns, p.name)
                  || state.traits.find(e => similarText(e.name, p.name))
-                 || _findFuzzyMatch(state.traits, p.name);
+                 || _findFuzzyMatch(state.traits, p.name)
+                 || _findEmbedMatch(p, state.patterns)
+                 || _findEmbedMatch(p, state.traits);
         if (exist) mergeModelItem(exist, p);
         else {
           const conf = typeof p.confidence === 'number' ? p.confidence : 0.5;
@@ -68839,6 +68957,7 @@ async function _resumePendingBatch() {
           if (jm) {
             try {
               const analysis = JSON.parse(jm[0]);
+              await _embedAnalysisItems(analysis);
               _processExtractChapterAnalysis(analysis);
             } catch (e) { console.warn('[batch case] JSON parse fail:', e); }
           }
@@ -69170,6 +69289,7 @@ async function _resumeChapterCleanupBatch() {
           const jm = text.match(/\{[\s\S]*\}/);
           if (jm) {
             const analysis = JSON.parse(jm[0]);
+            await _embedAnalysisItems(analysis);
             if (typeof _processExtractChapterAnalysis === 'function') {
               _processExtractChapterAnalysis(analysis);
             }
@@ -75123,7 +75243,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.366-me-tab-extract-gate';
+const APP_VERSION = 'v4.0.367-me-tab-embed-attach';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 

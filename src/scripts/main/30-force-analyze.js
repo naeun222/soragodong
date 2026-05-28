@@ -314,6 +314,8 @@ async function _processForceAnalyzeResult(text, isAuto) {
       }
     }
 
+    // PR2a (사용자 명시 2026-05-29 §14): merge 전 새 항목 임베딩 — 코사인 attach 용 (enabled 아니면 noop).
+    await _embedAnalysisItems(analysis);
     const _rcPrevIds = {
       traits: new Set((state.traits || []).map(x => x.id)),
       values: new Set((state.values || []).map(x => x.id)),
@@ -330,6 +332,7 @@ async function _processForceAnalyzeResult(text, isAuto) {
       if (typeof incoming.type === 'string' && incoming.type.trim() && !existing.type) existing.type = incoming.type.trim();
       if (typeof incoming.significance_reason === 'string' && incoming.significance_reason.trim() && !existing.significance_reason) existing.significance_reason = incoming.significance_reason.trim();
       if (typeof incoming.connects_to === 'string' && incoming.connects_to.trim() && !existing.connects_to) existing.connects_to = incoming.connects_to.trim();
+      if (Array.isArray(incoming.embedding) && incoming.embedding.length && !(Array.isArray(existing.embedding) && existing.embedding.length)) existing.embedding = incoming.embedding;
     };
     const NEW_THRESHOLD = 0.65;
     const FUZZY_MERGE_THRESHOLD = 0.6;
@@ -347,7 +350,9 @@ async function _processForceAnalyzeResult(text, isAuto) {
         let exist = state.traits.find(e => similarText(e.name, t.name))
                  || _findFuzzyMatch(state.traits, t.name)
                  || state.patterns.find(e => similarText(e.name, t.name))
-                 || _findFuzzyMatch(state.patterns, t.name);
+                 || _findFuzzyMatch(state.patterns, t.name)
+                 || _findEmbedMatch(t, state.traits)
+                 || _findEmbedMatch(t, state.patterns);
         if (exist) mergeModelItem(exist, t);
         else {
           const conf = typeof t.confidence === 'number' ? t.confidence : 0.5;
@@ -360,7 +365,8 @@ async function _processForceAnalyzeResult(text, isAuto) {
       analysis.values.forEach(v => {
         if (!v || typeof v.name !== 'string' || !v.name.trim()) return;
         let exist = state.values.find(e => similarText(e.name, v.name))
-                 || _findFuzzyMatch(state.values, v.name);
+                 || _findFuzzyMatch(state.values, v.name)
+                 || _findEmbedMatch(v, state.values);
         if (exist) mergeModelItem(exist, v);
         else {
           const conf = typeof v.confidence === 'number' ? v.confidence : 0.5;
@@ -375,7 +381,9 @@ async function _processForceAnalyzeResult(text, isAuto) {
         let exist = state.patterns.find(e => similarText(e.name, p.name))
                  || _findFuzzyMatch(state.patterns, p.name)
                  || state.traits.find(e => similarText(e.name, p.name))
-                 || _findFuzzyMatch(state.traits, p.name);
+                 || _findFuzzyMatch(state.traits, p.name)
+                 || _findEmbedMatch(p, state.patterns)
+                 || _findEmbedMatch(p, state.traits);
         if (exist) mergeModelItem(exist, p);
         else {
           const conf = typeof p.confidence === 'number' ? p.confidence : 0.5;
@@ -1077,6 +1085,7 @@ async function _resumePendingBatch() {
           if (jm) {
             try {
               const analysis = JSON.parse(jm[0]);
+              await _embedAnalysisItems(analysis);
               _processExtractChapterAnalysis(analysis);
             } catch (e) { console.warn('[batch case] JSON parse fail:', e); }
           }
@@ -1408,6 +1417,7 @@ async function _resumeChapterCleanupBatch() {
           const jm = text.match(/\{[\s\S]*\}/);
           if (jm) {
             const analysis = JSON.parse(jm[0]);
+            await _embedAnalysisItems(analysis);
             if (typeof _processExtractChapterAnalysis === 'function') {
               _processExtractChapterAnalysis(analysis);
             }

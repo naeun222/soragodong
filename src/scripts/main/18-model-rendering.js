@@ -118,6 +118,8 @@ function _dismissGuestNudge() {
 }
 
 function renderModel() {
+  // PR2a (사용자 명시 2026-05-29 §14): 모델 항목 embedding lazy backfill (게이트 OFF / 완료 시 noop). 코사인 attach 토대.
+  try { if (typeof _modelEmbedBackfillAll === 'function') _modelEmbedBackfillAll(); } catch {}
   const container = document.getElementById('modelContent');
   if (!container) return;  // FIX BUG-1: null guard
   // 사용자 명시 2026-05-10 (큐 10): traits/values/patterns 의 extractedFrom='simulation' 항목은 나 탭 표시 X (도서관 시뮬 영역 별도).

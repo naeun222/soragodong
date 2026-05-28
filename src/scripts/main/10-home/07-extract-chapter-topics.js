@@ -106,6 +106,8 @@ async function extractChapterCaseAnalysis(messages, opts) {
       }
     }
 
+    // PR2a (사용자 명시 2026-05-29 §14): sync 처리 전 새 신호 임베딩 — 코사인 attach 용 (enabled 아니면 noop).
+    await _embedAnalysisItems(analysis);
     const touched = _processExtractChapterAnalysis(analysis, { isSimulation: _isSim });
 
     // 사용자 명시 2026-05-09 (재정정): 시뮬 통합 추출 폐기 — 시뮬 _extracted mark 부분 제거.
