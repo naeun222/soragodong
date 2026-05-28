@@ -1,1 +1,1 @@
-v4.0.373-me-tab-hide-diagnoses
+v4.0.374-localstorage-photo-strip

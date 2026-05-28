@@ -16635,6 +16635,21 @@ function _serializeReplacer(key, value) {
 function _localSaveReplacer(key, value) {
   if (_SERIALIZE_TRANSIENT_KEYS.has(key)) return undefined;
   if (key === 'embedding') return undefined;
+  // 사용자 명시 2026-05-29: 사진 base64 — Storage 마이그(photoStorageKeys) *완료* 시 localStorage 에선 제거.
+  //   cloud(_cloudStateReplacer)는 그대로 유지 = 안전망 (Phase 1E Step 7 full 제거 아님, localStorage 슬림만).
+  //   렌더는 storageKey → diaryImgHtml/hydrateDiaryPhotos 가 Storage 에서 채움 (base64 불필요). 마이그 path(in-memory)도 영향 X.
+  //   부분 마이그(storageKey 가 사진 다 안 덮음)면 base64 유지 — 손실 방지.
+  if ((key === 'photos' || key === 'photoThumb' || key === 'photo') && this) {
+    const sk = this.photoStorageKeys;
+    if (Array.isArray(sk) && sk.filter(Boolean).length > 0) {
+      if (key === 'photos') {
+        const n = Array.isArray(value) ? value.filter(Boolean).length : 0;
+        if (sk.filter(Boolean).length >= n) return undefined;
+      } else if (sk[0]) {
+        return undefined;  // photoThumb / photo (legacy single = photos[0])
+      }
+    }
+  }
   return value;
 }
 
@@ -75502,7 +75517,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.373-me-tab-hide-diagnoses';
+const APP_VERSION = 'v4.0.374-localstorage-photo-strip';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 
