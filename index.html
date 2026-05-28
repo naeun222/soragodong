@@ -16628,6 +16628,16 @@ function _serializeReplacer(key, value) {
   return value;
 }
 
+// 사용자 보고 2026-05-29: localStorage quota 초과 (임베딩 bloat) → synthesis(coreNodes) 저장 실패 = "모으는 게 안 됨".
+//   localStorage 전용 replacer — 임베딩(BGE 1024 float, 항목당 ~12KB × 모델/archive/전략 다수)은 *로컬에 저장 X*.
+//   cloud 경로(_cloudStateReplacer + gzip line 646 의 _serializeReplacer)는 그대로 임베딩 유지 → reload 시 cloud 가 rehydrate.
+//   추가로 idb(02c-embedding-store) 가 로컬 캐시. 즉 임베딩 영속성 손실 0, localStorage 만 가벼워짐.
+function _localSaveReplacer(key, value) {
+  if (_SERIALIZE_TRANSIENT_KEYS.has(key)) return undefined;
+  if (key === 'embedding') return undefined;
+  return value;
+}
+
 // V4 (사용자 명시 2026-05-20 ultrathink): cloud main row 전용 replacer.
 //   _serializeReplacer (transient strip) + _hasMessages: true 박힌 archive 의 messages 키 strip.
 //   별도 테이블 (soragodong_chat_messages) 에 이미 보관 — main row JSONB cascade 회피.
@@ -16726,7 +16736,7 @@ function _flushLocalSave(opts) {
   let payload;
   try {
     // 사용자 요청 2026-04-29 (perf #1): replacer로 transient 필드 strip
-    payload = JSON.stringify(state, _serializeReplacer);
+    payload = JSON.stringify(state, _localSaveReplacer);
   } catch (e) {
     console.warn('localStorage stringify failed:', e);
     return;
@@ -75520,7 +75530,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.370-me-tab-synth-auto';
+const APP_VERSION = 'v4.0.371-localstorage-embed-strip';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 

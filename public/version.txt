@@ -1,1 +1,1 @@
-v4.0.370-me-tab-synth-auto
+v4.0.371-localstorage-embed-strip
