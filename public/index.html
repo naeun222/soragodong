@@ -2011,29 +2011,28 @@
      daily = 살구 (아침 햇살), inquiry = 보라 (저녁 램프), vent = amber (벽난로).
      null = 색 X (default). gradient transition 안 됨 — class 전환 시 snap, 의도된 동작.
      메시지 영역 가독성 — bubble 자체가 dark surface 라 안전. */
-  /* 사용자 명시 2026-05-29 (4차) — 더 넓게.
-     사용자 보고 2026-05-29 (5차) — 빛 살짝 ↓ (사이즈 유지, 색 강도만 ~28% ↓).
-     outer wash 100%/65% → 120%/88% w/h 유지. core 도 사이즈 그대로 (눈부신 핀포인트).
-     색: core 0.92 → 0.65, mid 0.82 → 0.65, outer 0.45 → 0.38. */
+  /* 사용자 명시 2026-05-29 (6차) — halo source 입력창 (at 50% 100%) → 왼쪽 꼭대기 모서리 (at 0% 0%).
+     화면 좌상단에서 대각선 방향으로 빛이 발산. ellipse 비율 = 원형에 가깝게 (모서리 광원).
+     core (눈부신 흰빛) + mid (mode color) + outer (wide wash) 3-layer 구조 유지. */
   #screen-chat.chat-bg-daily {
     background:
-      radial-gradient(ellipse 22% 16% at 50% 100%, rgba(255,238,210,0.65), transparent 65%),
-      radial-gradient(ellipse 65% 42% at 50% 100%, rgba(244,183,141,0.65), transparent 76%),
-      radial-gradient(ellipse 120% 88% at 50% 100%, rgba(244,183,141,0.38), transparent 88%),
+      radial-gradient(ellipse 14% 14% at 0% 0%, rgba(255,238,210,0.65), transparent 70%),
+      radial-gradient(ellipse 45% 45% at 0% 0%, rgba(244,183,141,0.65), transparent 78%),
+      radial-gradient(ellipse 100% 100% at 0% 0%, rgba(244,183,141,0.38), transparent 90%),
       var(--bg);
   }
   #screen-chat.chat-bg-inquiry {
     background:
-      radial-gradient(ellipse 18% 14% at 50% 100%, rgba(225,215,255,0.62), transparent 65%),
-      radial-gradient(ellipse 55% 40% at 50% 100%, rgba(150,110,210,0.72), transparent 74%),
-      radial-gradient(ellipse 110% 82% at 50% 100%, rgba(120,90,180,0.42), transparent 86%),
+      radial-gradient(ellipse 12% 12% at 0% 0%, rgba(225,215,255,0.62), transparent 68%),
+      radial-gradient(ellipse 40% 40% at 0% 0%, rgba(150,110,210,0.72), transparent 76%),
+      radial-gradient(ellipse 95% 95% at 0% 0%, rgba(120,90,180,0.42), transparent 88%),
       var(--bg);
   }
   #screen-chat.chat-bg-vent {
     background:
-      radial-gradient(ellipse 22% 16% at 50% 100%, rgba(255,232,185,0.65), transparent 65%),
-      radial-gradient(ellipse 60% 44% at 50% 100%, rgba(228,170,38,0.65), transparent 74%),
-      radial-gradient(ellipse 115% 90% at 50% 100%, rgba(218,165,32,0.38), transparent 90%),
+      radial-gradient(ellipse 14% 14% at 0% 0%, rgba(255,232,185,0.65), transparent 70%),
+      radial-gradient(ellipse 42% 42% at 0% 0%, rgba(228,170,38,0.65), transparent 76%),
+      radial-gradient(ellipse 100% 100% at 0% 0%, rgba(218,165,32,0.38), transparent 90%),
       var(--bg);
   }
   .chat-mode-card {
@@ -75111,7 +75110,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.363-chat-halo-soften';
+const APP_VERSION = 'v4.0.364-chat-halo-top-left-corner';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 
