@@ -53,7 +53,8 @@ function renderWeeklyStoryReview(reviewData, opts) {
     _cutoffEnd = _t;
   }
 
-  // mood arc — entries 의 mood 곡선 (라벨 / 숫자 X)
+  // mood + energy 두 곡선 — 옵션 1 의 _renderReviewMoodChartInline 재사용 (사용자 명시 2026-05-28: 옵션 1 차트 활용).
+  //   energy = entry.energy ?? entry.vitality fallback. legend 자동 포함.
   const entriesForArc = (state.entries || [])
     .filter(e => {
       if (!e.date) return false;
@@ -61,7 +62,9 @@ function renderWeeklyStoryReview(reviewData, opts) {
       return d >= _cutoff && d < _cutoffEnd;
     })
     .sort((a, b) => String(a.date).localeCompare(String(b.date)));
-  const moodArcSvg = _buildStoryMoodArc(entriesForArc);
+  const moodArcHtml = (typeof _renderReviewMoodChartInline === 'function' && entriesForArc.length >= 2)
+    ? _renderReviewMoodChartInline(entriesForArc)
+    : '';
 
   // 이 주의 진주 1개 — 본인이 ✦한 것 중 가장 최근
   const pearlsThisWeek = (state.pearls || [])
@@ -85,6 +88,15 @@ function renderWeeklyStoryReview(reviewData, opts) {
 
   const cycleLabel = (k) => k === 'sleep' ? '잠' : k === 'mode' ? '모드' : '·';
 
+  // one_word 글자 stagger fade — Spotify Wrapped 톤 + 한국 손글씨 *그어지는* 톤.
+  //   각 글자 <span> + animation-delay (80ms × index). reduced-motion 시 한 번에 fade.
+  const oneWordChars = oneWord
+    ? Array.from(oneWord).map((ch, i) => {
+        const safe = (ch === ' ') ? '&nbsp;' : escapeHtml(ch);
+        return `<span class="rstory-oneword-char" style="animation-delay:${(i * 80 + 200)}ms;">${safe}</span>`;
+      }).join('')
+    : '';
+
   const html = `
     <div class="rstory-container" id="rstoryContainer">
       <div class="rstory-progress" role="progressbar" aria-label="페이지 진행도">
@@ -96,15 +108,17 @@ function renderWeeklyStoryReview(reviewData, opts) {
       <button class="rstory-close" type="button" onclick="closeWeeklyStoryReview()" aria-label="닫기">✕</button>
 
       <div class="rstory-page rstory-page-hero active" data-page="0" role="region" aria-label="이번 주 한 단어">
-        <div class="rstory-meta">${escapeHtml(weekKey || '이번 주')} · 너의 한 주</div>
-        ${oneWord ? `<div class="rstory-oneword" aria-label="이번 주 한 단어 ${escapeHtml(oneWord)}">${escapeHtml(oneWord)}</div>` : '<div class="rstory-empty">이번 주는 한 단어가 흐릿했어</div>'}
+        <div class="rstory-meta">${escapeHtml(weekKey || '이번 주')} <span class="rstory-meta-dot">•</span> 너의 한 주</div>
+        ${oneWord ? `<div class="rstory-oneword" aria-label="이번 주 한 단어 ${escapeHtml(oneWord)}">${oneWordChars}</div>` : '<div class="rstory-empty">이번 주는 한 단어가 흐릿했어</div>'}
         ${momentum ? `<div class="rstory-momentum">${escapeHtml(momentum)}</div>` : ''}
-        ${moodArcSvg ? `<div class="rstory-moodarc">${moodArcSvg}</div>` : ''}
-        <div class="rstory-hint">↓ 살짝 위로</div>
+        ${moodArcHtml ? `<div class="rstory-moodarc">${moodArcHtml}</div>` : ''}
+        <div class="rstory-hint" aria-hidden="true">
+          <svg viewBox="0 0 12 8" width="12" height="8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2 L6 6 L10 2"/></svg>
+        </div>
       </div>
 
       <div class="rstory-page rstory-page-scenes" data-page="1" role="region" aria-label="이번 주 장면">
-        <div class="rstory-meta">${escapeHtml(weekKey || '')} · 이번 주 장면</div>
+        <div class="rstory-meta">${escapeHtml(weekKey || '')} <span class="rstory-meta-dot">•</span> 이번 주 장면</div>
         ${scenes.length === 0 ? `
           <div class="rstory-empty">이 주는 장면이 흐릿했어</div>
         ` : `
@@ -113,7 +127,7 @@ function renderWeeklyStoryReview(reviewData, opts) {
               <div class="rstory-scene ${i === 0 ? 'active' : ''}" data-scene="${i}">
                 ${s.when ? `<div class="rstory-scene-when">${escapeHtml(s.when)}</div>` : ''}
                 ${s.what ? `<div class="rstory-scene-what">${escapeHtml(s.what)}</div>` : ''}
-                ${s.feeling ? `<div class="rstory-scene-feeling">— ${escapeHtml(s.feeling)}</div>` : ''}
+                ${s.feeling ? `<div class="rstory-scene-feeling"><span class="rstory-scene-feeling-mark" aria-hidden="true">—</span> ${escapeHtml(s.feeling)}</div>` : ''}
               </div>
             `).join('')}
           </div>
@@ -126,21 +140,28 @@ function renderWeeklyStoryReview(reviewData, opts) {
       </div>
 
       <div class="rstory-page rstory-page-reflect" data-page="2" role="region" aria-label="이번 주 흐름과 한 마디">
-        <div class="rstory-meta">${escapeHtml(weekKey || '')} · 흐름</div>
-        ${flow ? `<div class="rstory-flow">${escapeHtml(flow)}</div>` : ''}
-        ${cycleEntries.length > 0 ? `
-          <div class="rstory-cycles">
-            ${cycleEntries.map(c => `<div class="rstory-cycle"><span class="rstory-cycle-k">${cycleLabel(c.k)}</span><span class="rstory-cycle-v">${escapeHtml(c.v)}</span></div>`).join('')}
-          </div>
-        ` : ''}
-        ${softNotice ? `<div class="rstory-notice">✦ ${escapeHtml(softNotice)}</div>` : ''}
-        ${pearlsThisWeek.length > 0 ? `
-          <div class="rstory-pearl">
-            <div class="rstory-pearl-label">이 주의 진주</div>
-            <div class="rstory-pearl-content">${escapeHtml(String(pearlsThisWeek[0].content || pearlsThisWeek[0].note || '').slice(0, 120))}</div>
-          </div>
-        ` : ''}
-        ${chaptersCount > 0 ? `<div class="rstory-chapters-label">이 주의 챕터 ${chaptersCount}개</div>` : ''}
+        <div class="rstory-meta">${escapeHtml(weekKey || '')} <span class="rstory-meta-dot">•</span> 흐름</div>
+        <div class="rstory-reflect-stack">
+          ${flow ? `<div class="rstory-flow">${escapeHtml(flow)}</div>` : ''}
+          ${cycleEntries.length > 0 ? `
+            <div class="rstory-cycles">
+              ${cycleEntries.map(c => `<div class="rstory-cycle"><span class="rstory-cycle-k">${cycleLabel(c.k)}</span><span class="rstory-cycle-v">${escapeHtml(c.v)}</span></div>`).join('')}
+            </div>
+          ` : ''}
+          ${softNotice ? `
+            <div class="rstory-notice">
+              <span class="rstory-notice-mark" aria-hidden="true">✦</span>
+              <span class="rstory-notice-text">${escapeHtml(softNotice)}</span>
+            </div>
+          ` : ''}
+          ${pearlsThisWeek.length > 0 ? `
+            <div class="rstory-pearl">
+              <div class="rstory-pearl-label">이 주의 진주</div>
+              <div class="rstory-pearl-content">${escapeHtml(String(pearlsThisWeek[0].content || pearlsThisWeek[0].note || '').slice(0, 120))}</div>
+            </div>
+          ` : ''}
+          ${chaptersCount > 0 ? `<div class="rstory-chapters-label"><span class="rstory-chip">챕터 <span class="rstory-num">${chaptersCount}</span></span></div>` : ''}
+        </div>
         <div class="rstory-actions">
           <button class="rstory-action-secondary" type="button" onclick="showScreen('archive-reviews')">← 모음으로</button>
         </div>

@@ -1,21 +1,70 @@
 /* ═══════════════════════════════════════════════════════════════
-   주간 리뷰 옵션 2 — Story Mode (풀스크린 3 페이지)
-   사용자 요청 2026-05-28: classic (옵션 1) 와 토글로 swap.
-   monochrome (deep navy + cream) + sky 액센트 1. 한국 시집 톤.
+   주간 리뷰 옵션 2 — Story Mode (3 페이지 풀스크린)
+   사용자 요청 2026-05-28: classic (옵션 1) 와 토글 swap.
+   디자인: 한국 시집 한 권의 챕터 + Spotify Wrapped 정체성 톤.
+   monochrome (deep navy + cream) + sky 액센트. Gowun Batang 손글씨체.
    ═══════════════════════════════════════════════════════════════ */
 
+/* ---- 색·간격 토큰 ---- */
 .rstory-container {
+  /* color */
+  --rs-bg: #0a0e14;
+  --rs-bg-elev: rgba(232, 227, 216, 0.025);
+  --rs-ink: #e8e3d8;
+  --rs-ink-soft: rgba(232, 227, 216, 0.62);
+  --rs-ink-mute: rgba(232, 227, 216, 0.38);
+  --rs-ink-dim: rgba(232, 227, 216, 0.18);
+  --rs-line: rgba(232, 227, 216, 0.10);
+  --rs-accent: #7ec8e3;
+  --rs-accent-soft: rgba(126, 200, 227, 0.62);
+  --rs-accent-mute: rgba(126, 200, 227, 0.22);
+  --rs-accent-wash: rgba(126, 200, 227, 0.06);
+  /* radius */
+  --rs-r-card: 14px;
+  --rs-r-pill: 999px;
+  --rs-r-chip: 8px;
+  /* shadow */
+  --rs-shadow-card: 0 1px 0 rgba(232, 227, 216, 0.04) inset,
+                     0 18px 32px -24px rgba(0, 0, 0, 0.7),
+                     0 4px 8px -4px rgba(0, 0, 0, 0.4);
+
   position: fixed;
   inset: 0;
-  background: #0a0e14;
-  color: #e8e3d8;
+  background: var(--rs-bg);
+  color: var(--rs-ink);
   z-index: 90;
   font-family: 'Pretendard', 'Noto Sans KR', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   overflow: hidden;
   outline: none;
+  font-variant-numeric: tabular-nums;
+  touch-action: manipulation;
 }
 
-/* 상단 progress bar — instagram story 톤 */
+/* ---- 오래된 종이 noise overlay + vignette (atmosphere) ---- */
+.rstory-container::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='4'/><feColorMatrix values='0 0 0 0 0.91 0 0 0 0 0.89 0 0 0 0 0.85 0 0 0 0.04 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>");
+  background-size: 200px 200px;
+  pointer-events: none;
+  opacity: 0.7;
+  mix-blend-mode: screen;
+  z-index: 0;
+}
+.rstory-container::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 40%, rgba(0, 0, 0, 0.35) 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+.rstory-container > * { position: relative; z-index: 1; }
+
+/* ---- 상단 progress bar ---- */
 .rstory-progress {
   position: absolute;
   top: calc(env(safe-area-inset-top, 0px) + 12px);
@@ -28,7 +77,7 @@
 .rstory-progress-bar {
   flex: 1;
   height: 2px;
-  background: rgba(232, 227, 216, 0.15);
+  background: var(--rs-ink-dim);
   border-radius: 1px;
   overflow: hidden;
   position: relative;
@@ -37,42 +86,51 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: rgba(232, 227, 216, 0.78);
+  background: var(--rs-ink-soft);
   transform: scaleX(0);
   transform-origin: left;
-  transition: transform 0.4s ease-out;
+  transition-property: transform;
+  transition-duration: 0.5s;
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
 }
-.rstory-progress-bar.done::after { transform: scaleX(1); }
+.rstory-progress-bar.done::after,
 .rstory-progress-bar.current::after { transform: scaleX(1); }
 
-/* 좌상단 ↺ Classic 토글 / 우상단 ✕ 닫기 */
+/* ---- 우상단/좌상단 컨트롤 ---- */
 .rstory-toggle,
 .rstory-close {
   position: absolute;
   top: calc(env(safe-area-inset-top, 0px) + 24px);
   background: transparent;
   border: 0;
-  color: rgba(232, 227, 216, 0.65);
-  padding: 6px 10px;
+  color: var(--rs-ink-soft);
+  padding: 10px 12px;
+  /* min hit area 40×40 — padding 으로 확장 */
+  min-height: 40px;
+  min-width: 40px;
   cursor: pointer;
   z-index: 11;
   font-family: inherit;
   letter-spacing: 0.04em;
-  transition: color 0.2s;
+  transition-property: color, opacity, transform;
+  transition-duration: 0.2s;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+  -webkit-tap-highlight-color: transparent;
 }
 .rstory-toggle:hover,
-.rstory-close:hover { color: rgba(232, 227, 216, 0.95); }
-.rstory-toggle {
-  left: 12px;
-  font-size: 11px;
+.rstory-close:hover { color: var(--rs-ink); }
+.rstory-toggle:focus-visible,
+.rstory-close:focus-visible {
+  outline: 1px solid var(--rs-accent-mute);
+  outline-offset: 4px;
+  border-radius: 6px;
 }
-.rstory-close {
-  right: 12px;
-  font-size: 16px;
-  line-height: 1;
-}
+.rstory-toggle:active,
+.rstory-close:active { transform: scale(0.96); }
+.rstory-toggle { left: 12px; font-size: 11px; }
+.rstory-close { right: 12px; font-size: 16px; line-height: 1; }
 
-/* 페이지 — 동시 absolute, active 만 visible */
+/* ---- 페이지 ---- */
 .rstory-page {
   position: absolute;
   inset: 0;
@@ -80,83 +138,125 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 80px 32px calc(env(safe-area-inset-bottom, 0px) + 60px);
+  padding: 88px 32px calc(env(safe-area-inset-bottom, 0px) + 64px);
   text-align: center;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.4s ease-out;
+  transition-property: opacity;
+  transition-duration: 0.42s;
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
 }
 .rstory-page.active {
   opacity: 1;
   pointer-events: auto;
 }
 
-/* meta — 상단 라벨 (날짜 / 페이지) */
+/* ---- meta 라벨 ---- */
 .rstory-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-family: 'IBM Plex Mono', ui-monospace, 'SF Mono', monospace;
-  font-size: 10px;
-  letter-spacing: 0.18em;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: rgba(232, 227, 216, 0.5);
-  margin-bottom: 36px;
+  color: var(--rs-ink-mute);
+  margin-bottom: 40px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0;
+  animation: rstoryFadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards;
+}
+.rstory-meta-dot {
+  display: inline-block;
+  color: var(--rs-accent-soft);
+  transform: translateY(-1px);
 }
 
-/* one_word — 큰 손글씨 */
-.rstory-oneword {
-  font-family: 'Gowun Batang', serif;
-  font-size: clamp(48px, 14vw, 72px);
-  font-weight: 400;
-  color: #7ec8e3;
-  letter-spacing: 0.04em;
-  line-height: 1.1;
-  margin-bottom: 24px;
-  animation: rstoryFadeUp 0.85s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both;
-}
+@keyframes rstoryFadeIn { to { opacity: 1; } }
 @keyframes rstoryFadeUp {
-  from { opacity: 0; transform: translateY(10px); }
+  from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* momentum_line — 한 줄 시 */
+/* ---- one_word — 글자 stagger fade ---- */
+.rstory-oneword {
+  font-family: 'Gowun Batang', serif;
+  font-size: clamp(56px, 16vw, 80px);
+  font-weight: 400;
+  color: var(--rs-accent);
+  letter-spacing: 0.04em;
+  line-height: 1.1;
+  margin-bottom: 28px;
+  text-wrap: balance;
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.rstory-oneword-char {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(14px);
+  animation: rstoryCharIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+@keyframes rstoryCharIn {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- momentum_line ---- */
 .rstory-momentum {
   font-family: 'Gowun Batang', serif;
-  font-size: 17px;
-  line-height: 1.7;
-  color: rgba(232, 227, 216, 0.92);
+  font-size: 17.5px;
+  line-height: 1.78;
+  color: var(--rs-ink);
   max-width: 320px;
   margin-bottom: 36px;
-  animation: rstoryFadeUp 0.7s ease-out 0.4s both;
+  text-wrap: pretty;
+  opacity: 0;
+  animation: rstoryFadeUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.85s forwards;
 }
 
-/* mood arc — 라벨 X, 곡선 only */
+/* ---- mood + energy 차트 (옵션 1 _renderReviewMoodChartInline 활용) ---- */
 .rstory-moodarc {
-  width: 240px;
-  height: 50px;
-  opacity: 0.72;
-  animation: rstoryFadeUp 0.7s ease-out 0.6s both;
+  width: 100%;
+  max-width: 280px;
+  opacity: 0;
+  animation: rstoryFadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 1.1s forwards;
 }
-.rstory-moodarc svg { width: 100%; height: 100%; display: block; }
+.rstory-moodarc > div { margin-top: 0 !important; }
+.rstory-moodarc svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.4));
+}
 
-/* hint — 살짝 위 ↕ */
+/* ---- hint chevron ---- */
 .rstory-hint {
   position: absolute;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 36px);
-  font-size: 10.5px;
-  color: rgba(232, 227, 216, 0.32);
-  letter-spacing: 0.1em;
-  animation: rstoryHintBob 2.4s ease-in-out infinite;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 40px);
+  color: var(--rs-ink-dim);
+  width: 16px;
+  height: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  animation: rstoryHintIn 0.5s ease-out 1.5s forwards, rstoryHintBob 2.4s ease-in-out 2.5s infinite;
 }
+@keyframes rstoryHintIn { to { opacity: 0.7; } }
 @keyframes rstoryHintBob {
-  0%, 100% { transform: translateY(0); opacity: 0.32; }
-  50% { transform: translateY(-3px); opacity: 0.55; }
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(3px); }
 }
 
-/* ───── Page 2 — Scenes carousel ───── */
+/* ───── Page 2 — Scenes carousel (폴라로이드 톤) ───── */
 .rstory-scenes-carousel {
   position: relative;
   width: 100%;
   max-width: 360px;
-  min-height: 240px;
+  min-height: 260px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -168,39 +268,58 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 0 12px;
+  padding: 28px 20px;
+  background: var(--rs-bg-elev);
+  border-radius: var(--rs-r-card);
+  box-shadow: var(--rs-shadow-card);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.45s ease-in-out;
+  transform: rotate(-0.8deg) translateY(6px);
+  transition-property: opacity, transform;
+  transition-duration: 0.45s;
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, opacity;
 }
 .rstory-scene.active {
   opacity: 1;
   pointer-events: auto;
+  transform: rotate(-0.8deg) translateY(0);
 }
 
 .rstory-scene-when {
   font-family: 'IBM Plex Mono', ui-monospace, monospace;
   font-size: 10.5px;
-  letter-spacing: 0.12em;
-  color: rgba(126, 200, 227, 0.72);
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  color: var(--rs-accent-soft);
   margin-bottom: 22px;
   text-transform: uppercase;
 }
 .rstory-scene-what {
   font-family: 'Gowun Batang', serif;
-  font-size: 20px;
-  line-height: 1.55;
-  color: #e8e3d8;
-  max-width: 300px;
-  margin-bottom: 14px;
+  font-size: 20.5px;
+  line-height: 1.6;
+  color: var(--rs-ink);
+  max-width: 280px;
+  margin-bottom: 16px;
+  text-wrap: balance;
 }
 .rstory-scene-feeling {
   font-family: 'Gowun Batang', serif;
   font-style: italic;
-  font-size: 13px;
-  color: rgba(232, 227, 216, 0.55);
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--rs-ink-soft);
+  max-width: 240px;
+}
+.rstory-scene-feeling-mark {
+  display: inline-block;
+  margin-right: 6px;
+  color: var(--rs-accent-mute);
+  font-style: normal;
 }
 
+/* ---- scene dots — mini-bar 톤 (story progress 와 일관) ---- */
 .rstory-scene-dots {
   position: absolute;
   bottom: calc(env(safe-area-inset-bottom, 0px) + 60px);
@@ -211,110 +330,187 @@
   z-index: 5;
 }
 .rstory-scene-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: rgba(232, 227, 216, 0.25);
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--rs-ink-dim);
   border: 0;
   padding: 0;
   cursor: pointer;
-  transition: background 0.2s, width 0.25s ease-out;
+  position: relative;
+  transition-property: background, width, transform;
+  transition-duration: 0.3s;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+  -webkit-tap-highlight-color: transparent;
+}
+.rstory-scene-dot::before {
+  /* 40×40 hit area 확장 */
+  content: '';
+  position: absolute;
+  inset: -18px -10px;
 }
 .rstory-scene-dot.active {
-  background: rgba(126, 200, 227, 0.9);
-  width: 18px;
-  border-radius: 3px;
+  background: var(--rs-accent);
+  width: 24px;
+}
+.rstory-scene-dot:active { transform: scale(0.92); }
+.rstory-scene-dot:focus-visible {
+  outline: 1px solid var(--rs-accent-mute);
+  outline-offset: 4px;
 }
 
 /* ───── Page 3 — Reflection ───── */
 .rstory-page-reflect {
   justify-content: flex-start;
-  padding-top: 76px;
+  padding-top: 84px;
 }
+.rstory-reflect-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  width: 100%;
+  max-width: 340px;
+}
+.rstory-reflect-stack > * {
+  opacity: 0;
+  animation: rstoryFadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.rstory-reflect-stack > *:nth-child(1) { animation-delay: 0.15s; }
+.rstory-reflect-stack > *:nth-child(2) { animation-delay: 0.25s; }
+.rstory-reflect-stack > *:nth-child(3) { animation-delay: 0.35s; }
+.rstory-reflect-stack > *:nth-child(4) { animation-delay: 0.45s; }
+.rstory-reflect-stack > *:nth-child(5) { animation-delay: 0.55s; }
+
 .rstory-flow {
   font-family: 'Gowun Batang', serif;
-  font-size: 16px;
-  line-height: 1.78;
-  color: rgba(232, 227, 216, 0.92);
-  max-width: 320px;
-  margin-bottom: 28px;
+  font-size: 16.5px;
+  line-height: 1.8;
+  color: var(--rs-ink);
   text-align: center;
+  text-wrap: pretty;
+  margin: 0;
 }
+
 .rstory-cycles {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-bottom: 26px;
+  gap: 12px;
   width: 100%;
-  max-width: 320px;
 }
 .rstory-cycle {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: 12px;
   font-size: 13.5px;
   line-height: 1.65;
-  color: rgba(232, 227, 216, 0.82);
+  color: var(--rs-ink-soft);
   text-align: left;
 }
 .rstory-cycle-k {
-  min-width: 32px;
-  color: rgba(126, 200, 227, 0.7);
+  flex-shrink: 0;
+  width: 36px;
+  padding-top: 3px;
+  color: var(--rs-accent-soft);
   font-family: 'IBM Plex Mono', monospace;
   font-size: 10px;
-  letter-spacing: 0.12em;
+  font-weight: 500;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  padding-top: 3px;
-  flex-shrink: 0;
 }
 .rstory-cycle-v { flex: 1; }
 
+/* notice — line + blockquote 톤 (현재 box → line) */
 .rstory-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 4px 0 4px 18px;
+  border-left: 2px solid var(--rs-accent-soft);
+  width: 100%;
+  text-align: left;
+}
+.rstory-notice-mark {
+  color: var(--rs-accent);
+  font-size: 13px;
+  line-height: 1.6;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+.rstory-notice-text {
   font-family: 'Gowun Batang', serif;
   font-size: 14.5px;
-  line-height: 1.7;
-  color: rgba(232, 227, 216, 0.9);
-  background: rgba(126, 200, 227, 0.06);
-  border: 1px solid rgba(126, 200, 227, 0.18);
-  border-radius: 12px;
-  padding: 14px 16px;
-  margin-bottom: 22px;
-  max-width: 320px;
-  text-align: center;
+  line-height: 1.75;
+  color: var(--rs-ink);
+  text-wrap: pretty;
 }
 
+/* pearl — polaroid mini tag */
 .rstory-pearl {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-  margin-bottom: 18px;
-  padding: 12px 14px;
-  border-left: 2px solid rgba(126, 200, 227, 0.5);
-  max-width: 320px;
+  gap: 8px;
+  padding: 14px 16px;
+  background: var(--rs-bg-elev);
+  border-radius: 12px;
+  box-shadow: var(--rs-shadow-card);
+  width: 100%;
   text-align: left;
 }
 .rstory-pearl-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 10px;
-  letter-spacing: 0.18em;
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: rgba(126, 200, 227, 0.7);
+  color: var(--rs-accent-soft);
+}
+.rstory-pearl-label::before {
+  content: '';
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--rs-accent);
 }
 .rstory-pearl-content {
   font-family: 'Gowun Batang', serif;
-  font-size: 14px;
-  line-height: 1.6;
-  color: rgba(232, 227, 216, 0.9);
+  font-size: 14.5px;
+  line-height: 1.7;
+  color: var(--rs-ink);
+  text-wrap: pretty;
 }
 
+/* chapters chip */
 .rstory-chapters-label {
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  color: rgba(232, 227, 216, 0.45);
-  margin-bottom: 20px;
+  display: flex;
+  justify-content: center;
+}
+.rstory-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: var(--rs-r-pill);
+  border: 1px solid var(--rs-line);
+  background: transparent;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--rs-ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+.rstory-num {
+  color: var(--rs-accent);
+  font-weight: 600;
 }
 
+/* actions */
 .rstory-actions {
   position: absolute;
   bottom: calc(env(safe-area-inset-bottom, 0px) + 32px);
@@ -327,25 +523,35 @@
 }
 .rstory-action-secondary {
   background: transparent;
-  border: 1px solid rgba(232, 227, 216, 0.22);
-  color: rgba(232, 227, 216, 0.82);
-  border-radius: 24px;
-  font-size: 12px;
-  padding: 10px 22px;
+  border: 1px solid var(--rs-line);
+  color: var(--rs-ink-soft);
+  border-radius: var(--rs-r-pill);
+  font-size: 12.5px;
+  padding: 12px 26px;
   letter-spacing: 0.04em;
+  min-height: 44px;
   cursor: pointer;
   font-family: inherit;
-  transition: background 0.2s, color 0.2s;
+  transition-property: background, color, border-color, transform;
+  transition-duration: 0.2s;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+  -webkit-tap-highlight-color: transparent;
 }
 .rstory-action-secondary:hover {
-  background: rgba(232, 227, 216, 0.08);
-  color: #e8e3d8;
+  background: rgba(232, 227, 216, 0.05);
+  border-color: var(--rs-ink-dim);
+  color: var(--rs-ink);
+}
+.rstory-action-secondary:active { transform: scale(0.96); }
+.rstory-action-secondary:focus-visible {
+  outline: 1px solid var(--rs-accent-mute);
+  outline-offset: 3px;
 }
 
 .rstory-empty {
   font-family: 'Gowun Batang', serif;
-  font-size: 14px;
-  color: rgba(232, 227, 216, 0.5);
+  font-size: 14.5px;
+  color: var(--rs-ink-mute);
   font-style: italic;
   margin: 40px 0;
 }
@@ -353,13 +559,22 @@
 /* reduced-motion — 모든 transform 제거 fade only */
 @media (prefers-reduced-motion: reduce) {
   .rstory-page,
-  .rstory-oneword,
+  .rstory-meta,
   .rstory-momentum,
   .rstory-moodarc,
   .rstory-scene,
-  .rstory-hint { animation: none !important; }
+  .rstory-hint,
+  .rstory-oneword-char,
+  .rstory-reflect-stack > *,
+  .rstory-progress-bar::after {
+    animation: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
   .rstory-page { transition: opacity 0.15s ease !important; }
-  .rstory-hint { opacity: 0.45 !important; }
+  .rstory-hint { animation: none !important; opacity: 0.45 !important; }
+  .rstory-progress-bar.done::after,
+  .rstory-progress-bar.current::after { transform: scaleX(1) !important; }
 }
 
 /* ───── Classic mode 마지막의 Story 시도 toggle hint ───── */
@@ -367,20 +582,30 @@
   display: block;
   width: 100%;
   margin-top: 14px;
-  padding: 10px 14px;
+  padding: 12px 14px;
   background: transparent;
   border: 1px dashed rgba(126, 200, 227, 0.32);
   border-radius: 10px;
-  color: rgba(126, 200, 227, 0.78);
+  color: rgba(126, 200, 227, 0.85);
   font-size: 11.5px;
+  font-weight: 500;
   letter-spacing: 0.06em;
   cursor: pointer;
   font-family: inherit;
   text-align: center;
-  transition: background 0.2s, color 0.2s, border-color 0.2s;
+  min-height: 40px;
+  -webkit-tap-highlight-color: transparent;
+  transition-property: background, color, border-color, transform;
+  transition-duration: 0.2s;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
 }
 .review-layout-hint:hover {
-  background: rgba(126, 200, 227, 0.05);
-  border-color: rgba(126, 200, 227, 0.5);
-  color: rgba(126, 200, 227, 0.95);
+  background: rgba(126, 200, 227, 0.06);
+  border-color: rgba(126, 200, 227, 0.55);
+  color: rgba(126, 200, 227, 1);
+}
+.review-layout-hint:active { transform: scale(0.98); }
+.review-layout-hint:focus-visible {
+  outline: 1px solid rgba(126, 200, 227, 0.5);
+  outline-offset: 3px;
 }
