@@ -326,6 +326,10 @@ async function _processForceAnalyzeResult(text, isAuto) {
       if (incoming.description && (!existing.description || incoming.description.length > existing.description.length)) {
         existing.description = incoming.description;
       }
+      // 사용자 명시 2026-05-29 (§2): 메타필드 보강 (없을 때만 — 기존 값 보존).
+      if (typeof incoming.type === 'string' && incoming.type.trim() && !existing.type) existing.type = incoming.type.trim();
+      if (typeof incoming.significance_reason === 'string' && incoming.significance_reason.trim() && !existing.significance_reason) existing.significance_reason = incoming.significance_reason.trim();
+      if (typeof incoming.connects_to === 'string' && incoming.connects_to.trim() && !existing.connects_to) existing.connects_to = incoming.connects_to.trim();
     };
     const NEW_THRESHOLD = 0.65;
     const FUZZY_MERGE_THRESHOLD = 0.6;

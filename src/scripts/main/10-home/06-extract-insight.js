@@ -142,6 +142,20 @@ function _processExtractChapterAnalysis(analysis, opts) {
   // 사용자 명시 2026-05-26 ultrathink: opts.threshold override 가능 (P1 = 0.65 / P2 default = 0.5 / 시뮬 = 0.7).
   const THRESHOLD = (typeof opts.threshold === 'number') ? opts.threshold
                   : _isSim ? 0.7 : 0.5;
+  // 사용자 명시 2026-05-29 (§2-B): 타입별 자격 바 — 단일 임계로 뭉개지 X. mechanism 은 구조 선명하면 낮은 바, identity 는 최고 바.
+  const _typeThreshold = (item) => {
+    const ty = (item && typeof item.type === 'string') ? item.type.trim().toLowerCase() : '';
+    if (ty === 'mechanism') return Math.min(THRESHOLD, 0.55);
+    if (ty === 'identity') return Math.max(THRESHOLD, 0.8);
+    return THRESHOLD;
+  };
+  // 사용자 명시 2026-05-29 (§2-D1): 같은 항목 재언급 시 confidence 인플레 금지 — 더 강한 근거일 때만 상향 + 메타필드 보강.
+  const _mergeMeta = (exists, item) => {
+    if (!item) return;
+    if (typeof item.significance_reason === 'string' && item.significance_reason.trim() && !exists.significance_reason) exists.significance_reason = item.significance_reason.trim();
+    if (typeof item.connects_to === 'string' && item.connects_to.trim() && !exists.connects_to) exists.connects_to = item.connects_to.trim();
+    if (typeof item.type === 'string' && item.type.trim() && !exists.type) exists.type = item.type.trim();
+  };
   // 사용자 명시 2026-05-26 ultrathink: opts.source override 가능 (P1 = 'reflection'/'magic_help'/'mutation').
   const _extractedFrom = opts.source || (_isSim ? 'simulation' : 'chapter');
   // 사용자 명시 2026-05-26 ultrathink: opts.fuzzyMerge true 일 때만 Levenshtein 폴백 활성 (P1 만).
@@ -179,13 +193,16 @@ function _processExtractChapterAnalysis(analysis, opts) {
         const exists = (state.traits || []).find(e => similarText(e.name, t.name))
                     || _findFuzzyTrait(t.name);
         if (!exists) {
-          if (conf < THRESHOLD) return;
+          if (conf < _typeThreshold(t)) return;
           state.traits = state.traits || [];
           state.traits.push({
             id: 'trait_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
             name: t.name.trim(),
             description: typeof t.description === 'string' ? t.description.trim() : '',
             quiz_question: (typeof t.quiz_question === 'string' ? t.quiz_question.trim() : '') || null,
+            type: (typeof t.type === 'string' ? t.type.trim() : '') || null,
+            significance_reason: (typeof t.significance_reason === 'string' ? t.significance_reason.trim() : '') || null,
+            connects_to: (typeof t.connects_to === 'string' ? t.connects_to.trim() : '') || null,
             confidence: conf, user_verified: false, evidence_count: 1,
             extractedFrom: _extractedFrom,
             created_at: new Date().toISOString()
@@ -193,7 +210,8 @@ function _processExtractChapterAnalysis(analysis, opts) {
           touched = true;
         } else {
           exists.evidence_count = (exists.evidence_count || 1) + 1;
-          exists.confidence = Math.min(1.0, (exists.confidence || 0.5) + 0.1);
+          if (conf > (exists.confidence || 0.5)) exists.confidence = Math.min(1.0, conf);
+          _mergeMeta(exists, t);
           if (typeof t.quiz_question === 'string' && t.quiz_question.trim() && !exists.quiz_question) exists.quiz_question = t.quiz_question.trim();
           touched = true;
         }
@@ -206,13 +224,16 @@ function _processExtractChapterAnalysis(analysis, opts) {
         const exists = (state.values || []).find(e => similarText(e.name, v.name))
                     || _findFuzzyValue(v.name);
         if (!exists) {
-          if (conf < THRESHOLD) return;
+          if (conf < _typeThreshold(v)) return;
           state.values = state.values || [];
           state.values.push({
             id: 'val_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
             name: v.name.trim(),
             description: typeof v.description === 'string' ? v.description.trim() : '',
             quiz_question: (typeof v.quiz_question === 'string' ? v.quiz_question.trim() : '') || null,
+            type: (typeof v.type === 'string' ? v.type.trim() : '') || null,
+            significance_reason: (typeof v.significance_reason === 'string' ? v.significance_reason.trim() : '') || null,
+            connects_to: (typeof v.connects_to === 'string' ? v.connects_to.trim() : '') || null,
             confidence: conf, user_verified: false, evidence_count: 1,
             sdt_need: v.sdt_need || null,
             extractedFrom: _extractedFrom,
@@ -221,7 +242,8 @@ function _processExtractChapterAnalysis(analysis, opts) {
           touched = true;
         } else {
           exists.evidence_count = (exists.evidence_count || 1) + 1;
-          exists.confidence = Math.min(1.0, (exists.confidence || 0.5) + 0.1);
+          if (conf > (exists.confidence || 0.5)) exists.confidence = Math.min(1.0, conf);
+          _mergeMeta(exists, v);
           if (typeof v.quiz_question === 'string' && v.quiz_question.trim() && !exists.quiz_question) exists.quiz_question = v.quiz_question.trim();
           touched = true;
         }
@@ -234,7 +256,7 @@ function _processExtractChapterAnalysis(analysis, opts) {
         const exists = (state.patterns || []).find(e => similarText(e.name, p.name))
                     || _findFuzzyPattern(p.name);
         if (!exists) {
-          if (conf < THRESHOLD) return;
+          if (conf < _typeThreshold(p)) return;
           state.patterns = state.patterns || [];
           state.patterns.push({
             id: 'pat_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
@@ -243,6 +265,9 @@ function _processExtractChapterAnalysis(analysis, opts) {
             trigger: typeof p.trigger === 'string' ? p.trigger.trim() : '',
             sequence: typeof p.sequence === 'string' ? p.sequence.trim() : '',
             quiz_question: (typeof p.quiz_question === 'string' ? p.quiz_question.trim() : '') || null,
+            type: (typeof p.type === 'string' ? p.type.trim() : '') || null,
+            significance_reason: (typeof p.significance_reason === 'string' ? p.significance_reason.trim() : '') || null,
+            connects_to: (typeof p.connects_to === 'string' ? p.connects_to.trim() : '') || null,
             confidence: conf, user_verified: false, evidence_count: 1,
             extractedFrom: _extractedFrom,
             created_at: new Date().toISOString()
@@ -250,7 +275,8 @@ function _processExtractChapterAnalysis(analysis, opts) {
           touched = true;
         } else {
           exists.evidence_count = (exists.evidence_count || 1) + 1;
-          exists.confidence = Math.min(1.0, (exists.confidence || 0.5) + 0.1);
+          if (conf > (exists.confidence || 0.5)) exists.confidence = Math.min(1.0, conf);
+          _mergeMeta(exists, p);
           if (typeof p.quiz_question === 'string' && p.quiz_question.trim() && !exists.quiz_question) exists.quiz_question = p.quiz_question.trim();
           touched = true;
         }
