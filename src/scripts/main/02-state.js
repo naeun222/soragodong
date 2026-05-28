@@ -465,6 +465,10 @@ const DEFAULT_STATE = {
   quarterlyReviews: [],     // V4 비전 7.9 분기 리뷰: [{id, quarterKey:'2026-Q2', completedAt, summary, sections, stats, auto, deepDive}]
   annualReviews: [],        // 사용자 명시 2026-04-30 ultrathink: 연간 리뷰 (10 카드 시퀀스). [{id, year, yearRange, completedAt, oneWord, persona, personaReason, stats, finding1, finding2, tree, beach, moments_card, best_pearl, realizations, deep, oneLine, songs, auto}]
   lastForceAnalyzeAt: null, // 사용자 요청 2026-04-30: forceAnalyze 일주일 자동화 — 마지막 실행 시각.
+  // 사용자 명시 2026-05-29 (연결·통합 §4): synthesis 패스 — 흩어진 항목 → ≤8 핵심 노드 overlay. raw 항목 0 손실.
+  coreNodes: [],            // [{id, name, type, valence, mechanism, linkage, leverage, source_names, connections, created_at}]
+  coreNodesMeta: null,      // {version, generatedAt, sourceCount, regatedOut}
+  lastSynthesisAt: null,    // 마지막 synthesis 실행 시각
   // 사용자 요청 2026-04-30: 자동 분석 4단계 (매일/매주/매월/매분기/매년 새벽 4시 cutoff).
   lastDailyChapterExtractAt: null,    // 매일 4AM
   lastWeeklyAnalyzeAt: null,           // 매주 일요일 4AM

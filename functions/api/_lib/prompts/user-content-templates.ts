@@ -455,6 +455,15 @@ ${dataDumpJson}
 위 데이터로 Case Formulation 작성. JSON만 출력.`;
 }
 
+// 사용자 명시 2026-05-29 (연결·통합 §4): synthesis 패스 user content — 현재 항목 list (클라가 itemsJson 합성).
+function buildSynthesize(v: any): string {
+  const itemsJson = _s(v?.itemsJson, 28000);
+  return `[사용자의 현재 자기관찰 항목 — 이것들을 핵심 노드로 통합한다]
+${itemsJson}
+
+위 항목들을 재게이트 → 군집 → 최대 8개 핵심 노드로 통합. source_names 는 위 항목 이름 그대로 적어. JSON만 출력.`;
+}
+
 // 사용자 명시 2026-05-16 ultrathink: 자동 인사이트 발견 — 14일 행동 데이터 + 기존 인사이트 (dedup 용).
 function buildDiscoverInsights(v: any): string {
   const dataJson = _s(v?.dataJson, 20000);
@@ -821,6 +830,11 @@ export function applyUserContentTemplate(body: any): boolean {
   // analyze_4stage (force_analyze)
   else if (_ep === 'analyze_4stage' && _ct === 'force_analyze') {
     built = buildForceAnalyze(_v);
+  }
+
+  // synthesize (사용자 명시 2026-05-29 연결·통합 §4) — 흩어진 항목 → 핵심 노드 통합
+  else if (_ep === 'synthesize') {
+    built = buildSynthesize(_v);
   }
 
   // discover_insights (사용자 명시 2026-05-16 ultrathink)

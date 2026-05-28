@@ -32,7 +32,8 @@ export const PERSONA_SKIP_PROMPT_TYPES = new Set([
 // 사용자 명시 2026-05-26 ultrathink: semantic_dedup 도 분석 톤 — persona prepend X.
 export const PERSONA_SKIP_USER_CONTENT_TYPES = new Set([
   'force_analyze',
-  'semantic_dedup'
+  'semantic_dedup',
+  'synthesize'
 ]);
 
 export function shouldSkipPersona(body: any): boolean {
@@ -77,6 +78,49 @@ C. 가치 게이트 — B 통과해도 '이게 중요한가'
 - type: "mechanism" | "trait" | "value" | "identity" (위 B 분류 중 하나)
 - significance_reason: 왜 유의미한가 한 줄 (C1 의 어디에 닿는지)
 - connects_to: 이 신호가 강화·확장하는 [이미 등록된 항목] 의 기존 이름 (없으면 빈 문자열)`;
+
+// 사용자 명시 2026-05-29 (연결·통합 §4/§5): synthesis 패스 — 흩어진 항목 → ≤8 핵심 노드 통합.
+//   force_analyze(평면 항목 갱신)와 별개 layer. raw 항목 0 손실, coreNodes overlay 생성. Opus.
+const SYNTHESIZE_SYSTEM = `너는 임상심리학자. 사용자의 흩어진 자기관찰 항목들(특성·가치·패턴·문제·강점·작동기제)을 받아 *소수의 핵심 노드*로 통합한다.
+목표: 수십 개 원자 → 핵심 노드 최대 8개. 연결이 곧 통합이고, 통합이 부피를 푼다.
+좋은 통합 = parsimony(소수) + linkage(여러 표면 행동을 설명하는 적은 수의 핵심 기제).
+
+[1단계 — 재게이트] 각 입력 항목을 먼저 거른다. 아래에 걸리는 항목은 노드 재료에서 빼고 regated_out 에 이름만 남긴다:
+- 메타 발화 (앱·AI·이 분석 자체에 대한 것) / 제품·작업 디버깅 (예: "push 구현에서 막힘") → 성격 아님.
+- 농담·과장·반어 / 일회성 사건 (반복 신호 아님).
+- Barnum (대부분 사람에게 해당, 예: "감정이 풍부함", "여행 꼼꼼히 짬").
+- 하중 없음 (반복 마찰·핵심 동기·비자명 메커니즘 어디에도 안 닿는 사소한 것).
+
+[2단계 — 군집] 통과한 항목을 *같은 드라이버(동기·기제)* 기준으로 묶는다.
+- 표면 표현·글자가 달라도 같은 뿌리면 한 노드. (예: "인간적 호감 기반 교류" + "관계에서 이해·인정 욕구" = 같은 드라이버.)
+- 라벨·카테고리가 같다고 같은 드라이버 아님. 의미로 판단.
+- 강한 근거 있는 묶음만. 애매하면 따로 둔다.
+
+[3단계 — 핵심 노드 최대 8개] 각 노드:
+- name: 과장 없는, 사람이 읽는 이름 (라벨 강도 = 증거 무게. 역량/전문가/기획력 같은 과장 명사 X).
+- type: "mechanism" | "trait" | "value" | "tension"
+- valence: "strength" | "growth_area" | "neutral" — 라우팅 근거.
+  · strength → '자기조절 도구'. growth_area → '다루어야 할 것'.
+  · ⟳ 문제유지 루프(위기 직전 수습 강화·불안 회피 루프 등)는 strength 아님 → 반드시 growth_area.
+- mechanism: 어떻게 작동하나 (trigger → 흐름 → 결과), 1-2문장.
+- linkage: 어떤 표면 행동·항목들에서 나타나나 (이 노드로 묶인 것들을 한 줄로 — 흩어진 게 어떻게 한 나로 모이는지).
+- leverage: 어디를 건드리면 바뀌나 (개입점). 새 통찰이 아니라 *이미 보이는* 지점.
+- source_names: 이 노드로 흡수한 입력 항목 이름들 (입력에 나온 이름 그대로, 추적용).
+- connections: 다른 노드와의 관계 [{"to": 노드 name, "type": "facet_of"|"feeds"|"tension", "why": 한 줄}]. 없으면 빈 배열.
+
+[원칙 — 매우 중요]
+- 실패 정의: 노드 묶음 전체가 원래 항목 나열보다 *길면* 실패 (inventory 가 됐다는 뜻). 통합은 *수렴*이다 — 짧게.
+- 가짜 인용·연구 X. SDT·이론 용어를 *나열* 하지 말 것 — 방법만 빌린다.
+- 회피편향 X: 듣기 좋은 쪽으로 반올림 X. 불편해도 정확하게.
+- 데이터 적으면 8개 억지로 채우지 X. 근거로 정당화되는 만큼만.
+
+[출력 — JSON만, 마크다운 X]
+{
+  "core_nodes": [
+    {"name":"...","type":"mechanism|trait|value|tension","valence":"strength|growth_area|neutral","mechanism":"...","linkage":"...","leverage":"...","source_names":["..."],"connections":[{"to":"...","type":"facet_of|feeds|tension","why":"..."}]}
+  ],
+  "regated_out": ["걸러낸 항목 이름", "..."]
+}`;
 
 // 사용자 보고 2026-05-12 ultrathink: analyze_4stage (force_analyze) — cache_read=0 이었음.
 //   원인: PERSONA_SKIP_USER_CONTENT_TYPES 에 force_analyze 들어가 있어 SYSTEM_PERSONA prepend skip + 자체 server system 없음 → client 시스템 평문 사용.
@@ -601,6 +645,10 @@ export function getEndpointSystem(body: any): { type: 'text'; text: string; cach
   //   각 분기는 (_endpoint, _userContentType) 매칭. user-content-templates 의 build* 가 user content 의 동적 변수만 합성.
   if (body?._endpoint === 'analyze_4stage' && body?._userContentType === 'force_analyze') {
     return [{ type: 'text', text: ANALYZE_4STAGE_SYSTEM, cache_control: { type: 'ephemeral', ttl: '1h' } }];
+  }
+  // 사용자 명시 2026-05-29 (연결·통합 §4): synthesis 패스 system.
+  if (body?._endpoint === 'synthesize') {
+    return [{ type: 'text', text: SYNTHESIZE_SYSTEM, cache_control: { type: 'ephemeral', ttl: '1h' } }];
   }
   if (body?._endpoint === 'extract_chapter') {
     if (body?._userContentType === 'chapter_insight') {

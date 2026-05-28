@@ -238,6 +238,9 @@ function renderModel() {
     { cat: 'patterns', arr: _patternsForRender, badge: '🌀' }
   ]);
 
+  // 사용자 명시 2026-05-29 (연결·통합 §4): synthesis 핵심 노드 섹션 (overlay, ≤8). 없으면 생성 prompt 또는 ''.
+  if (typeof _renderCoreNodesSection === 'function') { try { html += _renderCoreNodesSection(); } catch {} }
+
   // ── 2. 분석 — 통합 분석 + 작동 중인 패턴 (mid, 큰 그림 가끔) ──
   // 사용자 보고 2026-05-05: 신규 사용자 (caseFormulation.version=0) 한테 '통합 분석' 섹션 자체가 안 떠서 존재 모르던 문제 — placeholder 추가.
   if (state.caseFormulation.version === 0 || !state.caseFormulation.version) {

@@ -296,7 +296,7 @@ async function _saveToCloudNowInner() {
       // 사용자 보고 2026-05-18 ultrathink (root cause 동일 패턴 재발): _shownInlineTips 누락 → E2EE 사용자의 firstHomeTutorial 마커 ('firstHomeIntro') / inline tip 8개 / simple-tuto modal key 모두 reload 마다 wipe → 홈 진입 시마다 firstHomeTutorial 무한 fire. 같이 추가.
       // 사용자 보고 2026-05-27 ultrathink (root cause 동일 패턴 재재발): aiSuggestedDedupPairs 누락 → 빗자루 'AI 가 더 깊이 찾기' 결과 pair 가 cloud reload 마다 wipe → 모달 빈 결과. sensitiveBody (카드 이름/이유 = 사용자 분석 데이터).
       // 사용자 명시 2026-05-27 ultrathink (캘린더 일정/할 일 1단계): schedules 추가. 사용자 일정 = 개인 데이터 (시간 + 제목). E2EE 누락 시 평문 cloud 흘러감.
-      const sensitiveKeys = ['entries','chatMessages','chatArchive','traits','values','patterns','caseFormulation','archive','topicCards','pearls','decisions','reflectionQuestions','missions','memoryVault','tasks','projects','starts','insights','diagnoses','quarterlyReviews','monthlyReviews','weeklyReviews','annualReviews','shellCollection','dayPlan','profile','userDeepProfile','questionHistory','questionPreferences','intakeWorry','todaysShell','todaySchedule','schedules','hasSeenWelcomeTutorial','hasSeenV3Tour','predictionFollowups','areas','chatPairsCount','newUserExtractTriggers','chapterCompletedCount','miniReviews','rotatingCardState','tutorialShown','tutorialVersion','_core2NotUnlocked','userName','activeStrategies','_shownInlineTips','aiSuggestedDedupPairs'];
+      const sensitiveKeys = ['entries','chatMessages','chatArchive','traits','values','patterns','caseFormulation','archive','topicCards','pearls','decisions','reflectionQuestions','missions','memoryVault','tasks','projects','starts','insights','diagnoses','quarterlyReviews','monthlyReviews','weeklyReviews','annualReviews','shellCollection','dayPlan','profile','userDeepProfile','questionHistory','questionPreferences','intakeWorry','todaysShell','todaySchedule','schedules','hasSeenWelcomeTutorial','hasSeenV3Tour','predictionFollowups','areas','chatPairsCount','newUserExtractTriggers','chapterCompletedCount','miniReviews','rotatingCardState','tutorialShown','tutorialVersion','_core2NotUnlocked','userName','activeStrategies','_shownInlineTips','aiSuggestedDedupPairs','coreNodes','coreNodesMeta'];
       const sensitiveBody = {};
       for (const k of sensitiveKeys) sensitiveBody[k] = state[k];
       // V4 (사용자 명시 2026-05-20 ultrathink): _cloudStateReplacer — _hasMessages 박힌 archive 의 messages 키 strip.
@@ -365,6 +365,7 @@ async function _saveToCloudNowInner() {
         periodStart: state.periodStart,
         dailyChatCount: state.dailyChatCount,
         lastForceAnalyzeAt: state.lastForceAnalyzeAt,
+        lastSynthesisAt: state.lastSynthesisAt,
         lastDailyChapterExtractAt: state.lastDailyChapterExtractAt,
         lastChapterCleanupAt: state.lastChapterCleanupAt,
         lastWeeklyAnalyzeAt: state.lastWeeklyAnalyzeAt,
