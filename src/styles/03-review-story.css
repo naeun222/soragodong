@@ -285,7 +285,7 @@
   position: relative;
   width: 100%;
   max-width: 360px;
-  min-height: 320px;
+  min-height: 400px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -325,17 +325,17 @@
   text-transform: uppercase;
 }
 
-/* scene 사진 — 폴라로이드 (사용자 명시 2026-05-29 2차: mini 116 → 160 크기 ↑) */
+/* scene 사진 — 폴라로이드 (사용자 명시 2026-05-29 3차: 160 → 220 한 번 더 ↑) */
 .rstory-scene-photo-wrap {
-  width: 160px;
-  height: 160px;
-  margin: 0 auto 20px;
-  padding: 8px 8px 22px;
+  width: 220px;
+  height: 220px;
+  margin: 0 auto 22px;
+  padding: 10px 10px 28px;
   background: rgba(239, 229, 212, 0.96);
   border-radius: 3px;
   box-shadow:
-    0 2px 4px -2px rgba(0, 0, 0, 0.55),
-    0 14px 28px -14px rgba(0, 0, 0, 0.6);
+    0 3px 6px -3px rgba(0, 0, 0, 0.55),
+    0 18px 36px -16px rgba(0, 0, 0, 0.6);
   transform: rotate(1.2deg);
   position: relative;
 }
@@ -372,6 +372,24 @@
   line-height: 1.5;
   color: var(--rs-ink-soft);
   max-width: 240px;
+}
+
+/* 사용자 명시 2026-05-29 3차: 폴라로이드 사진 있는 장면 = 글씨 ↓ (폴라로이드 주인공).
+   :has() 모던 브라우저 (Chrome 105+ / Safari 15.4+ / Firefox 121+) 다 OK. */
+.rstory-scene:has(.rstory-scene-photo-wrap) .rstory-scene-what {
+  font-size: 15.5px;
+  line-height: 1.55;
+  max-width: 230px;
+  margin-bottom: 10px;
+}
+.rstory-scene:has(.rstory-scene-photo-wrap) .rstory-scene-feeling {
+  font-size: 12px;
+  line-height: 1.45;
+  max-width: 210px;
+}
+.rstory-scene:has(.rstory-scene-photo-wrap) .rstory-scene-when {
+  margin-bottom: 12px;
+  font-size: 9.5px;
 }
 .rstory-scene-feeling-mark {
   display: inline-block;
