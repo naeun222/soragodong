@@ -107,6 +107,9 @@ async function runSynthesis(opts) {
       mechanism: String(n?.mechanism || '').trim().slice(0, 400),
       linkage: String(n?.linkage || '').trim().slice(0, 400),
       leverage: String(n?.leverage || '').trim().slice(0, 400),
+      uses: String(n?.uses || '').trim().slice(0, 120),
+      clusters: Array.isArray(n?.clusters)
+        ? n.clusters.filter(c => ['자기조절도구', '다루어야할곳', '가고싶은곳', '자라는곳'].includes(c)).slice(0, 4) : [],
       source_names: Array.isArray(n?.source_names)
         ? n.source_names.map(s => String(s).trim().slice(0, 80)).filter(Boolean).slice(0, 30) : [],
       connections: Array.isArray(n?.connections)
@@ -124,6 +127,7 @@ async function runSynthesis(opts) {
       version: ((state.coreNodesMeta && state.coreNodesMeta.version) || 0) + 1,
       generatedAt: now,
       sourceCount: items.length,
+      centralThread: String(parsed?.central_thread || '').trim().slice(0, 400),
       regatedOut: Array.isArray(parsed?.regated_out)
         ? parsed.regated_out.map(s => String(s).trim().slice(0, 80)).filter(Boolean).slice(0, 60) : []
     };
@@ -215,13 +219,17 @@ function _renderCoreNodesSection() {
       <div class="model-item-name">${_typeBadge[n.type] || '•'} ${_esc(n.name)}</div>
       ${n.mechanism ? `<div class="model-item-desc" style="line-height:1.7;">${_esc(n.mechanism)}</div>` : ''}
       ${n.linkage ? `<div style="font-size:11px; color:var(--text-soft); margin-top:5px; line-height:1.6;">↳ 나타나는 곳: ${_esc(n.linkage)}</div>` : ''}
-      ${n.leverage ? `<div style="font-size:11px; color:var(--accent); margin-top:5px; line-height:1.6;">🔑 손잡이: ${_esc(n.leverage)}</div>` : ''}
+      ${n.leverage ? `<div style="font-size:11px; color:var(--accent); margin-top:5px; line-height:1.6;">🔑 손잡이: ${_esc(n.leverage)}${n.uses ? ` <span style="color:var(--text-soft);">(${_esc(n.uses)} 활용)</span>` : ''}</div>` : ''}
       ${connHtml}
       ${srcHtml}
     </div>`;
   };
 
   let html = `<div class="model-section"><div class="model-section-title">핵심 — ${nodes.length}가지로 모은 너</div>`;
+  const thread = (meta && meta.centralThread) ? meta.centralThread : '';
+  if (thread) {
+    html += `<div style="font-size:12.5px; color:var(--text); line-height:1.7; padding:11px 13px; margin-bottom:12px; background:rgba(126,200,227,0.06); border:1px solid rgba(126,200,227,0.22); border-radius:10px;">${_esc(thread)}</div>`;
+  }
   groups.forEach(g => {
     if (!g.nodes.length) return;
     html += `<div style="font-size:11.5px; color:var(--text-soft); margin:10px 0 6px;">${g.label}</div>`;
