@@ -42949,6 +42949,39 @@ function _dismissGuestNudge() {
   renderModel();
 }
 
+// 사용자 명시 2026-05-29: 미컨펌 원자(user_verified ≠ true) 리뷰 큐 — 나 탭 맨 위. '맞아' 컨펌하면 아래 '원자 보기'(컨펌됨)로 이동.
+//   시뮬 항목 제외. 최신순 정렬, 상위 5 + 나머지 접힘. renderModelItem 재사용 (맞아/아니야 버튼 내장).
+function _renderNewAtomsSection() {
+  const _pending = (arr) => (arr || []).filter(x => x && x.extractedFrom !== 'simulation' && x.user_verified !== true);
+  const cats = [
+    { cat: 'traits', badge: '🌿', arr: _pending(state.traits) },
+    { cat: 'values', badge: '✨', arr: _pending(state.values) },
+    { cat: 'patterns', badge: '🌀', arr: _pending(state.patterns) }
+  ];
+  const flat = [];
+  cats.forEach(c => c.arr.forEach(it => flat.push({ it, cat: c.cat, badge: c.badge })));
+  if (!flat.length) return '';
+  flat.sort((a, b) => {
+    const at = a.it.created_at ? new Date(a.it.created_at).getTime() : 0;
+    const bt = b.it.created_at ? new Date(b.it.created_at).getTime() : 0;
+    if (bt !== at) return bt - at;
+    return (b.it.confidence || 0) - (a.it.confidence || 0);
+  });
+  const card = (w) => renderModelItem(w.it, w.cat, state[w.cat].indexOf(w.it), w.badge);
+  let html = `<div class="model-section">
+    <div class="model-section-title">✦ 새로 발견 — 맞아?</div>
+    <div style="font-size:11px; color:var(--text-soft); margin-bottom:8px; line-height:1.6;">새로 본 것들 — '맞아' 누르면 아래로 정리돼.</div>`;
+  flat.slice(0, 5).forEach(w => { html += card(w); });
+  const more = flat.slice(5);
+  if (more.length) {
+    html += `<details class="model-collapse"><summary>+${more.length} 더</summary><div class="model-collapse-content">`;
+    more.forEach(w => { html += card(w); });
+    html += '</div></details>';
+  }
+  html += '</div>';
+  return html;
+}
+
 function renderModel() {
   // PR2a (사용자 명시 2026-05-29 §14): 모델 항목 embedding lazy backfill (게이트 OFF / 완료 시 noop). 코사인 attach 토대.
   try { if (typeof _modelEmbedBackfillAll === 'function') _modelEmbedBackfillAll(); } catch {}
@@ -43061,18 +43094,22 @@ function renderModel() {
     return inner;
   };
 
-  // PR5 (사용자 명시 2026-05-29): formulation(핵심 노드) 헤드라인을 나 탭 맨 위로. 평면 항목(values/패턴/cf)은 '원자 보기'로 접어 backing.
+  // 사용자 명시 2026-05-29: 미컨펌 원자는 맨 위 '새로 발견' 큐. '맞아' 컨펌하면 아래 '원자 보기'(컨펌됨)로 내려감.
+  if (typeof _renderNewAtomsSection === 'function') { try { html += _renderNewAtomsSection(); } catch {} }
+
+  // PR5 (사용자 명시 2026-05-29): formulation(핵심 노드) 헤드라인. 평면 항목(values/패턴/cf)은 '원자 보기'로 접어 backing.
   const _pr5HasCore = !!(state.coreNodes && state.coreNodes.length);
   if (typeof _renderCoreNodesSection === 'function') { try { html += _renderCoreNodesSection(); } catch {} }
   if (_pr5HasCore) html += '<details class="model-atoms-collapse" style="margin-top:6px;"><summary class="model-section-title" style="cursor:pointer; opacity:0.6; list-style:none;">▾ 원자 — 핵심을 이루는 조각들</summary>';
 
   // ── 1. 정체성 — 네가 중시하는 것 (values) + 핵심 작동 패턴 (traits ∪ patterns 통합) ──
   // 사용자 명시 2026-05-10 (큐 10): 시뮬 추출 항목 (extractedFrom='simulation') 은 hide.
-  // 사용자 명시 2026-05-26 ultrathink: 4 클러스터 양식 통합 — traits + patterns 한 섹션.
-  html += _renderConfirmableSection('values', '네가 중시하는 것', _valuesForRender);
+  // 사용자 명시 2026-05-29: 컨펌된 것만 여기 (미컨펌은 위 '새로 발견' 큐). user_verified===true.
+  const _confd = (arr) => (arr || []).filter(x => x && x.user_verified === true);
+  html += _renderConfirmableSection('values', '네가 중시하는 것', _confd(_valuesForRender));
   html += _renderClusterSection('핵심 작동 패턴', [
-    { cat: 'traits', arr: _traitsForRender, badge: '🌿' },
-    { cat: 'patterns', arr: _patternsForRender, badge: '🌀' }
+    { cat: 'traits', arr: _confd(_traitsForRender), badge: '🌿' },
+    { cat: 'patterns', arr: _confd(_patternsForRender), badge: '🌀' }
   ]);
 
   // ── 2. 분석 — 통합 분석 + 작동 중인 패턴 (mid, 큰 그림 가끔) ──
@@ -75517,7 +75554,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.374-localstorage-photo-strip';
+const APP_VERSION = 'v4.0.375-me-tab-new-atoms';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 
