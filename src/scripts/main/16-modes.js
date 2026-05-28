@@ -253,6 +253,28 @@ function refreshWeatherToggleStatus() {
   el.textContent = labels[v] || '🟡 아직 결정 X (다음 체크인 시 묻기)';
 }
 
+// 사용자 명시 2026-05-29: 날씨 허용(+위치 통과) 직후 알림 권한도 이어서 요청 — *처음 1회만*.
+//   _notifAskedAfterWeather flag 로 1회 보장 (이후 체크인에선 재요청 X).
+//   ensurePushSubscription 이 OS 알림 권한 prompt + 구독 (settings 와 동일 정식 opt-in). 이미 결정/구독이면 prompt 안 뜸.
+//   존중: hookFrequency='off'(명시 거부) 또는 이미 구독됨이면 prompt skip (flag 만 set).
+function _maybePromptNotifAfterWeather() {
+  try {
+    state.preferences = state.preferences || {};
+    if (state.preferences._notifAskedAfterWeather) return;
+    state.preferences._notifAskedAfterWeather = true;
+    saveState();
+    if (state.preferences.hookFrequency === 'off') return;
+    if (state.preferences._pushSubscribedAt) return;
+    setTimeout(() => {
+      try {
+        if (typeof ensurePushSubscription === 'function') {
+          ensurePushSubscription().catch(e => console.warn('[notif-after-weather]', e));
+        }
+      } catch (e) { console.warn('[notif-after-weather]', e); }
+    }, 800);
+  } catch (e) { console.warn('[notif-after-weather]', e); }
+}
+
 async function _fetchCurrentWeather() {
   state.preferences = state.preferences || {};
   // 거부 history → skip
@@ -303,6 +325,8 @@ async function _fetchCurrentWeather() {
   }
   state.preferences._weatherPermission = 'granted';
   saveState();
+  // 사용자 명시 2026-05-29: 날씨 허용·위치 통과 직후 (처음 1회만) 알림 권한 이어서 요청.
+  _maybePromptNotifAfterWeather();
   // Open-Meteo fetch (lat/lon 0.01° 반올림 — privacy)
   try {
     const lat = pos.coords.latitude.toFixed(2);
