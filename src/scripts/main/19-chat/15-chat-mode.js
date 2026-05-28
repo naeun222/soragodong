@@ -1,11 +1,11 @@
-// V4 사용자 요청 2026-05-25 ultrathink — 챗 탭 배경 모드별 tint helper. #screen-chat 만 적용 (다른 탭 영향 X).
-//   null = 색 없음 (default 다크). state.chatMode set/morph/reload 시 자동 호출.
+// V4 사용자 요청 2026-05-25 ultrathink — 챗 탭 배경 모드별 tint helper.
+// V4 사용자 명시 2026-05-29 (폐기 결정) — 배경 halo 폐기. 5번 조정에도 거슬림 보고 → 대화 task 에 안 맞는 framework.
+//   모드 시각 feedback = 헤더 토글 halo (.chat-mode-btn.is-mode.mode-*) 만으로 충분.
+//   함수는 옛 호출처 (3곳) 호환 위해 no-op 유지. 옛 stale class 자동 청소만.
 function _applyChatModeBg() {
   const el = document.getElementById('screen-chat');
   if (!el) return;
-  const mode = (state && state.chatMode) || null;
   el.classList.remove('chat-bg-daily', 'chat-bg-inquiry', 'chat-bg-vent');
-  if (mode) el.classList.add(`chat-bg-${mode}`);
 }
 
 // V4 사용자 명시 2026-05-22 ultrathink — 대화탭 3 모드 시스템 (CHAT-MODE-DESIGN.md).

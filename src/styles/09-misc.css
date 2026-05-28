@@ -993,40 +993,11 @@
   }
   .chat-mode-sheet-close:hover { background: var(--surface2); color: var(--text); }
   .chat-mode-sheet-cards { display: flex; flex-direction: column; gap: 10px; }
-  /* V4 사용자 요청 2026-05-25 ultrathink — 챗 탭 배경 모드별 atmospheric halo.
-     사용자 명시 2026-05-29 (3차) — *빛* 의 quality. 실제 발광체 = 중심이 거의 흰색 + 외부에 색.
-     3-layer:
-       core = 작고 밝은 cream/white-tint (눈부신 중심)
-       mid = 진한 mode color (색의 정체성)
-       outer = wide wash (위로 부드럽게 fade)
-     입력창 = 화면 하단 fixed 라 at 50% 100% = 입력창 자리.
-     daily = 살구 (아침 햇살), inquiry = 보라 (저녁 램프), vent = amber (벽난로).
-     null = 색 X (default). gradient transition 안 됨 — class 전환 시 snap, 의도된 동작.
-     메시지 영역 가독성 — bubble 자체가 dark surface 라 안전. */
-  /* 사용자 명시 2026-05-29 (6차) — halo source 입력창 (at 50% 100%) → 왼쪽 꼭대기 모서리 (at 0% 0%).
-     화면 좌상단에서 대각선 방향으로 빛이 발산. ellipse 비율 = 원형에 가깝게 (모서리 광원).
-     core (눈부신 흰빛) + mid (mode color) + outer (wide wash) 3-layer 구조 유지. */
-  #screen-chat.chat-bg-daily {
-    background:
-      radial-gradient(ellipse 14% 14% at 0% 0%, rgba(255,238,210,0.65), transparent 70%),
-      radial-gradient(ellipse 45% 45% at 0% 0%, rgba(244,183,141,0.65), transparent 78%),
-      radial-gradient(ellipse 100% 100% at 0% 0%, rgba(244,183,141,0.38), transparent 90%),
-      var(--bg);
-  }
-  #screen-chat.chat-bg-inquiry {
-    background:
-      radial-gradient(ellipse 12% 12% at 0% 0%, rgba(225,215,255,0.62), transparent 68%),
-      radial-gradient(ellipse 40% 40% at 0% 0%, rgba(150,110,210,0.72), transparent 76%),
-      radial-gradient(ellipse 95% 95% at 0% 0%, rgba(120,90,180,0.42), transparent 88%),
-      var(--bg);
-  }
-  #screen-chat.chat-bg-vent {
-    background:
-      radial-gradient(ellipse 14% 14% at 0% 0%, rgba(255,232,185,0.65), transparent 70%),
-      radial-gradient(ellipse 42% 42% at 0% 0%, rgba(228,170,38,0.65), transparent 76%),
-      radial-gradient(ellipse 100% 100% at 0% 0%, rgba(218,165,32,0.38), transparent 90%),
-      var(--bg);
-  }
+  /* V4 사용자 요청 2026-05-25 → 사용자 명시 2026-05-29 (폐기) — 챗 탭 배경 atmospheric halo 제거.
+     5번 조정 (위치/강도/사이즈/색) 에도 거슬림 보고 → 대화 task 시각 noise framework 자체 폐기.
+     모드 시각 feedback = 헤더 토글 halo (.chat-mode-btn.is-mode.mode-*) 로 충분 — redundant 제거.
+     ADHD 친화: 대화 = 인지 집중 task, 배경은 깨끗 유지.
+     JS _applyChatModeBg 도 옛 stale class 청소 only (no-op). */
   .chat-mode-card {
     background: var(--surface2);
     border: 1px solid var(--border);
