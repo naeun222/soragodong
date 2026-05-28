@@ -343,6 +343,18 @@ function renderReviewScreen(type, reviewData, opts) {
     screen.innerHTML = html;
     screen.dataset.reviewData = JSON.stringify(reviewData);
     screen.dataset.reviewType = type;
+    screen.dataset.reviewReadonly = readonly ? '1' : '';
+
+    // V4 (사용자 요청 2026-05-28): weekly classic 마지막 — Story mode (옵션 2) 시도 토글 1줄.
+    //   isNewFormat (현재 사용자 weekly 다 해당) 분기. 옛 schema 분기는 아래 별도 박음.
+    if (type === 'weekly' && typeof toggleWeeklyReviewLayout === 'function') {
+      const _btn = document.createElement('button');
+      _btn.className = 'review-layout-hint';
+      _btn.type = 'button';
+      _btn.textContent = '✦ Story mode 로 보기 (옵션 2 · 실험)';
+      _btn.onclick = toggleWeeklyReviewLayout;
+      screen.appendChild(_btn);
+    }
     return;
   }
 
