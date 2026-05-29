@@ -171,27 +171,6 @@ async function sendChat() {
 
   // 사용자 명시 2026-05-01 ultrathink: 5h+ 갭 시점 직접 토픽 추출 폐기 — _archiveCurrentChapter 이송 후 4AM 흐름이 일괄 처리 (또는 신규유저 즉시 trigger).
 
-  // V3.12: 프로젝트 측정값 감지 (regex 기반, fire-and-forget)
-  const projMatch = detectProjectMeasurement(text);
-  if (projMatch) {
-    showConfirmModal({
-      title: `📊 ${projMatch.value}${projMatch.unit} 발견`,
-      message: `"${projMatch.project.title}" 측정값으로 기록할까?`,
-      okLabel: '응 기록', cancelLabel: '아니'
-    }).then((yes) => {
-      if (!yes) return;
-      const p = state.projects.find(x => x.id === projMatch.project.id);
-      if (!p) return;
-      p.measurements = p.measurements || [];
-      p.measurements.push({ value: projMatch.value, at: new Date().toISOString(), source: 'chat' });
-      const reached = (p.target > p.baseline && projMatch.value >= p.target) || (p.target < p.baseline && projMatch.value <= p.target);
-      if (reached) p.status = 'done';
-      saveState();
-      renderProjects();
-      showToast(reached ? `🎉 ${p.title} 목표 달성!` : `${p.emoji || '✦'} 기록`);
-    }).catch(() => {});
-  }
-
   await generateAIResponse();
 
   // 사용자 보고 2026-05-10: text-trigger deeper cap 차감 — generate 후 increment + cap toast.

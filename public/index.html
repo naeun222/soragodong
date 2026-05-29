@@ -45848,27 +45848,6 @@ async function sendChat() {
 
   // 사용자 명시 2026-05-01 ultrathink: 5h+ 갭 시점 직접 토픽 추출 폐기 — _archiveCurrentChapter 이송 후 4AM 흐름이 일괄 처리 (또는 신규유저 즉시 trigger).
 
-  // V3.12: 프로젝트 측정값 감지 (regex 기반, fire-and-forget)
-  const projMatch = detectProjectMeasurement(text);
-  if (projMatch) {
-    showConfirmModal({
-      title: `📊 ${projMatch.value}${projMatch.unit} 발견`,
-      message: `"${projMatch.project.title}" 측정값으로 기록할까?`,
-      okLabel: '응 기록', cancelLabel: '아니'
-    }).then((yes) => {
-      if (!yes) return;
-      const p = state.projects.find(x => x.id === projMatch.project.id);
-      if (!p) return;
-      p.measurements = p.measurements || [];
-      p.measurements.push({ value: projMatch.value, at: new Date().toISOString(), source: 'chat' });
-      const reached = (p.target > p.baseline && projMatch.value >= p.target) || (p.target < p.baseline && projMatch.value <= p.target);
-      if (reached) p.status = 'done';
-      saveState();
-      renderProjects();
-      showToast(reached ? `🎉 ${p.title} 목표 달성!` : `${p.emoji || '✦'} 기록`);
-    }).catch(() => {});
-  }
-
   await generateAIResponse();
 
   // 사용자 보고 2026-05-10: text-trigger deeper cap 차감 — generate 후 increment + cap toast.
@@ -63920,26 +63899,6 @@ function toggleTrackerCheck(id) {
   if (typeof renderProjects === 'function') renderProjects();
 }
 
-// V3.12: 채팅 자연어 → 측정값 추출 (regex 기반 — AI 호출 절약)
-// 사용자 메시지에 "체중 65kg" 같은 패턴 발견 + 활성 프로젝트 매칭 → 제안 카드
-function detectProjectMeasurement(text) {
-  const active = (state.projects || []).filter(p => p.status === 'active' && p.target !== undefined);
-  if (active.length === 0) return null;
-  // 숫자 + 단위 매칭
-  const re = /(\d+(?:\.\d+)?)\s*(kg|km|분|회|시간|페이지|점|개|시)/g;
-  let m;
-  const matches = [];
-  while ((m = re.exec(text)) !== null) {
-    const value = parseFloat(m[1]);
-    const unit = m[2];
-    const matchedProject = active.find(p => p.unit && p.unit.includes(unit));
-    if (matchedProject) {
-      matches.push({ project: matchedProject, value, unit });
-    }
-  }
-  return matches.length > 0 ? matches[0] : null;
-}
-
 function showShortcutGuide() {
   showScreen('shortcut-guide');
 }
@@ -75578,7 +75537,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.376-notif-after-weather';
+const APP_VERSION = 'v4.0.377-no-chat-measure-detect';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 
