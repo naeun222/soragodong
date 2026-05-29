@@ -428,10 +428,13 @@ async function _saveToCloudNowInner() {
     if (r.status === 404 || r.status === 406) {
       console.warn('[saveToCloudNow] PATCH 404/406 — cache invalidate + POST fallback');
       window._v4RowExistsCache = null;
-      const postBody = JSON.stringify({ auth_user_id: authUserId, user_id: V4_USER_ID, data: dataPayload }, _serializeReplacer);
-      const postR = await _fetchWithRetry5xx(`${SUPABASE_URL}/rest/v1/soragodong_data`, {
+      // V4 fix (사용자 보고 2026-05-30 ultrathink — Disk IO budget 고갈 root cause): upsert 로 INSERT race 중복 차단.
+      //   옛 = 순수 POST → 같은 시점 2회 호출 시 둘 다 INSERT → (auth_user_id,user_id) 중복 row → 이후 PATCH 가 둘 다 rewrite (IO 2배).
+      //   on_conflict + merge-duplicates → 둘째 호출은 INSERT 대신 UPDATE 로 merge. 선행: 0036_data_dedupe_unique.sql 의 UNIQUE.
+      const postBody = JSON.stringify({ auth_user_id: authUserId, user_id: V4_USER_ID, data: dataPayload, updated_at: state.lastSync }, _serializeReplacer);
+      const postR = await _fetchWithRetry5xx(`${SUPABASE_URL}/rest/v1/soragodong_data?on_conflict=auth_user_id,user_id`, {
         method: 'POST',
-        headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=minimal' },
         body: postBody
       });
       if (postR.ok) window._v4RowExistsCache = 'exists';
@@ -440,11 +443,13 @@ async function _saveToCloudNowInner() {
     }
     _handleCloudSyncResponse(r);
   } else {
-    const body = JSON.stringify({ auth_user_id: authUserId, user_id: V4_USER_ID, data: dataPayload }, _serializeReplacer);
+    // V4 fix (사용자 보고 2026-05-30 ultrathink — Disk IO budget 고갈 root cause): upsert 로 INSERT race 중복 차단.
+    //   선행: 0036_data_dedupe_unique.sql 의 (auth_user_id,user_id) UNIQUE.
+    const body = JSON.stringify({ auth_user_id: authUserId, user_id: V4_USER_ID, data: dataPayload, updated_at: state.lastSync }, _serializeReplacer);
     _checkCloudRowOversize(body.length);
-    const r = await _fetchWithRetry5xx(`${SUPABASE_URL}/rest/v1/soragodong_data`, {
+    const r = await _fetchWithRetry5xx(`${SUPABASE_URL}/rest/v1/soragodong_data?on_conflict=auth_user_id,user_id`, {
       method: 'POST',
-      headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      headers: { ...authHeaders(), 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=minimal' },
       body
     });
     if (r.ok) window._v4RowExistsCache = 'exists';
