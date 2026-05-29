@@ -598,6 +598,113 @@ function _localSaveReplacer(key, value) {
   return value;
 }
 
+// V4 fix (사용자 명시 2026-05-30 ultrathink — Disk IO budget): cloud embedding 압축.
+//   incident_2026_05_30 §B — 어드민 me_v4 _encryptedBody 4.45MB 중 traits/values/patterns 의
+//   embedding (BGE-M3 1024 float, JSON 텍스트 ~18kB/항목) 합 ~2.9MB 가 매 saveToCloud 마다 통째
+//   재암호화+rewrite → Disk IO budget 누수의 본체. E2EE 는 high-entropy 라 gzip 도 안 먹음 (별도).
+//   방식: number[] (JS 안에선 Float64) → Float32Array → base64 ('f32b64:' prefix). ~3.4~4배 ↓.
+//     메모리 state 는 number[] 유지 (cosine 계산 그대로) — 저장 직전 _cloudStateReplacer 가 압축, 로드 직후 복원.
+//   ⚠️ 무결성: 압축은 _cloudStateReplacer (저장 단일 chokepoint — E2EE 06-backup:304 + 평문 gzip
+//     _packStateForCloud + manual/auto backup 14-manual:43 전부 경유) 1곳. 복원은 *모든* cloud/backup→state
+//     경로 (_unpackStateFromCloud + E2EE decrypt 후 + snap restore). 하나라도 누락 시 embedding 이 base64
+//     문자열인 채 → _ragCosine NaN / Array.isArray 가드에 걸려 dedup·RAG 조용한 손상.
+//   호환: 옛 number[] (array) 와 새 base64 (string) 둘 다 읽힘. 압축은 length>0 array 만, 복원은 prefix string 만.
+//   generic (key==='embedding' 전부) — traits/values/patterns/activeStrategies + 평문 사용자의
+//     archiveEmbeddings[].embedding 까지 한 번에. _localSaveReplacer 의 embedding strip 과 같은 의미론.
+const _EMBED_F32_PREFIX = 'f32b64:';
+function _packEmbeddingF32(arr) {
+  // number[] → 'f32b64:<base64>'. 실패 시 원본 array 반환 (압축만 skip, 저장은 array 로 — 복원 불필요).
+  try {
+    const n = arr.length;
+    const f32 = new Float32Array(n);
+    for (let i = 0; i < n; i++) f32[i] = arr[i];
+    const bytes = new Uint8Array(f32.buffer);
+    let bin = '';
+    const CHUNK = 0x8000;
+    for (let i = 0; i < bytes.length; i += CHUNK) {
+      bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
+    }
+    return _EMBED_F32_PREFIX + btoa(bin);
+  } catch (e) {
+    return arr;
+  }
+}
+function _unpackEmbeddingF32(str) {
+  // 'f32b64:<base64>' → number[]. 실패(손상/길이 비-4배수) 시 null — caller 가 키 자체 제거 (NaN 방지).
+  try {
+    const bin = atob(str.slice(_EMBED_F32_PREFIX.length));
+    const len = bin.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) bytes[i] = bin.charCodeAt(i);
+    const f32 = new Float32Array(bytes.buffer);  // len % 4 !== 0 이면 throw → catch → null
+    const out = new Array(f32.length);
+    for (let i = 0; i < f32.length; i++) out[i] = f32[i];
+    return out;
+  } catch (e) {
+    console.warn('[embedding unpack] 실패:', e);
+    return null;
+  }
+}
+// cloud/backup 본문 → state 적용 직후 호출. 'f32b64:' 압축 문자열을 number[] 로 in-place 복원.
+//   재귀(명시 스택 — 큰 state deep recursion 회피) walk. key==='embedding' 문자열 전부 복원.
+//   idempotent — 이미 array (옛 포맷 / 복원됨) 면 그대로. JSON.parse 결과라 cycle 없음 (seen 은 방어).
+function _restoreEmbeddingsInState(obj) {
+  if (!obj || typeof obj !== 'object') return obj;
+  const seen = new Set();
+  const stack = [obj];
+  while (stack.length) {
+    const cur = stack.pop();
+    if (!cur || typeof cur !== 'object' || seen.has(cur)) continue;
+    seen.add(cur);
+    if (Array.isArray(cur)) {
+      for (let i = 0; i < cur.length; i++) {
+        const v = cur[i];
+        if (v && typeof v === 'object') stack.push(v);
+      }
+      continue;
+    }
+    for (const k in cur) {
+      if (!Object.prototype.hasOwnProperty.call(cur, k)) continue;
+      const v = cur[k];
+      if (k === 'embedding') {
+        if (typeof v === 'string' && v.lastIndexOf(_EMBED_F32_PREFIX, 0) === 0) {
+          const restored = _unpackEmbeddingF32(v);
+          if (restored) cur[k] = restored;
+          else delete cur[k];  // 복원 실패 → 손상 문자열 제거 (Array.isArray 가드 통과 X → 무시됨, NaN 회피)
+        }
+        // array (옛 포맷) / 기타 — 그대로. number[] 안엔 객체 없으니 walk 안 함.
+        continue;
+      }
+      if (v && typeof v === 'object') stack.push(v);
+    }
+  }
+  return obj;
+}
+// 사용자 명시 2026-05-30: roundtrip self-test (1회, idle). 실패 시 warn — 플랫폼별 Float32/btoa 이슈 조기 감지.
+//   콘솔에서 _embeddingRoundtripSelfTest() 수동 호출 가능 (전역).
+function _embeddingRoundtripSelfTest() {
+  try {
+    const N = 1024;
+    const orig = new Array(N);
+    let s = 12345;  // 고정 seed LCG — 결정적.
+    for (let i = 0; i < N; i++) { s = (s * 1103515245 + 12345) & 0x7fffffff; orig[i] = (s / 0x7fffffff) * 2 - 1; }
+    const packed = _packEmbeddingF32(orig);
+    if (typeof packed !== 'string') { console.warn('[embedding self-test] pack 결과가 string 아님'); return false; }
+    const restored = _unpackEmbeddingF32(packed);
+    if (!Array.isArray(restored) || restored.length !== N) { console.warn('[embedding self-test] 복원 길이 불일치'); return false; }
+    let dot = 0, na = 0, nb = 0;
+    for (let i = 0; i < N; i++) { dot += orig[i] * restored[i]; na += orig[i] * orig[i]; nb += restored[i] * restored[i]; }
+    const cos = dot / (Math.sqrt(na) * Math.sqrt(nb));
+    if (Math.abs(cos - 1) >= 1e-4) { console.warn('[embedding self-test] roundtrip cosine 이탈:', cos); return false; }
+    return true;
+  } catch (e) { console.warn('[embedding self-test] throw:', e); return false; }
+}
+if (typeof window !== 'undefined') {
+  const _runEmbedSelfTest = () => { _embeddingRoundtripSelfTest(); };
+  if (typeof requestIdleCallback === 'function') requestIdleCallback(_runEmbedSelfTest, { timeout: 8000 });
+  else setTimeout(_runEmbedSelfTest, 6000);
+}
+
 // V4 (사용자 명시 2026-05-20 ultrathink): cloud main row 전용 replacer.
 //   _serializeReplacer (transient strip) + _hasMessages: true 박힌 archive 의 messages 키 strip.
 //   별도 테이블 (soragodong_chat_messages) 에 이미 보관 — main row JSONB cascade 회피.
@@ -606,6 +713,8 @@ function _localSaveReplacer(key, value) {
 function _cloudStateReplacer(key, value) {
   if (_SERIALIZE_TRANSIENT_KEYS.has(key)) return undefined;
   if (key === 'messages' && this && this._hasMessages === true) return undefined;
+  // V4 fix (사용자 명시 2026-05-30 — Disk IO): embedding number[] → Float32 base64 압축. 복원 = _restoreEmbeddingsInState.
+  if (key === 'embedding' && Array.isArray(value) && value.length > 0) return _packEmbeddingF32(value);
   return value;
 }
 
@@ -678,14 +787,24 @@ async function _packStateForCloud(stateObj) {
   }
 }
 async function _unpackStateFromCloud(rowData) {
-  if (!_isCompressedWrapper(rowData)) return rowData;
-  try {
-    const json = await _gzipB64Decode(rowData._payload);
-    return JSON.parse(json);
-  } catch (e) {
-    console.error('[gzip unpack] 실패 — cloud 데이터 복호 불가:', e);
-    throw new Error('Cloud 압축 데이터 복원 실패');
+  let data = rowData;
+  if (_isCompressedWrapper(rowData)) {
+    try {
+      const json = await _gzipB64Decode(rowData._payload);
+      data = JSON.parse(json);
+    } catch (e) {
+      console.error('[gzip unpack] 실패 — cloud 데이터 복호 불가:', e);
+      throw new Error('Cloud 압축 데이터 복원 실패');
+    }
   }
+  // V4 fix (사용자 명시 2026-05-30 — Disk IO): embedding 압축 복원.
+  //   gzip wrapper 든 plain (CompressionStream 미지원 / ratio guard fallback 으로 _packStateForCloud 가
+  //   압축 embedding 담은 _stripped 를 그대로 반환한 경우) 둘 다 복원 — wrapper 여부와 무관.
+  //   E2EE row (_encryptedBody) 는 embedding 이 암호문 안 → 여기선 skip, decrypt 후 별도 복원.
+  if (data && typeof data === 'object' && !(data._encryptedBody && data._encryptedBody._e2ee)) {
+    _restoreEmbeddingsInState(data);
+  }
+  return data;
 }
 
 function _flushLocalSave(opts) {

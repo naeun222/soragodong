@@ -1,1 +1,1 @@
-v4.0.378-cloud-dedupe-upsert
+v4.0.379-embedding-compress

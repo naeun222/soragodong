@@ -193,6 +193,8 @@ async function restoreFromCloudBackup() {
     const _curArchive = state.chatArchive;
     const _curPearls = state.pearls;
     state = { ...DEFAULT_STATE, ...snap.data };
+    // V4 fix (사용자 명시 2026-05-30 — Disk IO): 백업 snap (cloud/cron/평문 전부) embedding 'f32b64:' 압축 → number[] 복원.
+    if (typeof _restoreEmbeddingsInState === 'function') _restoreEmbeddingsInState(state);
     // V4 fix (사용자 명시 2026-05-26 ultrathink — restore 후 V7 strict 필드 보강): manual-restore + loadFromCloud 양쪽 동일 helper 사용.
     if (typeof _ensureV7Schema === 'function') _ensureV7Schema();
     state.chatArchive = _mergeArchivesPreservingMessages(_curArchive, state.chatArchive);
@@ -352,6 +354,8 @@ async function showAutoBackupList() {
     const _curArchive = state.chatArchive;
     const _curPearls = state.pearls;
     state = { ...DEFAULT_STATE, ...snap.data };
+    // V4 fix (사용자 명시 2026-05-30 — Disk IO): 백업 snap (cloud/cron/평문 전부) embedding 'f32b64:' 압축 → number[] 복원.
+    if (typeof _restoreEmbeddingsInState === 'function') _restoreEmbeddingsInState(state);
     // V4 fix (사용자 명시 2026-05-26 ultrathink — restore 후 V7 strict 필드 보강): manual-restore + loadFromCloud 양쪽 동일 helper 사용.
     if (typeof _ensureV7Schema === 'function') _ensureV7Schema();
     state.chatArchive = _mergeArchivesPreservingMessages(_curArchive, state.chatArchive);

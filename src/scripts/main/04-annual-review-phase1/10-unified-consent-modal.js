@@ -301,6 +301,8 @@ async function _e2eeRestoreFromPassphrase(password) {
       if (cloudBody) {
         let bodyOk = false;
         try {
+          // V4 (2026-05-30 embedding 압축): 여기 decrypt 는 *검증 전용* (test 폐기, state 미구성) →
+          //   embedding 복원 불필요. 실제 본문→state 는 submitE2EERecovery (07-recovery:151) 에서 복원됨.
           const test = await _e2eeDecrypt(cloudBody, masterKey);
           bodyOk = !!test;
         } catch (e) {

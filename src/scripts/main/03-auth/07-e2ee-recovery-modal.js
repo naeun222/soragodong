@@ -149,6 +149,8 @@ async function submitE2EERecovery() {
         const decryptedBody = JSON.parse(decryptedJson);
         const { _encryptedBody, ...metaPart } = pending;
         state = { ...DEFAULT_STATE, ...metaPart, ...decryptedBody };
+        // V4 fix (사용자 명시 2026-05-30 — Disk IO): E2EE 본문 embedding 'f32b64:' 압축 → number[] 복원.
+        if (typeof _restoreEmbeddingsInState === 'function') _restoreEmbeddingsInState(state);
         _e2eeEnabled = true;
       } else {
         // decrypt 실패 — master key 맞는데 encrypted blob 손상? 사용자에게 alert 후 abort.
@@ -298,6 +300,8 @@ async function e2eeForgotPasswordReset() {
 
   // 5. state를 snapshot으로 교체
   state = { ...DEFAULT_STATE, ...JSON.parse(JSON.stringify(chosen.data)) };
+  // V4 fix (사용자 명시 2026-05-30 — Disk IO): 평문 백업도 manualCloudBackup 이 _cloudStateReplacer 로 만들어 embedding 압축됨 → 복원.
+  if (typeof _restoreEmbeddingsInState === 'function') _restoreEmbeddingsInState(state);
   // E2EE 메타도 초기화 (혹시 snapshot에 _e2eeEnabled 들어가 있으면 정리)
   delete state._encryptedBody;
   delete state._e2eeRecovery;

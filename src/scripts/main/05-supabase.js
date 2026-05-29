@@ -191,6 +191,8 @@ async function loadFromCloud() {
             try {
               const decryptedBody = JSON.parse(decryptedJson);
               state = { ...DEFAULT_STATE, ..._metaPart, ...decryptedBody };
+              // V4 fix (사용자 명시 2026-05-30 — Disk IO): E2EE 본문 embedding 'f32b64:' 압축 → number[] 복원.
+              if (typeof _restoreEmbeddingsInState === 'function') _restoreEmbeddingsInState(state);
               _e2eeEnabled = true;
               _mergeUserDataDuringLoad(_entriesBeforeCloud);
               console.log('✅ V4 row loaded + decrypted (E2EE)');
