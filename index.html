@@ -35177,10 +35177,21 @@ function _processExtractChapterAnalysis(analysis, opts) {
         });
         // 챕터 자동 추출 = unverified 마킹 (시드 데이터와 동일 형태: { text, addedAt })
         if (!Array.isArray(cf.unverified[bucket])) cf.unverified[bucket] = [];
-        cf.unverified[bucket].push({
-          text: trimmed,
-          addedAt: new Date().toISOString()
-        });
+        // V4 fix (사용자 명시 2026-05-30 — 장기 안전 Phase 2): unverified 무한 누적 방어.
+        //   배경: 챕터마다 5차원 1개씩 unverified push 인데 dedup·prune 부재 → 미컨펌인 채 1년 ~1,500개 누적 (Disk IO budget 압박 한 축).
+        //   ① 30일+ 미컨펌 자동 prune: 회전 카드/퀴즈로 계속 노출되는데 30일 안 봤으면 관심 밖. confirmed 본체는 cf[bucket] 에 user_verified 로 보존되므로 손실 0 (컨펌 흐름과 독립).
+        //   ② push 전 unverified 자체 dedup: cf[bucket] 에서 삭제된 항목 재추출 시 unverified 중복 방어 (line 314 는 cf[bucket] 만 비교).
+        //   addedAt 없는 옛/시드 항목은 보존.
+        const _unvNow = Date.now();
+        cf.unverified[bucket] = cf.unverified[bucket].filter(it =>
+          !it || !it.addedAt || (_unvNow - new Date(it.addedAt).getTime()) < 30 * 864e5
+        );
+        if (!cf.unverified[bucket].some(x => similarText(x?.text || x, trimmed))) {
+          cf.unverified[bucket].push({
+            text: trimmed,
+            addedAt: new Date().toISOString()
+          });
+        }
         touched = true;
       });
       if (touched) {
@@ -75673,7 +75684,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.379-embedding-compress';
+const APP_VERSION = 'v4.0.379-unverified-prune';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 
