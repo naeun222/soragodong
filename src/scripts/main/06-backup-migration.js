@@ -287,8 +287,7 @@ async function _saveToCloudNowInner() {
     try {
       // sensitive body — 사용자 데이터 전부 암호화
       // 사용자 명시 2026-05-01 (agent audit): 누락된 11 키 추가 — E2EE save 시 cloud 영구 손실 fix.
-      // ⚠️ 사용자 명시 2026-05-08 ultrathink (audit WARN #24): whitelist 방식 — 신규 state 필드 추가 시 *반드시* 이 list 에 등록.
-      // TODO 베타 후: blocklist 전환 (DEFAULT_STATE 키에서 metaBody 키 제외 — 누락 방지). 단 *비-민감 운영 데이터* 와 분리 필수.
+      // ⚠️ 사용자 명시 2026-05-08 ultrathink (audit WARN #24): [원래 whitelist — 신규 필드 등록 누락 반복]. → 2026-06-01 blocklist 전환 완료 (아래).
       // 누락 시: 평문 metaBody 로 cloud 에 흘러가 PIPA §29 + privacy.md §6 약속 ("회사조차 평문 X") 위반.
       // 사용자 보고 2026-05-09 ultrathink (root cause): miniReviews + rotatingCardState 누락 → E2EE on 사용자 cloud 저장 X → 재진입 시 reset.
       // 회전 카드 spec final 추가 (2026-05-09): 미니 리뷰 결과 + 회전 카드 sessionState (진주 4시간 / unseenInsights / quizProgress 등) 모두 sensitiveBody 에 포함.
@@ -296,9 +295,25 @@ async function _saveToCloudNowInner() {
       // 사용자 보고 2026-05-18 ultrathink (root cause 동일 패턴 재발): _shownInlineTips 누락 → E2EE 사용자의 firstHomeTutorial 마커 ('firstHomeIntro') / inline tip 8개 / simple-tuto modal key 모두 reload 마다 wipe → 홈 진입 시마다 firstHomeTutorial 무한 fire. 같이 추가.
       // 사용자 보고 2026-05-27 ultrathink (root cause 동일 패턴 재재발): aiSuggestedDedupPairs 누락 → 빗자루 'AI 가 더 깊이 찾기' 결과 pair 가 cloud reload 마다 wipe → 모달 빈 결과. sensitiveBody (카드 이름/이유 = 사용자 분석 데이터).
       // 사용자 명시 2026-05-27 ultrathink (캘린더 일정/할 일 1단계): schedules 추가. 사용자 일정 = 개인 데이터 (시간 + 제목). E2EE 누락 시 평문 cloud 흘러감.
-      const sensitiveKeys = ['entries','chatMessages','chatArchive','traits','values','patterns','caseFormulation','archive','topicCards','pearls','decisions','reflectionQuestions','missions','memoryVault','tasks','projects','starts','insights','diagnoses','quarterlyReviews','monthlyReviews','weeklyReviews','annualReviews','shellCollection','dayPlan','profile','userDeepProfile','questionHistory','questionPreferences','intakeWorry','todaysShell','todaySchedule','schedules','hasSeenWelcomeTutorial','hasSeenV3Tour','predictionFollowups','areas','chatPairsCount','newUserExtractTriggers','chapterCompletedCount','miniReviews','rotatingCardState','tutorialShown','tutorialVersion','_core2NotUnlocked','userName','activeStrategies','_shownInlineTips','aiSuggestedDedupPairs','coreNodes','coreNodesMeta'];
+      // === blocklist 전환 (사용자 명시 2026-06-01 — 장기 안전 Phase 2) ===
+      //   기존 whitelist 만성 결함: 신규 state 필드 등록 누락 시 E2EE 사용자 cloud 영구 손실 (위 주석 = 5번+ 재발 이력).
+      //   조사(2026-06-01) 결과 현재도 누락 중이던 키: firstTouchInsight(코어1 첫 관찰) / simulationArchive / askedHooks / chatMode / apiKey.
+      //   전환: DEFAULT_STATE 데이터 키 - metaBody 키 - transient = sensitive. 신규 DEFAULT_STATE 필드 자동 E2EE → 누락 사고 근본 차단.
+      //   ⚠️ metaBody (평문, 아래 line 358~) 는 안 건드림 → 평문 노출 (PIPA §29 / privacy.md §6) 위험 0. sensitive 만 늘어남.
+      //   복원은 generic spread (05-supabase:193 `{...DEFAULT, ...metaPart, ...decryptedBody}`) 라 무수정 — 늘어난 키 자동 복원.
+      //   DEFAULT_STATE 기반이라 런타임 세션 임시 _ 키 (_beachJustUnlocked / _chatResumedAt 등) 자동 제외 (cloud stale 오염 방지).
+      //   _CLOUD_META_KEYS = metaBody 로 가는 평문 키 (sensitive 중복 회피). _EXTRA = DEFAULT_STATE 에 없지만 저장돼야 하는 런타임 마커 (신규 시 DEFAULT_STATE 등록 권장).
+      const _CLOUD_META_KEYS = new Set(['version','lastSync','preferences','unlocked','modes','modeActiveSince','periodStart','dailyChatCount','lastForceAnalyzeAt','lastSynthesisAt','lastDailyChapterExtractAt','lastChapterCleanupAt','lastWeeklyAnalyzeAt','lastMonthlyAnalyzeAt','lastQuarterlyAnalyzeAt','lastYearlyAnalyzeAt','_lastSemanticDedupManualAt','_lastSemanticDedupAutoAt','pendingReviewBatch','pendingChapterCleanupBatch','pendingForceAnalyzeBatch','pendingBatch','_e2eeEnabled','_e2eeVersion','_e2eeRecovery']);
+      const _EXTRA_SENSITIVE_KEYS = ['tutorialShown','tutorialVersion','_core2NotUnlocked','_shownInlineTips','aiSuggestedDedupPairs'];
       const sensitiveBody = {};
-      for (const k of sensitiveKeys) sensitiveBody[k] = state[k];
+      for (const k of Object.keys(DEFAULT_STATE)) {
+        if (_CLOUD_META_KEYS.has(k)) continue;
+        if (_SERIALIZE_TRANSIENT_KEYS.has(k)) continue;
+        sensitiveBody[k] = state[k];
+      }
+      for (const k of _EXTRA_SENSITIVE_KEYS) {
+        if (Object.prototype.hasOwnProperty.call(state, k)) sensitiveBody[k] = state[k];
+      }
       // V4 (사용자 명시 2026-05-20 ultrathink): _cloudStateReplacer — _hasMessages 박힌 archive 의 messages 키 strip.
       //   E2EE 사용자도 동일 cascade 회피 — 별도 테이블 (soragodong_chat_messages) 의 encrypted_body 로 분리 저장됨.
       const _sensitiveJson = JSON.stringify(sensitiveBody, _cloudStateReplacer);

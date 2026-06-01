@@ -452,6 +452,10 @@ const DEFAULT_STATE = {
   // 형식: [{role:'user'|'assistant', content, ts, kind?:'first'|'deepen_q'|'detailed'|'analysis'}]
   intakeWorry: [],
 
+  // 사용자 명시 2026-06-01 (장기 안전 blocklist): 코어 #1 첫 관찰 분석 결과 (one_word/hypotheses/watch_points).
+  //   06-first-observation.js 가 set. E2EE whitelist 누락 사고로 cloud 미저장이던 데이터키 → DEFAULT_STATE 정식 등록 (blocklist 자동 포함 + 초기화).
+  firstTouchInsight: null,
+
   // V4 사용자 명시 2026-05-22 ultrathink — 대화탭 3 모드 시스템 (CHAT-MODE-DESIGN.md).
   //   null = 미선택 → 일상고동 default visual + backend ADDENDUM_DEFAULT (자동 감지 legacy path).
   //   'daily' | 'inquiry' | 'vent' = 사용자 명시 선택 (empty placeholder chip 또는 헤더 시트).
@@ -533,6 +537,10 @@ const DEFAULT_STATE = {
     // 디버깅 / 호환
     history: [],                // [{sourceId, contentHash, seenAt}] — 옛 호환
   },
+
+  // 사용자 명시 2026-05-09 (재정정): 시뮬 verdict history (최근 30개, 03d-rotating-simulation.js).
+  //   E2EE whitelist 누락 사고로 cloud 미저장이던 데이터키 → DEFAULT_STATE 정식 등록 (2026-06-01 blocklist).
+  simulationArchive: [],
 
   version: 7
 };
