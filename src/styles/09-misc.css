@@ -1065,6 +1065,15 @@
     background: var(--accent);
   }
 
+  /* V4 사용자 명시 2026-06-01 — welcome 말풍선 안 보조 예시 한 줄 (기본 상태만). '편하게 말해 보소' 밑, 살짝 작고 흐리게. */
+  .ces-welcome .msg-bubble .ces-welcome-sub {
+    margin-top: 6px;
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--text-soft);
+    opacity: 0.8;
+  }
+
   /* V4 사용자 명시 2026-05-23 (재) — welcome 바로 밑 한 줄. 모드 시트 진입점 안내 (avatar tap). */
   .ces-avatar-hint-static {
     margin: -4px 0 10px 44px;

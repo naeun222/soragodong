@@ -253,7 +253,13 @@ function _chatEmptyAreaHtml() {
     // V4 사용자 명시 2026-05-23 (재재) — welcome 텍스트 helper 사용. sendChat 시점에 같은 텍스트가 chatMessages 에 박힘 (AI 첫 발화 인식).
     // V4 fix (사용자 명시 2026-05-26 ultrathink) — 모드 미선택 (null) 시 daily 강제 X. helper 가 '편하게 말해 보소' 반환.
     const welcomeText = (typeof _chatWelcomeText === 'function') ? _chatWelcomeText(chatMode) : '편하게 말해 보소';
-    const welcomeBubble = `<div class="msg assistant ces-welcome">${avatarHtml}<div class="msg-bubble">${welcomeText}</div></div>`;
+    // V4 (사용자 명시 2026-06-01) — 기본 상태(모드 미선택) 에만 말풍선 안 보조 예시 한 줄 (EMPTY_STATE_EXAMPLES pool 랜덤). 모드 고르면 숨김.
+    let welcomeSubHtml = '';
+    if (chatMode === null && typeof EMPTY_STATE_EXAMPLES !== 'undefined' && EMPTY_STATE_EXAMPLES.length) {
+      const _sub = EMPTY_STATE_EXAMPLES[Math.floor(Math.random() * EMPTY_STATE_EXAMPLES.length)];
+      welcomeSubHtml = `<div class="ces-welcome-sub">${escapeHtml(_sub)}</div>`;
+    }
+    const welcomeBubble = `<div class="msg assistant ces-welcome">${avatarHtml}<div class="msg-bubble">${welcomeText}${welcomeSubHtml}</div></div>`;
     // V4 사용자 명시 2026-05-23 — welcome 바로 밑 한 줄. 모드 시트 진입점 안내 (avatar tap).
     const avatarHintHtml = `<div class="ces-avatar-hint-static">고동 프로필을 눌러보세요</div>`;
     // ⓘ 일기 안내 — daily 모드만 (모드 시트에서 daily 선택 후). null 상태 = 미선택, 안 노출.
