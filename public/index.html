@@ -16636,7 +16636,7 @@ function _localSaveReplacer(key, value) {
   if (_SERIALIZE_TRANSIENT_KEYS.has(key)) return undefined;
   if (key === 'embedding') return undefined;
   // 사용자 명시 2026-05-29: 사진 base64 — Storage 마이그(photoStorageKeys) *완료* 시 localStorage 에선 제거.
-  //   cloud(_cloudStateReplacer)는 그대로 유지 = 안전망 (Phase 1E Step 7 full 제거 아님, localStorage 슬림만).
+  //   cloud(_cloudStateReplacer)도 2026-06-01(photoThumb offload)부터 동일 strip — Storage 가 SSOT. 같은 strip 로직 양쪽 동기 필수.
   //   렌더는 storageKey → diaryImgHtml/hydrateDiaryPhotos 가 Storage 에서 채움 (base64 불필요). 마이그 path(in-memory)도 영향 X.
   //   부분 마이그(storageKey 가 사진 다 안 덮음)면 base64 유지 — 손실 방지.
   if ((key === 'photos' || key === 'photoThumb' || key === 'photo') && this) {
@@ -16770,6 +16770,22 @@ function _cloudStateReplacer(key, value) {
   if (key === 'messages' && this && this._hasMessages === true) return undefined;
   // V4 fix (사용자 명시 2026-05-30 — Disk IO): embedding number[] → Float32 base64 압축. 복원 = _restoreEmbeddingsInState.
   if (key === 'embedding' && Array.isArray(value) && value.length > 0) return _packEmbeddingF32(value);
+  // V4 fix (사용자 명시 2026-06-01 — 장기 안전 Phase 2: photoThumb offload): Storage 백업(photoStorageKeys) 있는 사진 base64 는 cloud main row 에서도 strip.
+  //   배경: shellCollection 체크인 소라의 photoThumb/photos base64 (~726kB) 가 cloud row 통째 재암호화 IO 누수 (incident_2026_05_30 §B). diary entry 는 마이그 시 메모리 photos[idx]=null 이라 이미 무관.
+  //   _localSaveReplacer:587-597 와 *동일 로직* — localStorage 에서 이미 검증된 strip 을 cloud 로 확장 (변경 시 양쪽 동기 필수).
+  //   ⚠️ guard: photoStorageKeys 가 사진을 덮을 때만 strip. 백업 없는 사진(미션 소라 photoThumb — Storage 업로드 경로 X)은 보존 → 손실 0.
+  //   복원: photoStorageKeys 가 state 에 남아(strip X) 렌더 시 hydrateDiaryPhotos 가 Storage 에서 채움 (체크인 소라 = _openCheckinShellStory 경유, 13-resume:60 직접 src 는 미션 소라만 도달). embedding 과 달리 parse 직후 in-place 복원 불필요.
+  if ((key === 'photos' || key === 'photoThumb' || key === 'photo') && this) {
+    const sk = this.photoStorageKeys;
+    if (Array.isArray(sk) && sk.filter(Boolean).length > 0) {
+      if (key === 'photos') {
+        const n = Array.isArray(value) ? value.filter(Boolean).length : 0;
+        if (sk.filter(Boolean).length >= n) return undefined;
+      } else if (sk[0]) {
+        return undefined;  // photoThumb / photo (legacy single = photos[0])
+      }
+    }
+  }
   return value;
 }
 
@@ -75719,7 +75735,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.380-topic-cap';
+const APP_VERSION = 'v4.0.381-photo-cloud-strip';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 
