@@ -24255,10 +24255,15 @@ async function init() {
   if (typeof maybeRunChapterCleanup === 'function') {
     setTimeout(() => { maybeRunChapterCleanup().catch(e => console.warn('chapterCleanup:', e)); }, 4000);
   }
-  // V4 사용자 명시 2026-05-28 — init 시 저녁 6시~새벽 4시 자동 일상고동 모드 적용 (첫 화면이 챗일 때 반영).
-  if (typeof _maybeAutoDailyChatMode === 'function') {
-    try { _maybeAutoDailyChatMode(); } catch (e) { console.warn('autoDailyChatMode:', e); }
-  }
+  // V4 fix (사용자 명시 2026-06-01) — 저녁 6시~새벽 4시 자동 일상고동 모드 폐기 (수동 모드 시트로 일원화).
+  //   자동으로 켜졌던 daily (_chatModeAutoDaily 플래그) 만 1회 원복 — 사용자가 직접 선택한 모드는 보존.
+  try {
+    if (state && state.preferences && state.preferences._chatModeAutoDaily) {
+      if (state.chatMode === 'daily') state.chatMode = null;
+      delete state.preferences._chatModeAutoDaily;
+      saveState(true);
+    }
+  } catch (e) { console.warn('autoDailyChatMode revert:', e); }
   // V4 feat (사용자 명시 2026-05-26 ultrathink): forceAnalyze batch polling — pending 있으면 init 시 + 주기적 폴링.
   //   submit 후 5min / 15min / 30min 폴링 setTimeout — chapter cleanup polling 패턴 동일.
   if (typeof _resumeForceAnalyzeBatch === 'function') {
@@ -42029,10 +42034,6 @@ function showScreen(name) {
   }
   // V4 사용자 보고 2026-05-23 — chat 진입 시 renderChat 강제 호출. 옛 코드로 render 된 메시지를 새 코드 (avatar 포함) 로 재 render.
   //   empty entry (welcome bubble + chip) 도 renderChat 안 _chatEmptyAreaHtml 가 처리 — 별도 updateChatEmptyState 호출 불필요.
-  // V4 사용자 명시 2026-05-28 — 챗 진입 시 저녁 6시~새벽 4시 자동 일상고동 모드 적용 (renderChat 전 = 모드 반영된 상태로 render).
-  if (name === 'chat' && typeof _maybeAutoDailyChatMode === 'function') {
-    try { _maybeAutoDailyChatMode(); } catch {}
-  }
   if (name === 'chat' && typeof renderChat === 'function') {
     setTimeout(() => { try { renderChat(); } catch {} }, 0);
   }
@@ -48454,37 +48455,6 @@ function _renderChatModeSheetMemoState() {
   hint.textContent = on ? '안경 쓴 고동이가 너를 기억해' : '이번 대화만 기억해';
 }
 
-// V4 사용자 명시 2026-05-28 — 저녁 6시~새벽 4시 자동 일상고동(daily) 모드.
-//   조건: chatMode 가 default(null) 일 때만 daily 자동 on. 다른 모드 (inquiry/vent) 가 명시 set 이면 건드리지 않음.
-//   _chatModeAutoDaily 플래그로 '자동으로 켰음' 추적 → 시간대 벗어나면 null 로 자동 복귀.
-//   수동 선택 (selectChatMode) 은 플래그를 끄므로 시간대 벗어나도 복귀 X (사용자 의도 보존).
-//   호출: showScreen('chat') 진입 + init. 실시간 6시 경계 전환은 안 함 (재진입/reload 시 적용 — gold-plating 회피).
-function _maybeAutoDailyChatMode() {
-  if (!state) return;
-  const hour = new Date().getHours();
-  const inWindow = (hour >= 18 || hour < 4);  // 로컬 18:00 ~ 03:59
-  if (!state.preferences) state.preferences = {};
-  let changed = false;
-  if (inWindow) {
-    if (!state.chatMode) {   // default(null) 일 때만
-      state.chatMode = 'daily';
-      state.preferences._chatModeAutoDaily = true;
-      changed = true;
-    }
-  } else if (state.chatMode === 'daily' && state.preferences._chatModeAutoDaily) {
-    // 시간대 벗어남 — 자동으로 켰던 daily 만 복귀. 수동 daily 는 플래그 false 라 보존.
-    state.chatMode = null;
-    state.preferences._chatModeAutoDaily = false;
-    changed = true;
-  }
-  if (changed) {
-    try { saveState(true); } catch {}
-    if (typeof updateMainHeaderBtnVisual === 'function') { try { updateMainHeaderBtnVisual(); } catch {} }
-    if (typeof _applyChatModeBg === 'function') { try { _applyChatModeBg(); } catch {} }
-    if (typeof _refreshAllMsgAvatars === 'function') { try { _refreshAllMsgAvatars(); } catch {} }
-  }
-}
-
 function selectChatMode(mode) {
   if (!mode || (mode !== 'daily' && mode !== 'inquiry' && mode !== 'vent')) return;
   if (!state) return;
@@ -48492,9 +48462,6 @@ function selectChatMode(mode) {
   // V4 사용자 명시 2026-05-23 — 같은 모드 재선택 = deselect (null 로 복귀, 기본 상태). 토스트 silent.
   const next = (prev === mode) ? null : mode;
   state.chatMode = next;
-  // V4 사용자 명시 2026-05-28 — 수동 선택 = 자동-daily 추적 해제 (시간대 벗어나도 복귀 X, 사용자 명시 의도 보존).
-  if (!state.preferences) state.preferences = {};
-  state.preferences._chatModeAutoDaily = false;
   // V4 fix (사용자 보고 2026-05-25 ultrathink) — force=true: 강제 새로고침 시 mode 풀림 방지.
   //   debounce (local 400ms idle / cloud 1s) 안에 reload 떨어지면 미저장 → null 복귀. force 면 즉시 동기 flush + cloud PATCH 발사.
   try { saveState(true); } catch {}
@@ -75758,7 +75725,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.382-e2ee-blocklist';
+const APP_VERSION = 'v4.0.383-no-auto-daily';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 

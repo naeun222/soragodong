@@ -10,10 +10,6 @@ function showScreen(name) {
   }
   // V4 사용자 보고 2026-05-23 — chat 진입 시 renderChat 강제 호출. 옛 코드로 render 된 메시지를 새 코드 (avatar 포함) 로 재 render.
   //   empty entry (welcome bubble + chip) 도 renderChat 안 _chatEmptyAreaHtml 가 처리 — 별도 updateChatEmptyState 호출 불필요.
-  // V4 사용자 명시 2026-05-28 — 챗 진입 시 저녁 6시~새벽 4시 자동 일상고동 모드 적용 (renderChat 전 = 모드 반영된 상태로 render).
-  if (name === 'chat' && typeof _maybeAutoDailyChatMode === 'function') {
-    try { _maybeAutoDailyChatMode(); } catch {}
-  }
   if (name === 'chat' && typeof renderChat === 'function') {
     setTimeout(() => { try { renderChat(); } catch {} }, 0);
   }

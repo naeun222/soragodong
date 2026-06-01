@@ -383,10 +383,15 @@ async function init() {
   if (typeof maybeRunChapterCleanup === 'function') {
     setTimeout(() => { maybeRunChapterCleanup().catch(e => console.warn('chapterCleanup:', e)); }, 4000);
   }
-  // V4 사용자 명시 2026-05-28 — init 시 저녁 6시~새벽 4시 자동 일상고동 모드 적용 (첫 화면이 챗일 때 반영).
-  if (typeof _maybeAutoDailyChatMode === 'function') {
-    try { _maybeAutoDailyChatMode(); } catch (e) { console.warn('autoDailyChatMode:', e); }
-  }
+  // V4 fix (사용자 명시 2026-06-01) — 저녁 6시~새벽 4시 자동 일상고동 모드 폐기 (수동 모드 시트로 일원화).
+  //   자동으로 켜졌던 daily (_chatModeAutoDaily 플래그) 만 1회 원복 — 사용자가 직접 선택한 모드는 보존.
+  try {
+    if (state && state.preferences && state.preferences._chatModeAutoDaily) {
+      if (state.chatMode === 'daily') state.chatMode = null;
+      delete state.preferences._chatModeAutoDaily;
+      saveState(true);
+    }
+  } catch (e) { console.warn('autoDailyChatMode revert:', e); }
   // V4 feat (사용자 명시 2026-05-26 ultrathink): forceAnalyze batch polling — pending 있으면 init 시 + 주기적 폴링.
   //   submit 후 5min / 15min / 30min 폴링 setTimeout — chapter cleanup polling 패턴 동일.
   if (typeof _resumeForceAnalyzeBatch === 'function') {
