@@ -192,6 +192,7 @@ async function extractTopicsFromTempChat(messages, source, sourceId, context) {
       pushed += 1;
     });
     if (pushed > 0) {
+      if (typeof _capGeneralTopicCards === 'function') _capGeneralTopicCards();
       saveState();
       if (typeof renderArchive === 'function') {
         try { renderArchive(); } catch {}

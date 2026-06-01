@@ -69,6 +69,7 @@ function _processExtractTopicData(parsed, prevChapterMsgs) {
 
   // V4 (사용자 명시 2026-05-04 V191): archive.summary 갱신 제거 — 히스토리 API 줄거리 요약 기능 폐기.
   // topicCards 추출 흐름은 보존 (도서관 / 나 탭 카드 정상). chatArchive item 자체는 raw messages 그대로 보관.
+  if (typeof _capGeneralTopicCards === 'function') _capGeneralTopicCards();
   saveState();
   if (metaUpdated && typeof renderChat === 'function') renderChat();
   console.log(`✦ 챕터 토픽 ${parsed.topics.length}개 추출됨`);

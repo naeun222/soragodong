@@ -39,6 +39,20 @@ function _ensureRotatingCardState() {
   if (!r.dismissedSources || typeof r.dismissedSources !== 'object') r.dismissedSources = {};
   // 디버깅 / 호환
   if (!Array.isArray(r.history)) r.history = [];
+  // V4 fix (사용자 명시 2026-05-30 — 장기 안전 Phase 2 ②): rotatingCardState 무한 누적 방어.
+  //   _ensureRotatingCardState 는 거의 모든 rotating-card 진입점에서 호출 → 여기서 주기 prune (saveState 는 호출자 몫).
+  //   ① unseenInsightsHistory: 컨펌 로그가 무한 push (03-rotating-card.js _rcConfirmNewView) → 최근 500 cap (히스토리 표시 X, 단순 로그).
+  //   ② quizDenied/SkippedCooldown: {itemId:unlockMs} 만료 키가 영구 잔존 → now 지난 키 정리 (만료 키는 어차피 03a 가 `> now` 로 무시).
+  if (Array.isArray(r.unseenInsightsHistory) && r.unseenInsightsHistory.length > 500) {
+    r.unseenInsightsHistory = r.unseenInsightsHistory.slice(-500);
+  }
+  const _rcNow = Date.now();
+  for (const _ck of ['quizDeniedCooldown', 'quizSkippedCooldown']) {
+    const m = r[_ck];
+    if (m && typeof m === 'object') {
+      for (const k in m) { if (typeof m[k] === 'number' && m[k] <= _rcNow) delete m[k]; }
+    }
+  }
   return r;
 }
 

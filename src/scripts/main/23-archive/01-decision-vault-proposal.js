@@ -40,7 +40,9 @@ function acceptVaultProposal(msgIdx, proposalId) {
   const p = msg.vaultProposals.find(x => x.proposalId === proposalId);
   if (!p || p.responded) return;
   // 한 번 더 vault에 동일 항목 있는지 fuzzy 체크
-  const existsInVault = (state.memoryVault || []).slice(-30).find(v => 
+  // V4 fix (사용자 명시 2026-05-30 — 장기 안전 Phase 2 ②): slice(-30) → 전체 범위 dedup.
+  //   배경: 최근 30개만 비교 → 31번째 이전과 중복돼도 못 막아 vault 누적. 사용자 수동 accept 흐름이라 빈도 낮음 (전체 순회 무해).
+  const existsInVault = (state.memoryVault || []).find(v =>
     v.content && similarText(v.content, p.content)
   );
   if (!existsInVault) {

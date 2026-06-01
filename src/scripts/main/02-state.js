@@ -847,6 +847,23 @@ function _flushLocalSave(opts) {
     writeFn();
   }
 }
+// V4 fix (사용자 명시 2026-05-30 — 장기 안전 Phase 2 ②): topicCards 무한 누적 방어.
+//   배경: 챕터/숙고/매직 추출마다 AI 자동토픽 카드 push 인데 cap 부재 → 활발한 사용자 방치 시 수천 개 누적 (Disk IO budget 압박 한 축).
+//   strategy 카드(category==='strategy' — 사용자 수동 전략 + 체화/미션/진주 참조)는 보존. 일반 AI 자동토픽만 cap.
+//   cap=1000 (사용자 명시 2026-06-01): 무한증가만 차단, 첫 배포 대량삭제 회피 — '데이터 거의 안 지움' 원칙 우선 (도서관 히스토리 거의 보존).
+//   createdAt 오래된 것부터 제거, 최신 _TOPIC_CARDS_GENERAL_CAP 개 보존. 객체 참조 Set 이라 id 충돌 무관.
+//   호출처: AI 자동토픽 생성 2곳 (10-home/07-extract-chapter-topics.js, 25-archive-daily/02-extract-topic-prompt.js) saveState 직전.
+const _TOPIC_CARDS_GENERAL_CAP = 1000;
+function _capGeneralTopicCards() {
+  if (!Array.isArray(state.topicCards)) return;
+  const general = state.topicCards.filter(c => c && c.category !== 'strategy');
+  if (general.length <= _TOPIC_CARDS_GENERAL_CAP) return;
+  general.sort((a, b) => String(a.createdAt || '').localeCompare(String(b.createdAt || '')));
+  const keep = new Set(general.slice(general.length - _TOPIC_CARDS_GENERAL_CAP));
+  const before = state.topicCards.length;
+  state.topicCards = state.topicCards.filter(c => c && (c.category === 'strategy' || keep.has(c)));
+  console.log(`[topic-cap] 일반 토픽 ${before - state.topicCards.length}개 prune (general ${general.length}→${_TOPIC_CARDS_GENERAL_CAP}, strategy 보존)`);
+}
 function saveState(force) {
   // V4 (사용자 명시 2026-05-16 cowork ultrathink): _e2eePendingRecovery 가드 — 데이터 손실 root cause fix.
   //   원인: cloud E2EE decrypt 실패 시 loadFromCloud (05-supabase.js:111/121/137) 가 state = DEFAULT (빈) 처리 + window._e2eePendingRecovery 에 옛 cloudData 보관.

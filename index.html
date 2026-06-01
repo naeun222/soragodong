@@ -16902,6 +16902,23 @@ function _flushLocalSave(opts) {
     writeFn();
   }
 }
+// V4 fix (사용자 명시 2026-05-30 — 장기 안전 Phase 2 ②): topicCards 무한 누적 방어.
+//   배경: 챕터/숙고/매직 추출마다 AI 자동토픽 카드 push 인데 cap 부재 → 활발한 사용자 방치 시 수천 개 누적 (Disk IO budget 압박 한 축).
+//   strategy 카드(category==='strategy' — 사용자 수동 전략 + 체화/미션/진주 참조)는 보존. 일반 AI 자동토픽만 cap.
+//   cap=1000 (사용자 명시 2026-06-01): 무한증가만 차단, 첫 배포 대량삭제 회피 — '데이터 거의 안 지움' 원칙 우선 (도서관 히스토리 거의 보존).
+//   createdAt 오래된 것부터 제거, 최신 _TOPIC_CARDS_GENERAL_CAP 개 보존. 객체 참조 Set 이라 id 충돌 무관.
+//   호출처: AI 자동토픽 생성 2곳 (10-home/07-extract-chapter-topics.js, 25-archive-daily/02-extract-topic-prompt.js) saveState 직전.
+const _TOPIC_CARDS_GENERAL_CAP = 1000;
+function _capGeneralTopicCards() {
+  if (!Array.isArray(state.topicCards)) return;
+  const general = state.topicCards.filter(c => c && c.category !== 'strategy');
+  if (general.length <= _TOPIC_CARDS_GENERAL_CAP) return;
+  general.sort((a, b) => String(a.createdAt || '').localeCompare(String(b.createdAt || '')));
+  const keep = new Set(general.slice(general.length - _TOPIC_CARDS_GENERAL_CAP));
+  const before = state.topicCards.length;
+  state.topicCards = state.topicCards.filter(c => c && (c.category === 'strategy' || keep.has(c)));
+  console.log(`[topic-cap] 일반 토픽 ${before - state.topicCards.length}개 prune (general ${general.length}→${_TOPIC_CARDS_GENERAL_CAP}, strategy 보존)`);
+}
 function saveState(force) {
   // V4 (사용자 명시 2026-05-16 cowork ultrathink): _e2eePendingRecovery 가드 — 데이터 손실 root cause fix.
   //   원인: cloud E2EE decrypt 실패 시 loadFromCloud (05-supabase.js:111/121/137) 가 state = DEFAULT (빈) 처리 + window._e2eePendingRecovery 에 옛 cloudData 보관.
@@ -32184,6 +32201,20 @@ function _ensureRotatingCardState() {
   if (!r.dismissedSources || typeof r.dismissedSources !== 'object') r.dismissedSources = {};
   // 디버깅 / 호환
   if (!Array.isArray(r.history)) r.history = [];
+  // V4 fix (사용자 명시 2026-05-30 — 장기 안전 Phase 2 ②): rotatingCardState 무한 누적 방어.
+  //   _ensureRotatingCardState 는 거의 모든 rotating-card 진입점에서 호출 → 여기서 주기 prune (saveState 는 호출자 몫).
+  //   ① unseenInsightsHistory: 컨펌 로그가 무한 push (03-rotating-card.js _rcConfirmNewView) → 최근 500 cap (히스토리 표시 X, 단순 로그).
+  //   ② quizDenied/SkippedCooldown: {itemId:unlockMs} 만료 키가 영구 잔존 → now 지난 키 정리 (만료 키는 어차피 03a 가 `> now` 로 무시).
+  if (Array.isArray(r.unseenInsightsHistory) && r.unseenInsightsHistory.length > 500) {
+    r.unseenInsightsHistory = r.unseenInsightsHistory.slice(-500);
+  }
+  const _rcNow = Date.now();
+  for (const _ck of ['quizDeniedCooldown', 'quizSkippedCooldown']) {
+    const m = r[_ck];
+    if (m && typeof m === 'object') {
+      for (const k in m) { if (typeof m[k] === 'number' && m[k] <= _rcNow) delete m[k]; }
+    }
+  }
   return r;
 }
 
@@ -35511,6 +35542,7 @@ async function extractTopicsFromTempChat(messages, source, sourceId, context) {
       pushed += 1;
     });
     if (pushed > 0) {
+      if (typeof _capGeneralTopicCards === 'function') _capGeneralTopicCards();
       saveState();
       if (typeof renderArchive === 'function') {
         try { renderArchive(); } catch {}
@@ -52402,7 +52434,9 @@ function acceptVaultProposal(msgIdx, proposalId) {
   const p = msg.vaultProposals.find(x => x.proposalId === proposalId);
   if (!p || p.responded) return;
   // 한 번 더 vault에 동일 항목 있는지 fuzzy 체크
-  const existsInVault = (state.memoryVault || []).slice(-30).find(v => 
+  // V4 fix (사용자 명시 2026-05-30 — 장기 안전 Phase 2 ②): slice(-30) → 전체 범위 dedup.
+  //   배경: 최근 30개만 비교 → 31번째 이전과 중복돼도 못 막아 vault 누적. 사용자 수동 accept 흐름이라 빈도 낮음 (전체 순회 무해).
+  const existsInVault = (state.memoryVault || []).find(v =>
     v.content && similarText(v.content, p.content)
   );
   if (!existsInVault) {
@@ -57567,6 +57601,7 @@ function _processExtractTopicData(parsed, prevChapterMsgs) {
 
   // V4 (사용자 명시 2026-05-04 V191): archive.summary 갱신 제거 — 히스토리 API 줄거리 요약 기능 폐기.
   // topicCards 추출 흐름은 보존 (도서관 / 나 탭 카드 정상). chatArchive item 자체는 raw messages 그대로 보관.
+  if (typeof _capGeneralTopicCards === 'function') _capGeneralTopicCards();
   saveState();
   if (metaUpdated && typeof renderChat === 'function') renderChat();
   console.log(`✦ 챕터 토픽 ${parsed.topics.length}개 추출됨`);
@@ -75684,7 +75719,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.379-unverified-prune';
+const APP_VERSION = 'v4.0.380-topic-cap';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 
