@@ -204,8 +204,8 @@ const CHAT_PLACEHOLDERS = [
   '"검색해줘" 라고 말하면 인터넷에서 찾아와'
 ];
 
-// V4 (사용자 명시 2026-06-01): welcome 말풍선 보조 줄 pool — 0476973(5/20)에서 3개로 축소되며 사라졌던 원본 9개 복원.
-//   기본 상태(모드 미선택) 빈 대화 말풍선 '편하게 말해 보소' 밑에 랜덤 1개 노출 (19-chat/03-measure-render.js).
+// V4 (사용자 명시 2026-06-01): empty bubble '무슨 말 할까?' 예시 토글 pool — 0476973(5/20)에서 3개로 축소됐던 원본 9개 복원.
+//   기본 상태(모드 미선택) welcome 말풍선 '편하게 말해 보소' 밑 토글 펼침 (19-chat/03-measure-render.js toggleChatEmptyExamples).
 const EMPTY_STATE_EXAMPLES = [
   '🍜 오늘 점심 마라탕 먹었어',
   '😰 내일 발표인데 시작도 못 함 - 도와줄게',
