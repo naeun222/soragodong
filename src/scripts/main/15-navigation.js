@@ -213,7 +213,8 @@ const EMPTY_STATE_EXAMPLES = [
   '🎉 발표 끝났어! 뿌듯',
   '🌗 기쁘기도 하고 슬프기도 하고...',
   '📔 "일기:" 오늘 잘 지냄 - 원본으로 저장돼',
-  '💎 진주에 넣어줘 - 진주로 저장돼'
+  '💎 진주에 넣어줘 - 진주로 저장돼',
+  '📅 내일 오후 3시에 회의 일정 잡아줘'
 ];
 
 // 사용자 명시 2026-05-06: TEACHING_PLACEHOLDERS 풀 → CHAT_PLACEHOLDERS 와 통합. legacy 호환 위해 빈 array 유지.
