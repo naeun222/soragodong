@@ -747,7 +747,7 @@ ${entriesText}
 
 // ═══════════════════════════════════════════════════════════════
 // 15. INTAKE (user content — deepen_ask / long_example)
-//   intake_4stage 는 multi-turn (recentMsgs + 마지막 instruction). 마지막 user 메시지 instruction 만 server-side.
+//   insight_beat (첫 관찰) 는 multi-turn (recentMsgs + 마지막 instruction). 마지막 user 메시지 instruction 만 server-side.
 // ═══════════════════════════════════════════════════════════════
 
 function buildIntakeDeepenAsk(v: any): string {
@@ -774,7 +774,49 @@ function buildIntakeLongExample(v: any): string {
 장문 entry 1개만. 다른 글 X. 따옴표 X.`;
 }
 
-const INTAKE_4STAGE_LAST_USER = '아까 그 얘기, 4단계로 더 깊게 분석해줘. [상황] / [내가 본 것] / [이게 뭐냐면] / [이럴 땐 이렇게] / [오늘의 제안] 형식으로. [상황]은 사용자가 시도하려는 *원래 문제*를 한 줄로 요약 (50자 내, 미션 결과 체크 모달용 — 화면엔 안 보임). 그 외 4단은 네가 관찰한 패턴도 한 줄 자연스럽게 인용해줘.';
+// ═══════════════════════════════════════════════════════════════
+// 15b. INSIGHT BEAT (이거 짚어줘) + 가지 (왜 그런지 더 / 이어보기)
+//   사용자 명시 2026-06-02: 옛 '더 알아보기' 4단/5칸 깔때기 → 가벼운 '통찰 한 입' + 당기는 가지로 재구성.
+//   기본 비트 = ≤3줄 '한 수', 라벨/조언/제안 금지. SYSTEM_PERSONA voice·외재화·금지어 엔진은 그대로 (system prepend).
+//   analyze_4stage (대화탭) + intake (온보딩 첫 관찰) 공용. 옛 INTAKE_4STAGE_LAST_USER 대체.
+// ═══════════════════════════════════════════════════════════════
+
+const INSIGHT_BEAT_LAST_USER = `방금 그 얘기, 길게 분석하지 말고 — 내가 너에 대해 지금 가장 정확히 짚을 수 있는 한 가지만.
+- 2~3줄, 라벨/번호/제목/이모지/도입부 없이. 친구가 더 정확히 대답하듯 자연스러운 반말.
+- 이 순간 가장 맞는 '한 수'만 골라 (여러 개 X):
+  · 막혀있거나 자기 탓/뭉뚱그림이 있으면 → 다시 짚기(reframe): '너는 X로 보는데 사실 Y야'
+  · 말로 못 하고 있으면 → 언어화: '네가 느끼는 건 X야'
+  · 이미 정확히 보고 있으면 → 목격: '맞아, 너라서 그럴 만해'
+  · 과거 기록과 분명히 이어지면 → 그 조각을 자연스럽게 인용
+- 뒤집을 게 없으면 억지로 뒤집지 마.
+- 네가 가진 사용자 패턴/기록 중 직접 근거 하나만 자연스럽게 인용. 나열 X.
+- 조언/제안/할 일 금지. 위로 상투구 금지. 길이로 깊이 만들지 말고 정확히 찔러.`;
+
+// 가지 1 — "왜 그런지 더": 개념 수준 심리. 단정/통계/논문 인용 금지 (틀리면 신뢰 붕괴).
+function buildBranchWhy(_v: any): string {
+  return `방금 짚어준 거, 이번엔 '왜 그런지'를 한 겹 더 — 개념 수준에서 풀어줘.
+- 4~6줄, 반말. 이 사람한테 작동하는 심리 메커니즘을 자연스럽게 설명 (자이가르닉 효과, 의도-행동 격차 같은 개념을 이름 없이 풀어 써도 됨).
+- 단정 금지: 'X 연구가 증명했어' / 통계 수치 / 논문 인용 절대 X — 틀리면 신뢰가 무너져. '보통 ~한 경향이 있어' 정도로.
+- 보편성이 자연스럽게 묻어나게 ('너만 그런 거 아니야'). 단, 일반론으로 흐려지지 말고 이 사람 맥락에 붙여.
+- 조언/할 일/제안 금지. 이해를 깊게 해주는 게 목적.`;
+}
+
+// 가지 2 — "이어보기": 과거 깨달음/기록 중 진짜 관련된 1~2개를 날짜·제목과 함께 인용. 억지 연결 X.
+function buildBranchConnect(v: any): string {
+  const candidates = Array.isArray(v?.candidates) ? v.candidates : [];
+  const list = candidates.length
+    ? candidates.map((c: any) => `- ${_s(c?.date, 40)}: ${_s(c?.title, 120)}`).join('\n')
+    : '(관련 후보 없음)';
+  return `방금 짚어준 거랑 이 사람의 과거 기록을 이어줘.
+
+[관련 있을 수 있는 과거 깨달음/기록 후보]
+${list}
+
+- 위 후보 중 *진짜* 관련된 1~2개만 골라, 날짜와 제목을 자연스럽게 언급하며 지금 얘기와 어떻게 이어지는지 한 줄로 엮어줘.
+- 억지로 잇지 마. 진짜 관련된 게 없으면 솔직히 "딱 이어지는 건 아직 없네" 정도로 짧게.
+- 3~5줄, 반말. 다그치지 말고 — '기억하고 있어' 톤.
+- 조언/제안 금지.`;
+}
 
 // ═══════════════════════════════════════════════════════════════
 // Apply override
@@ -782,7 +824,7 @@ const INTAKE_4STAGE_LAST_USER = '아까 그 얘기, 4단계로 더 깊게 분석
 
 // _userContentType (또는 _endpoint default) 매칭 시 마지막 user message content 강제 합성.
 // mission_verify 만 multimodal: 클라가 image+text 결합 array content 보냄 → text part 만 server template 으로 교체, image 보존.
-// intake_4stage 는 multi-turn: 클라가 recentMsgs + 빈 placeholder user 메시지 보냄 → 마지막 user 의 content 만 server-side instruction 으로 교체.
+// insight_beat (대화탭 비트 / 첫 관찰) 는 multi-turn: 클라가 recentMsgs + 칩 텍스트 user 메시지 보냄 → 마지막 user 의 content 만 server-side instruction 으로 교체.
 export function applyUserContentTemplate(body: any): boolean {
   if (!Array.isArray(body?.messages) || body.messages.length === 0) return false;
   const _ep = body._endpoint;
@@ -827,9 +869,12 @@ export function applyUserContentTemplate(body: any): boolean {
     else if (_ct === 'quiz_polish') built = buildQuizPolish(_v);
   }
 
-  // analyze_4stage (force_analyze)
-  else if (_ep === 'analyze_4stage' && _ct === 'force_analyze') {
-    built = buildForceAnalyze(_v);
+  // analyze_4stage (force_analyze / insight_beat / branch_why / branch_connect)
+  else if (_ep === 'analyze_4stage') {
+    if (_ct === 'force_analyze') built = buildForceAnalyze(_v);
+    else if (_ct === 'insight_beat') built = INSIGHT_BEAT_LAST_USER;
+    else if (_ct === 'branch_why') built = buildBranchWhy(_v);
+    else if (_ct === 'branch_connect') built = buildBranchConnect(_v);
   }
 
   // synthesize (사용자 명시 2026-05-29 연결·통합 §4) — 흩어진 항목 → 핵심 노드 통합
@@ -888,11 +933,11 @@ export function applyUserContentTemplate(body: any): boolean {
     built = buildFirstTouchUserContent(_v);
   }
 
-  // intake (3종)
+  // intake (deepen_ask / long_example / insight_beat) — insight_beat = 온보딩 첫 관찰 비트 (대화탭과 동일 프롬프트)
   else if (_ep === 'intake') {
     if (_ct === 'intake_deepen_ask') built = buildIntakeDeepenAsk(_v);
     else if (_ct === 'intake_long_example') built = buildIntakeLongExample(_v);
-    else if (_ct === 'intake_4stage') built = INTAKE_4STAGE_LAST_USER;
+    else if (_ct === 'insight_beat') built = INSIGHT_BEAT_LAST_USER;
   }
 
   // mission_verify — multimodal (image + text). text part 만 server template 으로 교체.

@@ -196,6 +196,11 @@ function openArchiveItem(idx) {
     ? `<div class="archive-modal-section-label">${a.question ? 'AI 응답' : '원본 메시지'}</div>
        <div class="archive-modal-original">${escapeHtml(a.original)}</div>`
     : `<div class="archive-modal-no-original">원본이 함께 저장되지 않은 항목 (이전 버전에서 저장)</div>`;
+  // 변경 5 (사용자 명시 2026-06-02): '이어보기'로 엮인 과거 조각 — 연결망 표시.
+  const linksBlock = (Array.isArray(a.links) && a.links.length)
+    ? `<div class="archive-modal-section-label">🔗 이어진 기록</div>
+       <div class="archive-modal-original" style="display:flex; flex-direction:column; gap:6px;">${a.links.map(l => `<span style="font-size:12px; color:var(--text-soft);">• ${escapeHtml(l.date || '')}${(l.date && l.title) ? ' · ' : ''}${escapeHtml(l.title || '')}</span>`).join('')}</div>`
+    : '';
 
   const modal = document.createElement('div');
   modal.id = 'archiveModal';
@@ -210,6 +215,7 @@ function openArchiveItem(idx) {
       ${body}
       ${questionBlock}
       ${originalBlock}
+      ${linksBlock}
       <div class="topic-modal-meta">${escapeHtml(dateStr)}${sourceStr}</div>
       <div class="topic-modal-actions">
         <button class="topic-modal-btn danger" onclick="closeArchiveModal(); deleteArchiveItem(${idx})">🗑 삭제</button>

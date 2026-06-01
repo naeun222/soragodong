@@ -170,7 +170,7 @@ function _intakeStep4Html() {
   return `
     <div class="intake-ai-msg"><b>🐚</b> 잘 들었어 ✦<br><br><span class="small intake-quote">"${escapeHtml(preview)}"</span><br><br>이 마음, 어디서 작동하는지 같이 들여다볼래?</div>
     <div class="intake-actions">
-      <button class="intake-send-btn intake-deepen-btn" onclick="_intakeStep4Analyze()">🔍 더 알고 싶어</button>
+      <button class="intake-send-btn intake-deepen-btn" onclick="_intakeStep4Analyze()">🔍 이거 짚어줘</button>
     </div>
   `;
 }
@@ -192,10 +192,10 @@ async function _intakeStep4Analyze() {
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
       result = await _intakeAnalyze(state.intakeWorry);
-      // 사용자 명시 2026-05-08: 4단 raw text 응답 — text 필드만 검증.
-      if (result && result.text && result.text.length > 50) break;
+      // 사용자 명시 2026-06-02: 비트 raw text 응답 — text 필드만 검증 (≤3줄이라 길이 기준 완화).
+      if (result && result.text && result.text.length > 15) break;
       result = null;
-      throw new Error('빈 응답 — 4단 텍스트 부족');
+      throw new Error('빈 응답 — 비트 텍스트 부족');
     } catch (e) {
       lastErr = e;
       console.warn('[intake] analyze attempt ' + attempt + ' 실패', e && e.message);
@@ -229,9 +229,8 @@ function _startIntakeProgressMessages() {
   if (_intakeProgressTimer) clearInterval(_intakeProgressTimer);
   const messages = [
     '잠깐 들여다보는 중...',
-    '환경 단서 살피는 중...',
-    '심리 맥락 정리 중...',
-    '전략 도출 중...',
+    '네 말 다시 읽는 중...',
+    '가장 맞는 한 가지 고르는 중...',
     '거의 다 됐어...'
   ];
   let idx = 0;

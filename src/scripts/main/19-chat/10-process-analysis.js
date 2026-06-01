@@ -229,4 +229,60 @@ function _showDeeperCapToast() {
   }
 }
 
+// ─── beat cap (사용자 명시 2026-06-02): '이거 짚어줘' 기본 비트 + 가지(왜/이어보기) ───
+//   가벼운 비트는 frictionless 가 핵심 → 쿨다운 없음, cap 은 deeper 의 2배로 넉넉히.
+//   무거운 '그럼 뭐 하지'(4단·미션) 만 기존 _dailyDeeperCount cap 차감 (별도 카운터).
+function _getDailyBeatCap() {
+  const deeper = _getDailyDeeperCap();
+  return deeper === Infinity ? Infinity : deeper * 2;  // 무료 4 / Light 6 / Plus 10 / Premium 20
+}
+const _BEAT_LS_KEY = '_soragodong_dailyBeat';
+function _persistBeatLocally() {
+  try {
+    if (typeof localStorage !== 'undefined' && state._dailyBeatCount) {
+      localStorage.setItem(_BEAT_LS_KEY, JSON.stringify(state._dailyBeatCount));
+    }
+  } catch {}
+}
+function _loadBeatLocally(todayK) {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const raw = localStorage.getItem(_BEAT_LS_KEY);
+      if (!raw) return null;
+      const b = JSON.parse(raw);
+      if (b && b.date === todayK && typeof b.count === 'number') return b;
+    }
+  } catch {}
+  return null;
+}
+function _getTodayBeatCount() {
+  const todayK = todayKey();
+  if (!state._dailyBeatCount || state._dailyBeatCount.date !== todayK) {
+    const backup = _loadBeatLocally(todayK);
+    if (backup) {
+      state._dailyBeatCount = backup;
+      return state._dailyBeatCount.count;
+    }
+    state._dailyBeatCount = { date: todayK, count: 0, capToastShown: false };
+  }
+  return state._dailyBeatCount.count;
+}
+function _incrementDailyBeatCount() {
+  _getTodayBeatCount();
+  state._dailyBeatCount.count += 1;
+  saveState();
+  _persistBeatLocally();
+}
+function _checkBeatEligibility() {
+  const cap = _getDailyBeatCap();
+  if (cap === Infinity) return { ok: true, current: 0, cap: Infinity };
+  const current = _getTodayBeatCount();
+  // 쿨다운 없음 — 일일 cap 만.
+  return { ok: current < cap, current, cap, reason: current < cap ? null : 'cap' };
+}
+function _showBeatCapToast() {
+  const elig = _checkBeatEligibility();
+  showToast(`🔒 오늘 '이거 짚어줘' ${elig.cap}회 다 썼어 — 내일 또 ✨`);
+}
+
 // V3: 짧은 답을 더 깊게 분석 요청
