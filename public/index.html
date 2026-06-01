@@ -15725,8 +15725,7 @@ img.pearl-load-fail {
           <button class="btn-secondary" onclick="testForceDiscoverInsights()" title="5 entry 가드 우회 — 시드 fallback 도 함께 시도.">💡 인사이트 발견 강제</button>
           <button class="btn-secondary" onclick="testForceStrategyFollowup()" title="전략 팔로업 풀 흐름 (잘됨 / 그저 그래 / 안 됨 / 포기 4 옵션).">🌱 전략 팔로업 강제</button>
 
-          <div class="settings-mini-label" style="margin-top:14px;">⏰ 시간 / 푸시 시뮬</div>
-          <button class="btn-secondary" id="devForceEveningToggleBtn" onclick="devToggleForceEvening()" title="저녁 6시+ 모드 강제 ON — 회전카드 priority 에 체크인 진입 + 챗 empty 에 체크인 floating 카드. 낮 시간에 저녁 UI 검수용. reload 시 OFF (휘발).">⏰ 저녁 6시+ 시뮬: OFF</button>
+          <div class="settings-mini-label" style="margin-top:14px;">🔔 푸시 시뮬</div>
           <button class="btn-secondary" onclick="showHookOnboardingModal()" title="hook 알림 시각 picker 모달 (옛 session 2회째 트리거) — 아침/점심/저녁/자기전/직접. 응 → push 권한 prompt + Sub 등록. 필요 없어 → hookFrequency=off.">🔔 푸시 알림 시각 설정</button>
           <button class="btn-secondary" onclick="devDiagChatArchive()" title="chatArchive 상태 통계 — 총 개수, messages 빈 archive 개수, 휴지통/핀/pending 분포, 빈 archive 샘플 5개 console 덤프. '이전 대화 이어서 불러올 수 없어' bug 추적용.">📋 chatArchive 진단</button>
           <button class="btn-secondary" onclick="devCleanupEmptyArchives()" title="messages 누락된 옛 형식 archive 일괄 휴지통 이동 (복원 불가능한 잔재 정리). 휴지통 7일 후 자동 영구 삭제, 잘못 정리해도 7일 안 복구 가능.">🧹 옛 archive 정리</button>
@@ -32286,14 +32285,6 @@ function _rcMarkDismissedToday(sourceId) {
   if (typeof saveState === 'function') { try { saveState(); } catch {} }
 }
 
-// V4 (사용자 명시 2026-05-17): 저녁 mode = 18:00 이후 ~ 04:00 (dayK reset 까지). 우선순위에 체크인 진입.
-// V4 (사용자 명시 2026-05-17 ultrathink): dev toggle (window._devForceEvening) 우선 — 낮 시간에 저녁 UI 미리보기.
-function _rcIsEveningMode() {
-  if (window._devForceEvening) return true;
-  const h = new Date().getHours();
-  return h >= 18 || h < 4;
-}
-
 // =============================================================================
 // 상수 — baseWeight + tie-breaker stable order
 // =============================================================================
@@ -32744,20 +32735,8 @@ function renderRotatingCard() {
     };
     const buildCheckin = () => {
       if (checkinDone) return null;  // 완료 → priority 에서 제외 (자동 dismiss)
-      // 사용자 명시 2026-05-27 ultrathink: 4-18시 = 인라인 sleep widget (탭 진입 X, 자동 저장).
-      //   18시-4시 = 원래 큰 체크인 카드 (탭하면 체크인 화면).
-      //   _rcIsEveningMode() = h>=18 || h<4 = evening. !evening = 4-18시 daytime.
-      if (!_rcIsEveningMode()) {
-        // 사용자 명시 2026-05-27 — 수면 기록 끝나면 카드 사라짐 (체크인 카드가 checkinDone 시 빠지는 것과 동일).
-        //   완료 조건: 밤샘 || (잠든 시각 && 일어난 시각). priority 슬롯은 다음 source (hook/oneul/review) 로 넘어감.
-        const sleepDone = !!(todayEntry && (todayEntry.allNighter || (todayEntry.sleepStart && todayEntry.sleepEnd)));
-        if (sleepDone) return null;
-        return {
-          id: 'sleep_widget_' + todayKVal, sourceType: 'sleep_widget',
-          bodyHtml: _rcBuildSleepWidgetBodyHtml(todayEntry),
-          // onTapClick X — 카드 전체 tap 핸들러 emit 안 함 (자식 input 만 동작).
-        };
-      }
+      // V4 (사용자 명시 2026-06-01): 시간대 분기 폐기 — 낮/저녁 무관 항상 큰 체크인 카드 (탭하면 체크인 화면, 수면 입력 포함).
+      //   옛 4-18시 인라인 sleep widget 제거 → 5/27 이전 원래 체크인 흐름 복귀.
       return {
         id: 'checkin_' + todayKVal, sourceType: 'checkin',
         bodyHtml: _rcBuildCheckinBodyHtml(),
@@ -32877,48 +32856,6 @@ function _rcBuildHookBodyHtml(hook) {
         </div>
       </div>
       <div class="hero-meta">탭해서 답해줘</div>
-    </div>
-  `;
-}
-
-// 사용자 명시 2026-05-27 ultrathink: 4-18시 인라인 sleep widget — 그 자리에서 어젯밤 수면만 자동 저장.
-//   vitality/mood 없으므로 entry 는 미완료 (사용자가 "오늘 체크인" footer 누르면 큰 체크인 화면).
-//   prefill: entry.sleepStart/End/allNighter 있으면 채움. onchange 자동 저장 (onHomeSleepTimeChange / onHomeSleepAllNighterChange).
-function _rcBuildSleepWidgetBodyHtml(entry) {
-  const sStart = (entry && entry.sleepStart) || '';
-  const sEnd = (entry && entry.sleepEnd) || '';
-  const isAllNighter = !!(entry && entry.allNighter);
-  let durLabel = '';
-  if (!isAllNighter && sStart && sEnd) {
-    const [sh, sm] = sStart.split(':').map(Number);
-    const [eh, em] = sEnd.split(':').map(Number);
-    let minutes = (eh * 60 + em) - (sh * 60 + sm);
-    if (minutes < 0) minutes += 24 * 60;
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    durLabel = `약 ${hours}시간 ${mins}분`;
-  }
-  return `
-    <div class="home-sleep-widget has-attention-pulse">
-      <div class="home-sleep-widget-header">
-        <div class="home-sleep-widget-title">😴 어젯밤 수면</div>
-        <label class="home-sleep-allnighter-toggle">
-          <input type="checkbox" id="homeSleepAllNighter" ${isAllNighter ? 'checked' : ''} onchange="onHomeSleepAllNighterChange(this.checked)">
-          🌙 밤샘
-        </label>
-      </div>
-      <div class="home-sleep-time-pair" id="homeSleepTimePair" style="${isAllNighter ? 'display:none' : ''}">
-        <div class="home-sleep-input">
-          <div class="home-sleep-label">잠든 시각</div>
-          <input type="time" id="homeSleepStart" value="${sStart}" onchange="onHomeSleepTimeChange()">
-        </div>
-        <div class="home-sleep-input">
-          <div class="home-sleep-label">일어난 시각</div>
-          <input type="time" id="homeSleepEnd" value="${sEnd}" onchange="onHomeSleepTimeChange()">
-        </div>
-      </div>
-      <div class="home-sleep-allnighter-msg" id="homeSleepAllNighterMsg" style="${isAllNighter ? '' : 'display:none'}">🌙 밤샘으로 기록 — 수면 시간 X</div>
-      <div class="home-sleep-duration" id="homeSleepDuration">${durLabel}</div>
     </div>
   `;
 }
@@ -42987,69 +42924,6 @@ async function submitCheckin() {
       setTimeout(() => renderPwaInstallInlineCard({ target: 'home' }), 3000);
     }
   } catch (e) { console.warn('[pwa post-checkin]', e); }
-}
-
-// 사용자 명시 2026-05-27 ultrathink: 홈 인라인 sleep widget — 4-18시 동안 큰 체크인 카드 자리에 노출.
-//   onchange 즉시 자동 저장 (제출 버튼 X). vitality/mood 는 안 건드림 → entry 는 여전히 미완료.
-//   "오늘 체크인" mini-link 누르면 큰 체크인 화면 진입 + sleep 값 prefill.
-function onHomeSleepTimeChange() {
-  _updateHomeSleepDuration();
-  const sEl = document.getElementById('homeSleepStart');
-  const eEl = document.getElementById('homeSleepEnd');
-  if (!sEl || !eEl) return;
-  const sVal = sEl.value;
-  const eVal = eEl.value;
-  // 둘 다 있을 때만 저장 — 사용자가 하나만 set 한 중간 상태에선 보류.
-  if (!sVal || !eVal) return;
-  _saveSleepInline({ allNighter: false, sleepStart: sVal, sleepEnd: eVal });
-}
-
-function onHomeSleepAllNighterChange(checked) {
-  // UI 인라인 swap
-  const pair = document.getElementById('homeSleepTimePair');
-  const msg = document.getElementById('homeSleepAllNighterMsg');
-  const dur = document.getElementById('homeSleepDuration');
-  if (pair) pair.style.display = checked ? 'none' : '';
-  if (msg) msg.style.display = checked ? '' : 'none';
-  if (dur) dur.textContent = '';
-  _saveSleepInline({ allNighter: !!checked });
-}
-
-function _saveSleepInline(opts) {
-  try {
-    const key = (typeof todayKey === 'function') ? todayKey() : new Date().toISOString().slice(0, 10);
-    state.entries = state.entries || [];
-    let entry = state.entries.find(e => e.date === key);
-    if (!entry) { entry = { date: key }; state.entries.push(entry); }
-    if (opts.allNighter) {
-      entry.allNighter = true;
-      entry.sleepStart = '';
-      entry.sleepEnd = '';
-    } else {
-      entry.allNighter = false;
-      entry.sleepStart = opts.sleepStart || '';
-      entry.sleepEnd = opts.sleepEnd || '';
-    }
-    entry.timestamp = new Date().toISOString();
-    if (typeof saveState === 'function') saveState();
-    // 사용자 명시 2026-05-27 — 수면 기록되면 sleep widget 카드 자동 사라짐 (rerender → buildCheckin 의 sleepDone 체크가 다음 source 로 swap).
-    if (typeof renderRotatingCard === 'function') renderRotatingCard();
-  } catch (e) { console.warn('[saveSleepInline]', e); }
-}
-
-function _updateHomeSleepDuration() {
-  const sEl = document.getElementById('homeSleepStart');
-  const eEl = document.getElementById('homeSleepEnd');
-  const dEl = document.getElementById('homeSleepDuration');
-  if (!sEl || !eEl || !dEl) return;
-  if (!sEl.value || !eEl.value) { dEl.textContent = ''; return; }
-  const [sh, sm] = sEl.value.split(':').map(Number);
-  const [eh, em] = eEl.value.split(':').map(Number);
-  let minutes = (eh * 60 + em) - (sh * 60 + sm);
-  if (minutes < 0) minutes += 24 * 60;
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  dEl.textContent = `약 ${hours}시간 ${mins}분`;
 }
 
 function buildCheckinSummary(entry) {
@@ -63085,25 +62959,6 @@ function devPreviewPlanOnboarding(planKey) {
     if (typeof showToast === 'function') showToast('_showRecurringSuccessModal 미정의');
   }
 }
-// V4 (사용자 명시 2026-05-17 ultrathink): 시간대 시뮬 dev toggle.
-//   저녁 6시 ~ 새벽 4시 모드 UI (회전카드 priority, 챗 empty 체크인 카드) 를 낮 시간에도 미리볼 수 있음.
-//   _rcIsEveningMode (10-home/03-rotating-card.js) + _chatEmptyAreaHtml (19-chat/03-measure-render.js) 둘 다 flag 우선 체크.
-//   flag = window._devForceEvening. localStorage 안 박힘 (휘발성 — reload 시 OFF).
-
-function devToggleForceEvening() {
-  window._devForceEvening = !window._devForceEvening;
-  const btn = document.getElementById('devForceEveningToggleBtn');
-  if (btn) btn.textContent = '⏰ 저녁 6시+ 시뮬: ' + (window._devForceEvening ? 'ON' : 'OFF');
-  if (typeof showToast === 'function') {
-    showToast(window._devForceEvening
-      ? '⏰ 저녁 6시+ 시뮬 ON — 홈 priority stack 에 체크인 진입 / 챗 empty 에 체크인 카드'
-      : '⏰ 저녁 6시+ 시뮬 OFF — 실제 시간대로 복귀');
-  }
-  // 즉시 rerender — 홈/챗 보고 있으면 바로 반영.
-  if (typeof renderRotatingCard === 'function') { try { renderRotatingCard(); } catch {} }
-  if (typeof renderChat === 'function') { try { renderChat(); } catch {} }
-}
-
 // V4 (사용자 보고 2026-05-17): chatArchive 진단 — messages 빈 archive 통계 + console 덤프.
 //   "이전 대화 → 이어서 → 불러올 수 없어" 토스트 root cause 추적.
 function devDiagChatArchive() {
@@ -70697,9 +70552,6 @@ function loadSettings() {
   // 사용자 요청 2026-04-30: 개발자 도구 admin only (jade6679@naver.com만 보임)
   const devSection = document.getElementById('devToolsSection');
   if (devSection) devSection.style.display = _isAdmin() ? 'block' : 'none';
-  // V4 (사용자 명시 2026-05-17 ultrathink): 저녁 시뮬 toggle 라벨 sync (window flag 휘발성, settings 열 때마다 현재 상태 반영).
-  const evBtn = document.getElementById('devForceEveningToggleBtn');
-  if (evBtn) evBtn.textContent = '⏰ 저녁 6시+ 시뮬: ' + (window._devForceEvening ? 'ON' : 'OFF');
 
   // 사용자 요청 2026-04-30: 사업자 정보 표시 — 발급 후 BUSINESS_INFO 채우면 자동
   if (typeof renderBusinessInfo === 'function') renderBusinessInfo();
@@ -75725,7 +75577,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.383-no-auto-daily';
+const APP_VERSION = 'v4.0.384-no-sleep-widget';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 

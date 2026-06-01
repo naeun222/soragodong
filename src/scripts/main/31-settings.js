@@ -22,9 +22,6 @@ function loadSettings() {
   // 사용자 요청 2026-04-30: 개발자 도구 admin only (jade6679@naver.com만 보임)
   const devSection = document.getElementById('devToolsSection');
   if (devSection) devSection.style.display = _isAdmin() ? 'block' : 'none';
-  // V4 (사용자 명시 2026-05-17 ultrathink): 저녁 시뮬 toggle 라벨 sync (window flag 휘발성, settings 열 때마다 현재 상태 반영).
-  const evBtn = document.getElementById('devForceEveningToggleBtn');
-  if (evBtn) evBtn.textContent = '⏰ 저녁 6시+ 시뮬: ' + (window._devForceEvening ? 'ON' : 'OFF');
 
   // 사용자 요청 2026-04-30: 사업자 정보 표시 — 발급 후 BUSINESS_INFO 채우면 자동
   if (typeof renderBusinessInfo === 'function') renderBusinessInfo();

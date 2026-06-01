@@ -80,14 +80,6 @@ function _rcMarkDismissedToday(sourceId) {
   if (typeof saveState === 'function') { try { saveState(); } catch {} }
 }
 
-// V4 (사용자 명시 2026-05-17): 저녁 mode = 18:00 이후 ~ 04:00 (dayK reset 까지). 우선순위에 체크인 진입.
-// V4 (사용자 명시 2026-05-17 ultrathink): dev toggle (window._devForceEvening) 우선 — 낮 시간에 저녁 UI 미리보기.
-function _rcIsEveningMode() {
-  if (window._devForceEvening) return true;
-  const h = new Date().getHours();
-  return h >= 18 || h < 4;
-}
-
 // =============================================================================
 // 상수 — baseWeight + tie-breaker stable order
 // =============================================================================
@@ -538,20 +530,8 @@ function renderRotatingCard() {
     };
     const buildCheckin = () => {
       if (checkinDone) return null;  // 완료 → priority 에서 제외 (자동 dismiss)
-      // 사용자 명시 2026-05-27 ultrathink: 4-18시 = 인라인 sleep widget (탭 진입 X, 자동 저장).
-      //   18시-4시 = 원래 큰 체크인 카드 (탭하면 체크인 화면).
-      //   _rcIsEveningMode() = h>=18 || h<4 = evening. !evening = 4-18시 daytime.
-      if (!_rcIsEveningMode()) {
-        // 사용자 명시 2026-05-27 — 수면 기록 끝나면 카드 사라짐 (체크인 카드가 checkinDone 시 빠지는 것과 동일).
-        //   완료 조건: 밤샘 || (잠든 시각 && 일어난 시각). priority 슬롯은 다음 source (hook/oneul/review) 로 넘어감.
-        const sleepDone = !!(todayEntry && (todayEntry.allNighter || (todayEntry.sleepStart && todayEntry.sleepEnd)));
-        if (sleepDone) return null;
-        return {
-          id: 'sleep_widget_' + todayKVal, sourceType: 'sleep_widget',
-          bodyHtml: _rcBuildSleepWidgetBodyHtml(todayEntry),
-          // onTapClick X — 카드 전체 tap 핸들러 emit 안 함 (자식 input 만 동작).
-        };
-      }
+      // V4 (사용자 명시 2026-06-01): 시간대 분기 폐기 — 낮/저녁 무관 항상 큰 체크인 카드 (탭하면 체크인 화면, 수면 입력 포함).
+      //   옛 4-18시 인라인 sleep widget 제거 → 5/27 이전 원래 체크인 흐름 복귀.
       return {
         id: 'checkin_' + todayKVal, sourceType: 'checkin',
         bodyHtml: _rcBuildCheckinBodyHtml(),
@@ -671,48 +651,6 @@ function _rcBuildHookBodyHtml(hook) {
         </div>
       </div>
       <div class="hero-meta">탭해서 답해줘</div>
-    </div>
-  `;
-}
-
-// 사용자 명시 2026-05-27 ultrathink: 4-18시 인라인 sleep widget — 그 자리에서 어젯밤 수면만 자동 저장.
-//   vitality/mood 없으므로 entry 는 미완료 (사용자가 "오늘 체크인" footer 누르면 큰 체크인 화면).
-//   prefill: entry.sleepStart/End/allNighter 있으면 채움. onchange 자동 저장 (onHomeSleepTimeChange / onHomeSleepAllNighterChange).
-function _rcBuildSleepWidgetBodyHtml(entry) {
-  const sStart = (entry && entry.sleepStart) || '';
-  const sEnd = (entry && entry.sleepEnd) || '';
-  const isAllNighter = !!(entry && entry.allNighter);
-  let durLabel = '';
-  if (!isAllNighter && sStart && sEnd) {
-    const [sh, sm] = sStart.split(':').map(Number);
-    const [eh, em] = sEnd.split(':').map(Number);
-    let minutes = (eh * 60 + em) - (sh * 60 + sm);
-    if (minutes < 0) minutes += 24 * 60;
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    durLabel = `약 ${hours}시간 ${mins}분`;
-  }
-  return `
-    <div class="home-sleep-widget has-attention-pulse">
-      <div class="home-sleep-widget-header">
-        <div class="home-sleep-widget-title">😴 어젯밤 수면</div>
-        <label class="home-sleep-allnighter-toggle">
-          <input type="checkbox" id="homeSleepAllNighter" ${isAllNighter ? 'checked' : ''} onchange="onHomeSleepAllNighterChange(this.checked)">
-          🌙 밤샘
-        </label>
-      </div>
-      <div class="home-sleep-time-pair" id="homeSleepTimePair" style="${isAllNighter ? 'display:none' : ''}">
-        <div class="home-sleep-input">
-          <div class="home-sleep-label">잠든 시각</div>
-          <input type="time" id="homeSleepStart" value="${sStart}" onchange="onHomeSleepTimeChange()">
-        </div>
-        <div class="home-sleep-input">
-          <div class="home-sleep-label">일어난 시각</div>
-          <input type="time" id="homeSleepEnd" value="${sEnd}" onchange="onHomeSleepTimeChange()">
-        </div>
-      </div>
-      <div class="home-sleep-allnighter-msg" id="homeSleepAllNighterMsg" style="${isAllNighter ? '' : 'display:none'}">🌙 밤샘으로 기록 — 수면 시간 X</div>
-      <div class="home-sleep-duration" id="homeSleepDuration">${durLabel}</div>
     </div>
   `;
 }
