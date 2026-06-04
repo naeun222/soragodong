@@ -1,1 +1,1 @@
-v4.0.392-insight-to-msg-menu
+v4.0.393-reflection-intro-copy

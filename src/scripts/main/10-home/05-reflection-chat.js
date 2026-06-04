@@ -61,7 +61,7 @@ function renderReflectionChat() {
   if (q.chatMessages.length === 0) {
     container.innerHTML = `
       <div class="msg assistant">
-        <div class="msg-bubble">이 질문 같이 보자.\n\n답이 바로 안 나와도 OK. 다양한 각도에서 천천히 — 며칠, 몇 주 걸려도 돼.\n\n첫 한 줄, 떠오르는 생각이나 감각 적어봐.</div>
+        <div class="msg-bubble">이 질문 같이 천천히 생각해보자.\n\n답이 바로 안 나와도 괜찮아.\n\n떠오르는 생각이나 감각 아무거나 적어봐.</div>
       </div>
     `;
     return;
