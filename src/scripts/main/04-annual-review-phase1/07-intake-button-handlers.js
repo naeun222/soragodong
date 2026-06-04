@@ -1,6 +1,6 @@
 // 사용자 명시 2026-04-30 ultrathink: chat_intake_entry step 안 button 핸들러.
-// 모달 풀 흐름 종료 → 분석 결과(가벼운 비트)를 대화창에 fromBeat 메시지로 자동 표시 (사용자 명시 2026-06-02).
-// 주의: 현재 dead path — ONBOARDING_STEPS=[] (옛 풀 튜토리얼 폐기). 살아있는 첫 관찰 = _resumePendingIntake → runIntakeFlow (모달만).
+// 모달 풀 흐름 종료 → 분석 결과를 대화창에 4단 형식 + proposal 메시지로 자동 표시
+// → 튜토리얼은 click_strategy step 으로 점프 (send_diary / click_deeper / await_deeper_response 생략 — intake 가 동일 분석을 만들었으므로 중복 단계 회피).
 window._startIntakeFromTutorial = async function() {
   if (document.getElementById('intakeModalOverlay')) return;
   // 사용자 명시 2026-05-01 (agent audit): _canAI 가드 — session 없거나 401 시 사용자 stranded 차단.
@@ -34,20 +34,28 @@ window._startIntakeFromTutorial = async function() {
         timestamp: nowIso
       });
     }
-    // 사용자 명시 2026-06-02: 첫 관찰 = 가벼운 비트 (fromBeat). 옛 4단/proposal/미션 온램프 제거 — 비트 규칙 (조언/제안 X).
-    //   대화탭 '이거 짚어줘' 와 동일 시각 — 깨달음 핀 + 가지(왜/이어보기/그럼뭐하지) 칩.
-    const beatText = analysis.text;
+    // 사용자 명시 2026-05-08: AI 가 직접 [상황]/[내가 본 것]/[이게 뭐냐면]/[이럴 땐 이렇게]/[오늘의 제안] raw text 로 응답.
+    //   askDeeper 와 100% 동일 흐름 — fromDeeper: true 로 markdown 렌더 + ⭐ 오늘의 제안 카드.
+    const fourStage = analysis.text;
+    // proposal title 추출 — [오늘의 제안] 섹션 첫 줄.
+    let proposalTitle = '오늘 한 걸음';
+    const propMatch = fourStage.match(/\[오늘의 제안\]\s*([\s\S]+?)(?=\n\s*\[|$)/);
+    if (propMatch) {
+      const firstLine = propMatch[1].trim().split(/\n/)[0].trim();
+      if (firstLine) proposalTitle = firstLine.slice(0, 40);
+    }
     state.chatMessages.push({
       role: 'assistant',
-      content: beatText,
-      fromBeat: true,
-      relatedCandidates: (typeof _findRelatedInsights === 'function') ? _findRelatedInsights(worries.join(' '), 2) : [],
+      content: fourStage,
+      fromDeeper: true,
+      proposal: true,
+      proposalData: { title: proposalTitle },
       timestamp: nowIso
     });
-    // 첫 관찰 직후 안내 — 비트 + 새 칩 이름.
+    // V4 (사용자 명시 2026-05-04 ultrathink): 4단 분석 직후 안내 메시지 inject — '내가 지금은 4단 분석 채워놨다' 톤 (옛 카피 톤)
     state.chatMessages.push({
       role: 'assistant',
-      content: '처음이라 내가 먼저 한 번 짚어봤어 ✦\n평소엔 답 아래 "이거 짚어줘" 누르면 이렇게 콕 짚어줄게.',
+      content: '처음이라 위 4단으로 친절히 정리해줬어 ✦\n평소엔 답 아래 "더 알고 싶어 ▾" 누르면 이렇게 깊게 풀어줄게.',
       timestamp: nowIso
     });
     saveState();

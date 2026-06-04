@@ -204,9 +204,10 @@ async function _intakeGenLongExample(userText) {
   return (data?.content?.[0]?.text || '').trim();
 }
 
-// 첫 관찰 분석 — 전체 intakeWorry chat 받아 가벼운 비트 raw text 생성 (대화탭 '이거 짚어줘' 와 동일 프롬프트).
-// 사용자 명시 2026-06-02: 옛 4단/5칸 깔때기 → ≤3줄 비트 (insight_beat). 라벨/조언/제안 없음.
-//   결과는 formatAIResponse 로 렌더링 (대화탭 비트와 동일 시각).
+// Step6: 전체 intakeWorry chat 받아 4단 분석 raw text 생성 (askDeeper 와 동일 형식).
+// 사용자 명시 2026-05-08: intake 분석 = 평소 '더 알아보기' 4단 분석과 똑같은 prompt + 출력.
+//   [상황] / [내가 본 것] / [이게 뭐냐면] / [이럴 땐 이렇게] / [오늘의 제안] raw text. JSON / hypotheses 폐기.
+//   결과는 formatAIResponse 로 렌더링 (askDeeper 응답과 100% 동일 시각).
 async function _intakeAnalyze(intakeWorry) {
   if (!_canAI()) throw new Error('AI 세션 미준비');
 
@@ -232,8 +233,8 @@ async function _intakeAnalyze(intakeWorry) {
     systemBlocks = '너는 "소라고동". 한국어 반말. 친구 카톡 톤.';
   }
 
-  // intakeWorry → messages + 마지막 비트 instruction (대화탭 '이거 짚어줘' 와 동일 instruction).
-  // 사용자 명시 2026-05-11 / 2026-06-02: instruction text backend 이전 — _userContentType='insight_beat' 매칭 시 server-side INSIGHT_BEAT_LAST_USER 로 강제 교체.
+  // intakeWorry → messages + 마지막 4단 instruction (askDeeper 와 동일 instruction).
+  // 사용자 명시 2026-05-11 ultrathink: instruction text backend 이전 — _userContentType='intake_4stage' 매칭 시 server-side INTAKE_4STAGE_LAST_USER 로 강제 교체.
   const messages = (intakeWorry || []).map(m => ({ role: m.role, content: m.content }));
   messages.push({
     role: 'user',
@@ -252,10 +253,10 @@ async function _intakeAnalyze(intakeWorry) {
 
   const resp = await callAnthropic({
     _endpoint: 'intake',
-    _userContentType: 'insight_beat',
-    // 사용자 명시 2026-05-08 / 2026-06-02: askDeeper 비트와 동일 모델 (Opus 4.7) + 짧은 cap (≤3줄 비트).
+    _userContentType: 'intake_4stage',
+    // 사용자 명시 2026-05-08: askDeeper 와 동일 모델 (Opus 4.7).
     model: 'claude-opus-4-7',
-    max_tokens: 320,
+    max_tokens: 1500,
     system: systemBlocks,
     messages
   });
@@ -267,9 +268,9 @@ async function _intakeAnalyze(intakeWorry) {
   const data = await resp.json();
   const text = (data?.content?.[0]?.text || '').trim();
   if (!text) throw new Error('AI 빈 응답');
-  // 사용자 명시 2026-06-02: 비트 = 라벨 없는 ≤3줄 자유 텍스트. 옛 4단 라벨 검증 제거. 너무 짧은 빈 응답만 retry trigger.
-  if (text.length < 8) {
-    throw new Error('빈 응답 — 비트 텍스트 부족');
+  // 4단 라벨 한 개라도 있어야 분석 성공 — 없으면 retry trigger.
+  if (!/\[내가 본 것\]|\[이게 뭐냐면\]|\[이럴 땐 이렇게\]|\[오늘의 제안\]/.test(text)) {
+    throw new Error('4단 라벨 미감지');
   }
   return { text };
 }

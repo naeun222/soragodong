@@ -20763,9 +20763,10 @@ async function _intakeGenLongExample(userText) {
   return (data?.content?.[0]?.text || '').trim();
 }
 
-// 첫 관찰 분석 — 전체 intakeWorry chat 받아 가벼운 비트 raw text 생성 (대화탭 '이거 짚어줘' 와 동일 프롬프트).
-// 사용자 명시 2026-06-02: 옛 4단/5칸 깔때기 → ≤3줄 비트 (insight_beat). 라벨/조언/제안 없음.
-//   결과는 formatAIResponse 로 렌더링 (대화탭 비트와 동일 시각).
+// Step6: 전체 intakeWorry chat 받아 4단 분석 raw text 생성 (askDeeper 와 동일 형식).
+// 사용자 명시 2026-05-08: intake 분석 = 평소 '더 알아보기' 4단 분석과 똑같은 prompt + 출력.
+//   [상황] / [내가 본 것] / [이게 뭐냐면] / [이럴 땐 이렇게] / [오늘의 제안] raw text. JSON / hypotheses 폐기.
+//   결과는 formatAIResponse 로 렌더링 (askDeeper 응답과 100% 동일 시각).
 async function _intakeAnalyze(intakeWorry) {
   if (!_canAI()) throw new Error('AI 세션 미준비');
 
@@ -20791,8 +20792,8 @@ async function _intakeAnalyze(intakeWorry) {
     systemBlocks = '너는 "소라고동". 한국어 반말. 친구 카톡 톤.';
   }
 
-  // intakeWorry → messages + 마지막 비트 instruction (대화탭 '이거 짚어줘' 와 동일 instruction).
-  // 사용자 명시 2026-05-11 / 2026-06-02: instruction text backend 이전 — _userContentType='insight_beat' 매칭 시 server-side INSIGHT_BEAT_LAST_USER 로 강제 교체.
+  // intakeWorry → messages + 마지막 4단 instruction (askDeeper 와 동일 instruction).
+  // 사용자 명시 2026-05-11 ultrathink: instruction text backend 이전 — _userContentType='intake_4stage' 매칭 시 server-side INTAKE_4STAGE_LAST_USER 로 강제 교체.
   const messages = (intakeWorry || []).map(m => ({ role: m.role, content: m.content }));
   messages.push({
     role: 'user',
@@ -20811,10 +20812,10 @@ async function _intakeAnalyze(intakeWorry) {
 
   const resp = await callAnthropic({
     _endpoint: 'intake',
-    _userContentType: 'insight_beat',
-    // 사용자 명시 2026-05-08 / 2026-06-02: askDeeper 비트와 동일 모델 (Opus 4.7) + 짧은 cap (≤3줄 비트).
+    _userContentType: 'intake_4stage',
+    // 사용자 명시 2026-05-08: askDeeper 와 동일 모델 (Opus 4.7).
     model: 'claude-opus-4-7',
-    max_tokens: 320,
+    max_tokens: 1500,
     system: systemBlocks,
     messages
   });
@@ -20826,9 +20827,9 @@ async function _intakeAnalyze(intakeWorry) {
   const data = await resp.json();
   const text = (data?.content?.[0]?.text || '').trim();
   if (!text) throw new Error('AI 빈 응답');
-  // 사용자 명시 2026-06-02: 비트 = 라벨 없는 ≤3줄 자유 텍스트. 옛 4단 라벨 검증 제거. 너무 짧은 빈 응답만 retry trigger.
-  if (text.length < 8) {
-    throw new Error('빈 응답 — 비트 텍스트 부족');
+  // 4단 라벨 한 개라도 있어야 분석 성공 — 없으면 retry trigger.
+  if (!/\[내가 본 것\]|\[이게 뭐냐면\]|\[이럴 땐 이렇게\]|\[오늘의 제안\]/.test(text)) {
+    throw new Error('4단 라벨 미감지');
   }
   return { text };
 }
@@ -20954,8 +20955,8 @@ window._toggleInputSpeech = function(taId, btnId) {
 };
 
 // 사용자 명시 2026-04-30 ultrathink: chat_intake_entry step 안 button 핸들러.
-// 모달 풀 흐름 종료 → 분석 결과(가벼운 비트)를 대화창에 fromBeat 메시지로 자동 표시 (사용자 명시 2026-06-02).
-// 주의: 현재 dead path — ONBOARDING_STEPS=[] (옛 풀 튜토리얼 폐기). 살아있는 첫 관찰 = _resumePendingIntake → runIntakeFlow (모달만).
+// 모달 풀 흐름 종료 → 분석 결과를 대화창에 4단 형식 + proposal 메시지로 자동 표시
+// → 튜토리얼은 click_strategy step 으로 점프 (send_diary / click_deeper / await_deeper_response 생략 — intake 가 동일 분석을 만들었으므로 중복 단계 회피).
 window._startIntakeFromTutorial = async function() {
   if (document.getElementById('intakeModalOverlay')) return;
   // 사용자 명시 2026-05-01 (agent audit): _canAI 가드 — session 없거나 401 시 사용자 stranded 차단.
@@ -20989,20 +20990,28 @@ window._startIntakeFromTutorial = async function() {
         timestamp: nowIso
       });
     }
-    // 사용자 명시 2026-06-02: 첫 관찰 = 가벼운 비트 (fromBeat). 옛 4단/proposal/미션 온램프 제거 — 비트 규칙 (조언/제안 X).
-    //   대화탭 '이거 짚어줘' 와 동일 시각 — 깨달음 핀 + 가지(왜/이어보기/그럼뭐하지) 칩.
-    const beatText = analysis.text;
+    // 사용자 명시 2026-05-08: AI 가 직접 [상황]/[내가 본 것]/[이게 뭐냐면]/[이럴 땐 이렇게]/[오늘의 제안] raw text 로 응답.
+    //   askDeeper 와 100% 동일 흐름 — fromDeeper: true 로 markdown 렌더 + ⭐ 오늘의 제안 카드.
+    const fourStage = analysis.text;
+    // proposal title 추출 — [오늘의 제안] 섹션 첫 줄.
+    let proposalTitle = '오늘 한 걸음';
+    const propMatch = fourStage.match(/\[오늘의 제안\]\s*([\s\S]+?)(?=\n\s*\[|$)/);
+    if (propMatch) {
+      const firstLine = propMatch[1].trim().split(/\n/)[0].trim();
+      if (firstLine) proposalTitle = firstLine.slice(0, 40);
+    }
     state.chatMessages.push({
       role: 'assistant',
-      content: beatText,
-      fromBeat: true,
-      relatedCandidates: (typeof _findRelatedInsights === 'function') ? _findRelatedInsights(worries.join(' '), 2) : [],
+      content: fourStage,
+      fromDeeper: true,
+      proposal: true,
+      proposalData: { title: proposalTitle },
       timestamp: nowIso
     });
-    // 첫 관찰 직후 안내 — 비트 + 새 칩 이름.
+    // V4 (사용자 명시 2026-05-04 ultrathink): 4단 분석 직후 안내 메시지 inject — '내가 지금은 4단 분석 채워놨다' 톤 (옛 카피 톤)
     state.chatMessages.push({
       role: 'assistant',
-      content: '처음이라 내가 먼저 한 번 짚어봤어 ✦\n평소엔 답 아래 "이거 짚어줘" 누르면 이렇게 콕 짚어줄게.',
+      content: '처음이라 위 4단으로 친절히 정리해줬어 ✦\n평소엔 답 아래 "더 알고 싶어 ▾" 누르면 이렇게 깊게 풀어줄게.',
       timestamp: nowIso
     });
     saveState();
@@ -21216,7 +21225,7 @@ function _intakeStep4Html() {
   return `
     <div class="intake-ai-msg"><b>🐚</b> 잘 들었어 ✦<br><br><span class="small intake-quote">"${escapeHtml(preview)}"</span><br><br>이 마음, 어디서 작동하는지 같이 들여다볼래?</div>
     <div class="intake-actions">
-      <button class="intake-send-btn intake-deepen-btn" onclick="_intakeStep4Analyze()">🔍 이거 짚어줘</button>
+      <button class="intake-send-btn intake-deepen-btn" onclick="_intakeStep4Analyze()">🔍 더 알고 싶어</button>
     </div>
   `;
 }
@@ -21238,10 +21247,10 @@ async function _intakeStep4Analyze() {
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
       result = await _intakeAnalyze(state.intakeWorry);
-      // 사용자 명시 2026-06-02: 비트 raw text 응답 — text 필드만 검증 (≤3줄이라 길이 기준 완화).
-      if (result && result.text && result.text.length > 15) break;
+      // 사용자 명시 2026-05-08: 4단 raw text 응답 — text 필드만 검증.
+      if (result && result.text && result.text.length > 50) break;
       result = null;
-      throw new Error('빈 응답 — 비트 텍스트 부족');
+      throw new Error('빈 응답 — 4단 텍스트 부족');
     } catch (e) {
       lastErr = e;
       console.warn('[intake] analyze attempt ' + attempt + ' 실패', e && e.message);
@@ -21275,8 +21284,9 @@ function _startIntakeProgressMessages() {
   if (_intakeProgressTimer) clearInterval(_intakeProgressTimer);
   const messages = [
     '잠깐 들여다보는 중...',
-    '네 말 다시 읽는 중...',
-    '가장 맞는 한 가지 고르는 중...',
+    '환경 단서 살피는 중...',
+    '심리 맥락 정리 중...',
+    '전략 도출 중...',
     '거의 다 됐어...'
   ];
   let idx = 0;
@@ -45284,63 +45294,46 @@ function _renderChatMessageHTML(m, i) {
         <button class="msg-action retry" onclick="retryMessage(${i})">↻ 다시 보내기</button>
       </div>`;
     } else if (m.role === 'assistant' && !m.typing) {
-      // 사용자 명시 2026-06-02: '더 알아보기' 4단 깔때기 → 가벼운 비트 + 가지로 재구성.
-      //   메시지 종류별 actions: 일반→'이거 짚어줘' / 비트(fromBeat)→깨달음+가지3 / '그럼뭐하지'(fromDeeper)→전략 / 가지(fromBranch)→깨달음.
-      // V4 (v8 묶음 9): Core 2 미잠금 시 🧬 전략으로 disabled-locked. 클릭 시 단순 토스트.
-      const _c2Locked = !!state._core2NotUnlocked && !window._onbTutorialMode && !(state.preferences && state.preferences.testerMode);
-      const _beatElig = (typeof _checkBeatEligibility === 'function') ? _checkBeatEligibility() : { ok: true };
+      // Detect if response was "short" (no 4-stage labels)
+      const has4Stage = /\[내가 본 것\]|\[이게 뭐냐면\]/.test(m.content || '');
+      // V4 (v8 묶음 4): show / disabled / hide 분기 — Plan 별 cap + 쿨다운
       const _deeperElig = (typeof _checkDeeperEligibility === 'function') ? _checkDeeperEligibility() : { ok: true };
-      const _saveInsightBtn = `<button class="msg-action ${m.saved ? 'saved' : ''}" onclick="saveMsgAsInsight(${i})">${m.saved ? '✦ 저장됨' : '✦ 깨달음으로'}</button>`;
-
-      if (m.fromDeeper) {
-        // '그럼 뭐 하지' 결과 — 기존 4단/전략/proposal 온램프 그대로 (proposal 카드는 아래 proposalBtns).
-        const saveBtn = _c2Locked
-          ? `<button class="msg-action disabled-locked" onclick="_showCore2LockedToast()">🧬 전략으로</button>`
-          : `<button class="msg-action ${m.savedStrategy ? 'saved' : ''}" onclick="saveMsgAsStrategy(${i})">${m.savedStrategy ? '🧬 전략 저장됨' : '🧬 전략으로'}</button>`;
-        actions = `<div class="msg-actions">${saveBtn}</div>`;
-      } else if (m.fromBeat) {
-        // 1층 비트 — ✦ 깨달음으로 + 2층 가지 (왜 그런지 더 / 이어보기[관련 있을 때만] / 그럼 뭐 하지).
-        const whyBtn = _beatElig.ok
-          ? `<button class="msg-action" onclick="askWhyDeeper(${i})">왜 그런지 더</button>`
-          : `<button class="msg-action disabled-locked" onclick="_showBeatCapToast()">왜 그런지 더</button>`;
-        const connectBtn = (Array.isArray(m.relatedCandidates) && m.relatedCandidates.length)
-          ? (_beatElig.ok
-              ? `<button class="msg-action" onclick="askConnect(${i})">이어보기</button>`
-              : `<button class="msg-action disabled-locked" onclick="_showBeatCapToast()">이어보기</button>`)
-          : '';
-        // '그럼 뭐 하지' = 무거운 4단·미션 온램프 → 기존 deeper cap.
-        const thenWhatBtn = _deeperElig.ok
-          ? `<button class="msg-action" onclick="askDeeper(${i})">그럼 뭐 하지</button>`
-          : `<button class="msg-action disabled-locked" onclick="_showDeeperCapToast()">그럼 뭐 하지</button>`;
-        actions = `<div class="msg-actions">${_saveInsightBtn}${whyBtn}${connectBtn}${thenWhatBtn}</div>`;
-      } else if (m.fromBranch) {
-        // 가지 결과 (왜 그런지 더 / 이어보기) — 깨달음 핀만.
-        actions = `<div class="msg-actions">${_saveInsightBtn}</div>`;
-      } else {
-        // 일반 assistant 메시지 — ✦ 깨달음으로 + '이거 짚어줘' 진입 칩.
-        // 이미 4단 응답이거나 3턴 게이트 미충족 시 진입 칩 숨김 (옛 deeper 게이트 의도 유지).
-        const has4Stage = /\[내가 본 것\]|\[이게 뭐냐면\]/.test(m.content || '');
-        // V4 (사용자 명시 2026-05-16 cowork): 챕터당 user 3회 누적 후 노출. testerMode/튜토/기존 사용자는 우회.
-        const _chapterUserMsgs = (state.chatMessages || []).filter(mm => mm && mm.role === 'user').length;
-        const _isExistingChatUser = (state.chatPairsCount || 0) >= 3
-          || (typeof _isTutorialEligibleUser === 'function' && !_isTutorialEligibleUser());
-        const _bypassTurnGate = !!(window._onbTutorialMode || (state.preferences && state.preferences.testerMode) || _isExistingChatUser);
-        const _turnsOk = _bypassTurnGate || _chapterUserMsgs >= 3;
-        const beatBtn = (has4Stage || !_turnsOk)
-          ? ''
-          : (_beatElig.ok
-              ? `<button class="msg-action" onclick="askInsightBeat(${i})">이거 짚어줘</button>`
-              : `<button class="msg-action disabled-locked" onclick="_showBeatCapToast()">이거 짚어줘</button>`);
-        // V4 (사용자 명시 2026-05-17 ultrathink): 게스트 첫 '이거 짚어줘' 노출 시 튜토 모달 2page chain.
-        if (beatBtn && state.isGuest
-            && !(state._shownInlineTips || []).includes('firstDeeperBtn')
-            && !window._firstDeeperTutoQueued
-            && typeof _showFirstDeeperTutoIfGuest === 'function') {
-          window._firstDeeperTutoQueued = true;
-          setTimeout(() => _showFirstDeeperTutoIfGuest(), 250);
-        }
-        actions = `<div class="msg-actions">${_saveInsightBtn}${beatBtn}</div>`;
+      // V4 (사용자 명시 2026-05-16 cowork): 3턴 이전 hide. 첫 응답 옆에 깊이 버튼 = "이 앱 = 분석 도구" frame 즉시 박힘.
+      //   결정: 챕터당 user 메시지 3회 누적 후 노출. testerMode / 튜토리얼 모드는 우회.
+      // V4 fix (사용자 명시 2026-05-18 ultrathink): 기존 사용자 (chatPairsCount ≥ 3 누적 OR 구독자) 도 우회 — ✓ 마무리 후 새 이야기 시작 시 매번 3턴 락은 불필요.
+      //   '첫 채팅' 3턴 락의 의도 = 게스트/미구독 신규에게 frame 박지 않기. 이미 사용법 인지한 사용자는 즉시 노출.
+      const _chapterUserMsgs = (state.chatMessages || []).filter(mm => mm && mm.role === 'user').length;
+      const _isExistingChatUser = (state.chatPairsCount || 0) >= 3
+        || (typeof _isTutorialEligibleUser === 'function' && !_isTutorialEligibleUser());
+      const _bypassTurnGate = !!(window._onbTutorialMode || (state.preferences && state.preferences.testerMode) || _isExistingChatUser);
+      const _deeperTurnsOk = _bypassTurnGate || _chapterUserMsgs >= 3;
+      const deeperBtn = (has4Stage || !_deeperTurnsOk)
+        ? ''
+        : (_deeperElig.ok
+            ? `<button class="msg-action" onclick="askDeeper(${i})">더 알고 싶어 ▾</button>`
+            : `<button class="msg-action disabled-locked" onclick="_showDeeperCapToast()">더 알고 싶어 ▾</button>`);
+      // V4 (사용자 명시 2026-05-17 ultrathink): 게스트 첫 '더 알아보기' 노출 시 튜토 모달 2page chain.
+      //   _shownInlineTips 'firstDeeperBtn' 영구 가드 + queued flag 로 같은 render cycle 중복 timer 회피.
+      if (deeperBtn && state.isGuest
+          && !(state._shownInlineTips || []).includes('firstDeeperBtn')
+          && !window._firstDeeperTutoQueued
+          && typeof _showFirstDeeperTutoIfGuest === 'function') {
+        window._firstDeeperTutoQueued = true;
+        setTimeout(() => _showFirstDeeperTutoIfGuest(), 250);
       }
+      // V4 (v8 묶음 9): Core 2 미잠금 시 4단 응답의 🧬 전략으로 disabled-locked
+      // V4 (v2 §6 명시): 클릭 시 단순 토스트 — entry modal 자동 권유는 환영 선물 후
+      const _c2Locked = !!state._core2NotUnlocked && !window._onbTutorialMode && !(state.preferences && state.preferences.testerMode);
+      // V3.13.x: askDeeper 응답이면 깨달음 버튼 대신 '전략으로' (전략 탭에 저장)
+      const saveBtn = m.fromDeeper
+        ? (_c2Locked
+            ? `<button class="msg-action disabled-locked" onclick="_showCore2LockedToast()">🧬 전략으로</button>`
+            : `<button class="msg-action ${m.savedStrategy ? 'saved' : ''}" onclick="saveMsgAsStrategy(${i})">${m.savedStrategy ? '🧬 전략 저장됨' : '🧬 전략으로'}</button>`)
+        : `<button class="msg-action ${m.saved ? 'saved' : ''}" onclick="saveMsgAsInsight(${i})">${m.saved ? '✦ 저장됨' : '✦ 깨달음으로'}</button>`;
+      actions = `<div class="msg-actions">
+        ${saveBtn}
+        ${deeperBtn}
+      </div>`;
     }
 
     let proposalBtns = '';
@@ -45456,7 +45449,7 @@ function _showFirstDeeperTutoIfGuest() {
   _showSimpleTutoModal({
     key: 'firstDeeperBtn',
     pages: [
-      { html: `고민이 있을 때, 어찌해야 할지 모르겠을 때,<br>고동이에게 털어놓고 <b>'이거 짚어줘'</b>를 눌러보세요.<br><br>마법의 소라고동이 이름값을 할 거예요. 🐚` },
+      { html: `고민이 있을 때, 어찌해야 할지 모르겠을 때,<br>고동이에게 털어놓고 <b>'더 알아보기'</b>를 눌러보세요.<br><br>마법의 소라고동이 이름값을 할 거예요. 🐚` },
       // V4 (사용자 명시 2026-05-17 ultrathink): page 2 카피 단순화 + okLabel='오호라'.
       { html: `이 앱의 모든 정보는<br><b>AI 학습에 전혀 쓰이지 않고</b>,<br>종단간 암호화로 보호됩니다.<br><br><span style="color:var(--text-dim); font-size:13px;">(로그인 후)</span>`, okLabel: '오호라' }
     ]
@@ -46728,11 +46721,7 @@ async function generateAIResponse(modelOverride, opts) {
   // 헤더 토글 (state.preferences.useOpus) 의 Opus 모드 = chat_main + Premium 가드 (backend) — 별개.
   // 사용자 보고 2026-05-10 (audit-backend): 옛 is_deeper_analysis hint 폐기 (client 위변조 위험) → endpoint 분리.
   const _isDeeperAnalysis = !!(opts && opts.isDeeper);
-  // 사용자 명시 2026-06-02: 비트('이거 짚어줘')/가지(왜·이어보기)도 분석 스타일 — analyze_4stage endpoint (persona 보존 + Opus 가드 자연 skip), RAG/billing-poll skip.
-  const _isBeat = !!(opts && opts.beat);
-  const _branch = (opts && opts.branch) || null;  // 'why' | 'connect'
-  const _isAnalyzeStyle = _isDeeperAnalysis || _isBeat || !!_branch;
-  const _endpointName = _isAnalyzeStyle ? 'analyze_4stage' : 'chat_main';
+  const _endpointName = _isDeeperAnalysis ? 'analyze_4stage' : 'chat_main';
   state.chatMessages = state.chatMessages.filter(m => !m.typing);
   state.chatMessages.push({ role: 'assistant', content: '...', typing: true });
   renderChat();
@@ -46744,7 +46733,7 @@ async function generateAIResponse(modelOverride, opts) {
   //   재현 evidence: 앱 진입 직후 빠르게 chat 보내면 _billingCache 아직 안 떠서
   //   _ragIsEnabled() false → RAG silent skip → window._ragLastRetrieved = null.
   //   한 박자 기다리면 정상. polling 100ms × 15 = 1.5초 max.
-  if (!_isAnalyzeStyle) {
+  if (!_isDeeperAnalysis) {
     for (let i = 0; i < 15; i++) {
       if (window._billingCache) break;
       await new Promise(r => setTimeout(r, 100));
@@ -46753,7 +46742,7 @@ async function generateAIResponse(modelOverride, opts) {
       console.warn('[rag] _billingCache not ready after 1.5s — skipping retrieve');
     }
   }
-  if (!_isAnalyzeStyle && typeof _ragIsEnabled === 'function' && _ragIsEnabled()) {
+  if (!_isDeeperAnalysis && typeof _ragIsEnabled === 'function' && _ragIsEnabled()) {
     try {
       // V4 (사용자 명시 2026-05-25 ultrathink, 2 번째 묶음): query 확장 — last user msg 한 줄만 쓰면 anaphor ("기억해봐") 일 때 의미 매칭 실패.
       //   직전 3개 user msg concat → semantic content 살아남음. 토큰 ↑ 미미 (~50), recall ↑ 큼.
@@ -46877,14 +46866,10 @@ async function generateAIResponse(modelOverride, opts) {
       // V4 사용자 명시 2026-05-22 ultrathink — 대화탭 모드 → backend ADDENDUM dispatch (functions/api/_lib/prompts/system-persona.ts).
       //   null = 사용자 미선택 → ADDENDUM_DEFAULT (자동 감지 legacy path). 'daily'|'inquiry'|'vent' = 모드별 ADDENDUM.
       _chatMode: (typeof state !== 'undefined' && state && state.chatMode) || null,
-      // 사용자 명시 2026-06-02: 비트/가지 — backend applyUserContentTemplate 가 마지막 user content 를 서버 프롬프트로 교체 (insight_beat / branch_why / branch_connect). _vars 는 이어보기 후보 전달용.
-      _userContentType: (opts && opts.userContentType) || undefined,
-      _vars: (opts && opts.vars) || undefined,
       _useWebSearch,
       // 사용자 요청 2026-04-30 ultrathink Task 7: useOpus 토글 시 Opus, 아니면 Sonnet (검색 시 Haiku 강제 — 위에서 결정).
       model: _modelForCall,
-      // 사용자 명시 2026-06-02: 비트 ≤3줄 = 짧은 cap (출력 길이 하드 캡으로 비용·무게 통제).
-      max_tokens: (opts && opts.maxTokens) || 2000,
+      max_tokens: 2000,
       stream: true,
       system: systemBlocks,
       messages
@@ -47177,36 +47162,28 @@ async function generateAIResponse(modelOverride, opts) {
       state.chatMessages[state.chatMessages.length - 1].content = finalDisplay;
     }
 
-    // 사용자 명시 2026-06-02: 비트('이거 짚어줘')/가지(왜·이어보기)는 4단 감지·proposal·전략 일절 안 함 (조언/제안 금지 = 1층 비트 규칙).
-    //   '그럼 뭐 하지'(askDeeper, isDeeper) 만 옛 4단/proposal/미션 온램프 그대로 재현.
-    if (_isBeat) {
-      state.chatMessages[state.chatMessages.length - 1].fromBeat = true;
-    } else if (_branch) {
-      state.chatMessages[state.chatMessages.length - 1].fromBranch = _branch;
-    } else {
-      // V3.13.x: 4단 응답 ([오늘의 제안] 또는 다른 4단 라벨 포함) 판정
-      // '그럼 뭐 하지'(askDeeper)로 트리거됐든, 사용자 직접 '어떡하지' 등 도움 요청 → 자동 4단이든 다 해당
-      // → fromDeeper(전략으로) + proposal(해볼게) 두 버튼 노출
-      // 사용자 보고 2026-05-09: web search 응답에서 검색 결과 안 '[오늘의 제안]' 텍스트 (예: '오늘의 메뉴 제안 ABC')
-      // false positive 로 proposal 트리거됨 → 검색 응답 시 4단 검출 자체 disable.
-      const has4Stage = !_useWebSearch && /\[내가 본 것\]|\[이게 뭐냐면\]|\[오늘의 제안\]/.test(fullText);
-      if (has4Stage) {
-        state.chatMessages[state.chatMessages.length - 1].fromDeeper = true;
-        // V4 (v8 묶음 3): [상황] 추출 → message.situation stash → acceptProposal 시 mission.situation 으로 전달
-        const sitMatch = fullText.match(/\[상황\]\s*([\s\S]*?)(?=\n*\[내가 본 것\]|\n*\[이게 뭐냐면\]|\n*\[이럴 땐 이렇게\]|\n*\[오늘의 제안\]|$)/);
-        if (sitMatch && sitMatch[1] && sitMatch[1].trim()) {
-          state.chatMessages[state.chatMessages.length - 1].situation = sitMatch[1].trim().slice(0, 200);
-        }
+    // V3.13.x: 4단 응답 ([오늘의 제안] 또는 다른 4단 라벨 포함) 판정
+    // askDeeper로 트리거됐든, 사용자 직접 '어떡하지' 등 도움 요청 → 자동 4단이든 다 해당
+    // → fromDeeper(전략으로) + proposal(해볼게) 두 버튼 노출
+    // 사용자 보고 2026-05-09: web search 응답에서 검색 결과 안 '[오늘의 제안]' 텍스트 (예: '오늘의 메뉴 제안 ABC')
+    // false positive 로 proposal 트리거됨 → 검색 응답 시 4단 검출 자체 disable.
+    const has4Stage = !_useWebSearch && /\[내가 본 것\]|\[이게 뭐냐면\]|\[오늘의 제안\]/.test(fullText);
+    if (has4Stage) {
+      state.chatMessages[state.chatMessages.length - 1].fromDeeper = true;
+      // V4 (v8 묶음 3): [상황] 추출 → message.situation stash → acceptProposal 시 mission.situation 으로 전달
+      const sitMatch = fullText.match(/\[상황\]\s*([\s\S]*?)(?=\n*\[내가 본 것\]|\n*\[이게 뭐냐면\]|\n*\[이럴 땐 이렇게\]|\n*\[오늘의 제안\]|$)/);
+      if (sitMatch && sitMatch[1] && sitMatch[1].trim()) {
+        state.chatMessages[state.chatMessages.length - 1].situation = sitMatch[1].trim().slice(0, 200);
       }
+    }
 
-      // Check for proposal in response — 사용자 보고 2026-05-09: 검색 응답엔 proposal 검출 X (false positive).
-      // 사용자 보고 2026-05-10: 4단 응답 아닌데 모델이 analysisData.proposal 박는 케이스 → chip 만 떠서 어색.
-      //   has4Stage 가드 추가 — 4단 형식 (`[내가 본 것]/[이게 뭐냐면]/[오늘의 제안]`) 갖춘 응답일 때만 proposal chip.
-      if (!_useWebSearch && has4Stage && (fullText.includes('[오늘의 제안]') || (analysisData && analysisData.proposal))) {
-        state.chatMessages[state.chatMessages.length - 1].proposal = true;
-        if (analysisData && analysisData.proposal) {
-          state.chatMessages[state.chatMessages.length - 1].proposalData = analysisData.proposal;
-        }
+    // Check for proposal in response — 사용자 보고 2026-05-09: 검색 응답엔 proposal 검출 X (false positive).
+    // 사용자 보고 2026-05-10: 4단 응답 아닌데 모델이 analysisData.proposal 박는 케이스 → chip 만 떠서 어색.
+    //   has4Stage 가드 추가 — 4단 형식 (`[내가 본 것]/[이게 뭐냐면]/[오늘의 제안]`) 갖춘 응답일 때만 proposal chip.
+    if (!_useWebSearch && has4Stage && (fullText.includes('[오늘의 제안]') || (analysisData && analysisData.proposal))) {
+      state.chatMessages[state.chatMessages.length - 1].proposal = true;
+      if (analysisData && analysisData.proposal) {
+        state.chatMessages[state.chatMessages.length - 1].proposalData = analysisData.proposal;
       }
     }
 
@@ -47521,62 +47498,6 @@ function _showDeeperCapToast() {
   }
 }
 
-// ─── beat cap (사용자 명시 2026-06-02): '이거 짚어줘' 기본 비트 + 가지(왜/이어보기) ───
-//   가벼운 비트는 frictionless 가 핵심 → 쿨다운 없음, cap 은 deeper 의 2배로 넉넉히.
-//   무거운 '그럼 뭐 하지'(4단·미션) 만 기존 _dailyDeeperCount cap 차감 (별도 카운터).
-function _getDailyBeatCap() {
-  const deeper = _getDailyDeeperCap();
-  return deeper === Infinity ? Infinity : deeper * 2;  // 무료 4 / Light 6 / Plus 10 / Premium 20
-}
-const _BEAT_LS_KEY = '_soragodong_dailyBeat';
-function _persistBeatLocally() {
-  try {
-    if (typeof localStorage !== 'undefined' && state._dailyBeatCount) {
-      localStorage.setItem(_BEAT_LS_KEY, JSON.stringify(state._dailyBeatCount));
-    }
-  } catch {}
-}
-function _loadBeatLocally(todayK) {
-  try {
-    if (typeof localStorage !== 'undefined') {
-      const raw = localStorage.getItem(_BEAT_LS_KEY);
-      if (!raw) return null;
-      const b = JSON.parse(raw);
-      if (b && b.date === todayK && typeof b.count === 'number') return b;
-    }
-  } catch {}
-  return null;
-}
-function _getTodayBeatCount() {
-  const todayK = todayKey();
-  if (!state._dailyBeatCount || state._dailyBeatCount.date !== todayK) {
-    const backup = _loadBeatLocally(todayK);
-    if (backup) {
-      state._dailyBeatCount = backup;
-      return state._dailyBeatCount.count;
-    }
-    state._dailyBeatCount = { date: todayK, count: 0, capToastShown: false };
-  }
-  return state._dailyBeatCount.count;
-}
-function _incrementDailyBeatCount() {
-  _getTodayBeatCount();
-  state._dailyBeatCount.count += 1;
-  saveState();
-  _persistBeatLocally();
-}
-function _checkBeatEligibility() {
-  const cap = _getDailyBeatCap();
-  if (cap === Infinity) return { ok: true, current: 0, cap: Infinity };
-  const current = _getTodayBeatCount();
-  // 쿨다운 없음 — 일일 cap 만.
-  return { ok: current < cap, current, cap, reason: current < cap ? null : 'cap' };
-}
-function _showBeatCapToast() {
-  const elig = _checkBeatEligibility();
-  showToast(`🔒 오늘 '이거 짚어줘' ${elig.cap}회 다 썼어 — 내일 또 ✨`);
-}
-
 // V3: 짧은 답을 더 깊게 분석 요청
 async function askDeeper(messageIdx) {
   // V4 (v8 묶음 4): 진입 시 eligibility 체크
@@ -47628,125 +47549,6 @@ async function askDeeper(messageIdx) {
       saveState();
       showToast(`🔒 오늘 깊은 분석 ${after.cap}회 다 썼어 — 내일 또`);
     }
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════
-// 사용자 명시 2026-06-02: '이거 짚어줘' 기본 비트 + 가지 (왜 그런지 더 / 이어보기).
-//   기본 비트 = ≤3줄 '한 수'. 조언/제안/전략/미션 일절 X (그건 '그럼 뭐 하지' = askDeeper).
-//   비용: 기본 비트 + 가지 = beat cap (deeper×2, 쿨다운 없음). 무거운 '그럼 뭐 하지' = 기존 deeper cap.
-// ═══════════════════════════════════════════════════════════════
-
-// 콜드스타트 판정 + 이어보기 후보 — ctx(원본 대화)와 저장된 깨달음의 콘텐츠 단어 겹침으로 관련 과거 탐색.
-const _BEAT_STOPWORDS = new Set(['그리고','근데','그래서','그게','그거','정말','진짜','너무','이거','저거','그런','이런','해서','하는','했어','있어','없어','같아','거야','그냥','약간','조금','계속']);
-function _beatTokenize(s) {
-  const out = new Set();
-  String(s || '').toLowerCase().replace(/[^가-힣a-z0-9\s]/g, ' ').split(/\s+/).forEach(w => {
-    if (w.length >= 2 && !_BEAT_STOPWORDS.has(w)) out.add(w);
-  });
-  return out;
-}
-function _findRelatedInsights(ctx, limit) {
-  const items = (state.archive || []).filter(a => a && !a._deleted && a.type !== 'memo' && !a._excludeFromAI);
-  if (!items.length || !ctx) return [];
-  const ctxTokens = _beatTokenize(ctx);
-  if (ctxTokens.size === 0) return [];
-  const scored = items.map(a => {
-    const text = [a.headline, a.body, a.insight, ...(Array.isArray(a.tags) ? a.tags : [])].filter(Boolean).join(' ');
-    const tk = _beatTokenize(text);
-    let overlap = 0;
-    tk.forEach(w => { if (ctxTokens.has(w)) overlap++; });
-    return { a, overlap };
-  }).filter(x => x.overlap >= 2).sort((x, y) => y.overlap - x.overlap);
-  return scored.slice(0, limit || 2).map(x => ({
-    date: x.a.date || '',
-    title: x.a.headline || (x.a.insight || x.a.body || '').slice(0, 40)
-  }));
-}
-// 비트가 답한 원본 대화 텍스트 (원본 assistant + 직전 user).
-function _beatContextText(idx) {
-  const parts = [];
-  const m = state.chatMessages[idx];
-  if (m && m.content) parts.push(m.content);
-  for (let i = idx - 1; i >= 0; i--) {
-    const mm = state.chatMessages[i];
-    if (mm && mm.role === 'user' && !mm.typing) { parts.push(mm.content || ''); break; }
-  }
-  return parts.join(' ').slice(0, 1000);
-}
-
-// beat cap 차감 + cap 도달 토스트 (성공 시에만). 튜토/테스터는 무제한 (increment X).
-function _afterBeatGen() {
-  if (window._onbTutorialMode || (state.preferences && state.preferences.testerMode)) return;
-  if (typeof _incrementDailyBeatCount === 'function') _incrementDailyBeatCount();
-  const after = (typeof _checkBeatEligibility === 'function') ? _checkBeatEligibility() : { ok: true };
-  if (!after.ok && after.reason === 'cap' && state._dailyBeatCount && !state._dailyBeatCount.capToastShown) {
-    state._dailyBeatCount.capToastShown = true;
-    saveState();
-    if (typeof _showBeatCapToast === 'function') _showBeatCapToast();
-  }
-}
-
-// 1층 기본 비트 — 일반 assistant 메시지의 '이거 짚어줘' 칩.
-async function askInsightBeat(idx) {
-  const elig = (typeof _checkBeatEligibility === 'function') ? _checkBeatEligibility() : { ok: true };
-  if (!elig.ok) { if (typeof _showBeatCapToast === 'function') _showBeatCapToast(); return; }
-  if (typeof dismissPlaceholder === 'function') dismissPlaceholder('deeper');
-  state.chatMessages.push({ role: 'user', content: '이거 짚어줘', timestamp: new Date().toISOString(), isBeatRequest: true });
-  saveState();
-  renderChat();
-  let _ok = false;
-  try {
-    await generateAIResponse('claude-opus-4-7', { beat: true, maxTokens: 280, userContentType: 'insight_beat' });
-    const _last = state.chatMessages[state.chatMessages.length - 1];
-    _ok = !!(_last && _last.role === 'assistant' && !_last.error && !_last.typing && _last.fromBeat);
-  } catch (_) {}
-  if (_ok) {
-    const beat = state.chatMessages[state.chatMessages.length - 1];
-    try { beat.relatedCandidates = _findRelatedInsights(_beatContextText(idx), 2); } catch (_) { beat.relatedCandidates = []; }
-    _afterBeatGen();
-    saveState();
-    renderChat();
-  }
-}
-
-// 가지 — '왜 그런지 더' (개념 수준 심리). 비트 메시지 칩.
-async function askWhyDeeper(idx) {
-  const elig = (typeof _checkBeatEligibility === 'function') ? _checkBeatEligibility() : { ok: true };
-  if (!elig.ok) { if (typeof _showBeatCapToast === 'function') _showBeatCapToast(); return; }
-  state.chatMessages.push({ role: 'user', content: '왜 그런지 더', timestamp: new Date().toISOString(), isBranchReq: 'why' });
-  saveState();
-  renderChat();
-  let _ok = false;
-  try {
-    await generateAIResponse('claude-opus-4-7', { branch: 'why', maxTokens: 520, userContentType: 'branch_why' });
-    const _last = state.chatMessages[state.chatMessages.length - 1];
-    _ok = !!(_last && _last.role === 'assistant' && !_last.error && !_last.typing && _last.fromBranch);
-  } catch (_) {}
-  if (_ok) { _afterBeatGen(); saveState(); renderChat(); }
-}
-
-// 가지 — '이어보기' (과거 깨달음 인용). idx = 비트 메시지 인덱스. 후보는 비트 생성 시 stash 된 relatedCandidates.
-async function askConnect(idx) {
-  const elig = (typeof _checkBeatEligibility === 'function') ? _checkBeatEligibility() : { ok: true };
-  if (!elig.ok) { if (typeof _showBeatCapToast === 'function') _showBeatCapToast(); return; }
-  const beat = state.chatMessages[idx];
-  const candidates = (beat && Array.isArray(beat.relatedCandidates)) ? beat.relatedCandidates : [];
-  state.chatMessages.push({ role: 'user', content: '이어보기', timestamp: new Date().toISOString(), isBranchReq: 'connect' });
-  saveState();
-  renderChat();
-  let _ok = false;
-  try {
-    await generateAIResponse('claude-opus-4-7', { branch: 'connect', maxTokens: 480, userContentType: 'branch_connect', vars: { candidates } });
-    const _last = state.chatMessages[state.chatMessages.length - 1];
-    _ok = !!(_last && _last.role === 'assistant' && !_last.error && !_last.typing && _last.fromBranch);
-  } catch (_) {}
-  if (_ok) {
-    // 변경 5: 핀 시 연결망 기록용 — 이어보기로 엮인 과거 조각 참조를 비트 메시지에 stash.
-    if (beat && candidates.length) beat.connectedRefs = candidates.slice(0, 2);
-    _afterBeatGen();
-    saveState();
-    renderChat();
   }
 }
 
@@ -49051,9 +48853,7 @@ async function saveMsgAsInsight(idx) {
     source: '대화',
     savedAt: new Date().toISOString(),
     type: 'scrap',
-    tags: [],
-    // 변경 5 (사용자 명시 2026-06-02): '이어보기'로 엮인 과거 깨달음 참조 같이 저장 → 깨달음 lens 가 평면 리스트 X, 연결망.
-    ...((Array.isArray(msg.connectedRefs) && msg.connectedRefs.length) ? { links: msg.connectedRefs.slice(0, 2) } : {})
+    tags: []
   });
   msg.saved = true;
   saveState();
@@ -55837,11 +55637,6 @@ function openArchiveItem(idx) {
     ? `<div class="archive-modal-section-label">${a.question ? 'AI 응답' : '원본 메시지'}</div>
        <div class="archive-modal-original">${escapeHtml(a.original)}</div>`
     : `<div class="archive-modal-no-original">원본이 함께 저장되지 않은 항목 (이전 버전에서 저장)</div>`;
-  // 변경 5 (사용자 명시 2026-06-02): '이어보기'로 엮인 과거 조각 — 연결망 표시.
-  const linksBlock = (Array.isArray(a.links) && a.links.length)
-    ? `<div class="archive-modal-section-label">🔗 이어진 기록</div>
-       <div class="archive-modal-original" style="display:flex; flex-direction:column; gap:6px;">${a.links.map(l => `<span style="font-size:12px; color:var(--text-soft);">• ${escapeHtml(l.date || '')}${(l.date && l.title) ? ' · ' : ''}${escapeHtml(l.title || '')}</span>`).join('')}</div>`
-    : '';
 
   const modal = document.createElement('div');
   modal.id = 'archiveModal';
@@ -55856,7 +55651,6 @@ function openArchiveItem(idx) {
       ${body}
       ${questionBlock}
       ${originalBlock}
-      ${linksBlock}
       <div class="topic-modal-meta">${escapeHtml(dateStr)}${sourceStr}</div>
       <div class="topic-modal-actions">
         <button class="topic-modal-btn danger" onclick="closeArchiveModal(); deleteArchiveItem(${idx})">🗑 삭제</button>
@@ -75795,7 +75589,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.389-insight-beat';
+const APP_VERSION = 'v4.0.390-restore-deeper';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 

@@ -8,11 +8,7 @@ async function generateAIResponse(modelOverride, opts) {
   // 헤더 토글 (state.preferences.useOpus) 의 Opus 모드 = chat_main + Premium 가드 (backend) — 별개.
   // 사용자 보고 2026-05-10 (audit-backend): 옛 is_deeper_analysis hint 폐기 (client 위변조 위험) → endpoint 분리.
   const _isDeeperAnalysis = !!(opts && opts.isDeeper);
-  // 사용자 명시 2026-06-02: 비트('이거 짚어줘')/가지(왜·이어보기)도 분석 스타일 — analyze_4stage endpoint (persona 보존 + Opus 가드 자연 skip), RAG/billing-poll skip.
-  const _isBeat = !!(opts && opts.beat);
-  const _branch = (opts && opts.branch) || null;  // 'why' | 'connect'
-  const _isAnalyzeStyle = _isDeeperAnalysis || _isBeat || !!_branch;
-  const _endpointName = _isAnalyzeStyle ? 'analyze_4stage' : 'chat_main';
+  const _endpointName = _isDeeperAnalysis ? 'analyze_4stage' : 'chat_main';
   state.chatMessages = state.chatMessages.filter(m => !m.typing);
   state.chatMessages.push({ role: 'assistant', content: '...', typing: true });
   renderChat();
@@ -24,7 +20,7 @@ async function generateAIResponse(modelOverride, opts) {
   //   재현 evidence: 앱 진입 직후 빠르게 chat 보내면 _billingCache 아직 안 떠서
   //   _ragIsEnabled() false → RAG silent skip → window._ragLastRetrieved = null.
   //   한 박자 기다리면 정상. polling 100ms × 15 = 1.5초 max.
-  if (!_isAnalyzeStyle) {
+  if (!_isDeeperAnalysis) {
     for (let i = 0; i < 15; i++) {
       if (window._billingCache) break;
       await new Promise(r => setTimeout(r, 100));
@@ -33,7 +29,7 @@ async function generateAIResponse(modelOverride, opts) {
       console.warn('[rag] _billingCache not ready after 1.5s — skipping retrieve');
     }
   }
-  if (!_isAnalyzeStyle && typeof _ragIsEnabled === 'function' && _ragIsEnabled()) {
+  if (!_isDeeperAnalysis && typeof _ragIsEnabled === 'function' && _ragIsEnabled()) {
     try {
       // V4 (사용자 명시 2026-05-25 ultrathink, 2 번째 묶음): query 확장 — last user msg 한 줄만 쓰면 anaphor ("기억해봐") 일 때 의미 매칭 실패.
       //   직전 3개 user msg concat → semantic content 살아남음. 토큰 ↑ 미미 (~50), recall ↑ 큼.
@@ -157,14 +153,10 @@ async function generateAIResponse(modelOverride, opts) {
       // V4 사용자 명시 2026-05-22 ultrathink — 대화탭 모드 → backend ADDENDUM dispatch (functions/api/_lib/prompts/system-persona.ts).
       //   null = 사용자 미선택 → ADDENDUM_DEFAULT (자동 감지 legacy path). 'daily'|'inquiry'|'vent' = 모드별 ADDENDUM.
       _chatMode: (typeof state !== 'undefined' && state && state.chatMode) || null,
-      // 사용자 명시 2026-06-02: 비트/가지 — backend applyUserContentTemplate 가 마지막 user content 를 서버 프롬프트로 교체 (insight_beat / branch_why / branch_connect). _vars 는 이어보기 후보 전달용.
-      _userContentType: (opts && opts.userContentType) || undefined,
-      _vars: (opts && opts.vars) || undefined,
       _useWebSearch,
       // 사용자 요청 2026-04-30 ultrathink Task 7: useOpus 토글 시 Opus, 아니면 Sonnet (검색 시 Haiku 강제 — 위에서 결정).
       model: _modelForCall,
-      // 사용자 명시 2026-06-02: 비트 ≤3줄 = 짧은 cap (출력 길이 하드 캡으로 비용·무게 통제).
-      max_tokens: (opts && opts.maxTokens) || 2000,
+      max_tokens: 2000,
       stream: true,
       system: systemBlocks,
       messages
@@ -457,36 +449,28 @@ async function generateAIResponse(modelOverride, opts) {
       state.chatMessages[state.chatMessages.length - 1].content = finalDisplay;
     }
 
-    // 사용자 명시 2026-06-02: 비트('이거 짚어줘')/가지(왜·이어보기)는 4단 감지·proposal·전략 일절 안 함 (조언/제안 금지 = 1층 비트 규칙).
-    //   '그럼 뭐 하지'(askDeeper, isDeeper) 만 옛 4단/proposal/미션 온램프 그대로 재현.
-    if (_isBeat) {
-      state.chatMessages[state.chatMessages.length - 1].fromBeat = true;
-    } else if (_branch) {
-      state.chatMessages[state.chatMessages.length - 1].fromBranch = _branch;
-    } else {
-      // V3.13.x: 4단 응답 ([오늘의 제안] 또는 다른 4단 라벨 포함) 판정
-      // '그럼 뭐 하지'(askDeeper)로 트리거됐든, 사용자 직접 '어떡하지' 등 도움 요청 → 자동 4단이든 다 해당
-      // → fromDeeper(전략으로) + proposal(해볼게) 두 버튼 노출
-      // 사용자 보고 2026-05-09: web search 응답에서 검색 결과 안 '[오늘의 제안]' 텍스트 (예: '오늘의 메뉴 제안 ABC')
-      // false positive 로 proposal 트리거됨 → 검색 응답 시 4단 검출 자체 disable.
-      const has4Stage = !_useWebSearch && /\[내가 본 것\]|\[이게 뭐냐면\]|\[오늘의 제안\]/.test(fullText);
-      if (has4Stage) {
-        state.chatMessages[state.chatMessages.length - 1].fromDeeper = true;
-        // V4 (v8 묶음 3): [상황] 추출 → message.situation stash → acceptProposal 시 mission.situation 으로 전달
-        const sitMatch = fullText.match(/\[상황\]\s*([\s\S]*?)(?=\n*\[내가 본 것\]|\n*\[이게 뭐냐면\]|\n*\[이럴 땐 이렇게\]|\n*\[오늘의 제안\]|$)/);
-        if (sitMatch && sitMatch[1] && sitMatch[1].trim()) {
-          state.chatMessages[state.chatMessages.length - 1].situation = sitMatch[1].trim().slice(0, 200);
-        }
+    // V3.13.x: 4단 응답 ([오늘의 제안] 또는 다른 4단 라벨 포함) 판정
+    // askDeeper로 트리거됐든, 사용자 직접 '어떡하지' 등 도움 요청 → 자동 4단이든 다 해당
+    // → fromDeeper(전략으로) + proposal(해볼게) 두 버튼 노출
+    // 사용자 보고 2026-05-09: web search 응답에서 검색 결과 안 '[오늘의 제안]' 텍스트 (예: '오늘의 메뉴 제안 ABC')
+    // false positive 로 proposal 트리거됨 → 검색 응답 시 4단 검출 자체 disable.
+    const has4Stage = !_useWebSearch && /\[내가 본 것\]|\[이게 뭐냐면\]|\[오늘의 제안\]/.test(fullText);
+    if (has4Stage) {
+      state.chatMessages[state.chatMessages.length - 1].fromDeeper = true;
+      // V4 (v8 묶음 3): [상황] 추출 → message.situation stash → acceptProposal 시 mission.situation 으로 전달
+      const sitMatch = fullText.match(/\[상황\]\s*([\s\S]*?)(?=\n*\[내가 본 것\]|\n*\[이게 뭐냐면\]|\n*\[이럴 땐 이렇게\]|\n*\[오늘의 제안\]|$)/);
+      if (sitMatch && sitMatch[1] && sitMatch[1].trim()) {
+        state.chatMessages[state.chatMessages.length - 1].situation = sitMatch[1].trim().slice(0, 200);
       }
+    }
 
-      // Check for proposal in response — 사용자 보고 2026-05-09: 검색 응답엔 proposal 검출 X (false positive).
-      // 사용자 보고 2026-05-10: 4단 응답 아닌데 모델이 analysisData.proposal 박는 케이스 → chip 만 떠서 어색.
-      //   has4Stage 가드 추가 — 4단 형식 (`[내가 본 것]/[이게 뭐냐면]/[오늘의 제안]`) 갖춘 응답일 때만 proposal chip.
-      if (!_useWebSearch && has4Stage && (fullText.includes('[오늘의 제안]') || (analysisData && analysisData.proposal))) {
-        state.chatMessages[state.chatMessages.length - 1].proposal = true;
-        if (analysisData && analysisData.proposal) {
-          state.chatMessages[state.chatMessages.length - 1].proposalData = analysisData.proposal;
-        }
+    // Check for proposal in response — 사용자 보고 2026-05-09: 검색 응답엔 proposal 검출 X (false positive).
+    // 사용자 보고 2026-05-10: 4단 응답 아닌데 모델이 analysisData.proposal 박는 케이스 → chip 만 떠서 어색.
+    //   has4Stage 가드 추가 — 4단 형식 (`[내가 본 것]/[이게 뭐냐면]/[오늘의 제안]`) 갖춘 응답일 때만 proposal chip.
+    if (!_useWebSearch && has4Stage && (fullText.includes('[오늘의 제안]') || (analysisData && analysisData.proposal))) {
+      state.chatMessages[state.chatMessages.length - 1].proposal = true;
+      if (analysisData && analysisData.proposal) {
+        state.chatMessages[state.chatMessages.length - 1].proposalData = analysisData.proposal;
       }
     }
 

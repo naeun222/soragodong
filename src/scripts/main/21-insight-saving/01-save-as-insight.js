@@ -42,9 +42,7 @@ async function saveMsgAsInsight(idx) {
     source: '대화',
     savedAt: new Date().toISOString(),
     type: 'scrap',
-    tags: [],
-    // 변경 5 (사용자 명시 2026-06-02): '이어보기'로 엮인 과거 깨달음 참조 같이 저장 → 깨달음 lens 가 평면 리스트 X, 연결망.
-    ...((Array.isArray(msg.connectedRefs) && msg.connectedRefs.length) ? { links: msg.connectedRefs.slice(0, 2) } : {})
+    tags: []
   });
   msg.saved = true;
   saveState();

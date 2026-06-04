@@ -19,63 +19,46 @@ function _renderChatMessageHTML(m, i) {
         <button class="msg-action retry" onclick="retryMessage(${i})">↻ 다시 보내기</button>
       </div>`;
     } else if (m.role === 'assistant' && !m.typing) {
-      // 사용자 명시 2026-06-02: '더 알아보기' 4단 깔때기 → 가벼운 비트 + 가지로 재구성.
-      //   메시지 종류별 actions: 일반→'이거 짚어줘' / 비트(fromBeat)→깨달음+가지3 / '그럼뭐하지'(fromDeeper)→전략 / 가지(fromBranch)→깨달음.
-      // V4 (v8 묶음 9): Core 2 미잠금 시 🧬 전략으로 disabled-locked. 클릭 시 단순 토스트.
-      const _c2Locked = !!state._core2NotUnlocked && !window._onbTutorialMode && !(state.preferences && state.preferences.testerMode);
-      const _beatElig = (typeof _checkBeatEligibility === 'function') ? _checkBeatEligibility() : { ok: true };
+      // Detect if response was "short" (no 4-stage labels)
+      const has4Stage = /\[내가 본 것\]|\[이게 뭐냐면\]/.test(m.content || '');
+      // V4 (v8 묶음 4): show / disabled / hide 분기 — Plan 별 cap + 쿨다운
       const _deeperElig = (typeof _checkDeeperEligibility === 'function') ? _checkDeeperEligibility() : { ok: true };
-      const _saveInsightBtn = `<button class="msg-action ${m.saved ? 'saved' : ''}" onclick="saveMsgAsInsight(${i})">${m.saved ? '✦ 저장됨' : '✦ 깨달음으로'}</button>`;
-
-      if (m.fromDeeper) {
-        // '그럼 뭐 하지' 결과 — 기존 4단/전략/proposal 온램프 그대로 (proposal 카드는 아래 proposalBtns).
-        const saveBtn = _c2Locked
-          ? `<button class="msg-action disabled-locked" onclick="_showCore2LockedToast()">🧬 전략으로</button>`
-          : `<button class="msg-action ${m.savedStrategy ? 'saved' : ''}" onclick="saveMsgAsStrategy(${i})">${m.savedStrategy ? '🧬 전략 저장됨' : '🧬 전략으로'}</button>`;
-        actions = `<div class="msg-actions">${saveBtn}</div>`;
-      } else if (m.fromBeat) {
-        // 1층 비트 — ✦ 깨달음으로 + 2층 가지 (왜 그런지 더 / 이어보기[관련 있을 때만] / 그럼 뭐 하지).
-        const whyBtn = _beatElig.ok
-          ? `<button class="msg-action" onclick="askWhyDeeper(${i})">왜 그런지 더</button>`
-          : `<button class="msg-action disabled-locked" onclick="_showBeatCapToast()">왜 그런지 더</button>`;
-        const connectBtn = (Array.isArray(m.relatedCandidates) && m.relatedCandidates.length)
-          ? (_beatElig.ok
-              ? `<button class="msg-action" onclick="askConnect(${i})">이어보기</button>`
-              : `<button class="msg-action disabled-locked" onclick="_showBeatCapToast()">이어보기</button>`)
-          : '';
-        // '그럼 뭐 하지' = 무거운 4단·미션 온램프 → 기존 deeper cap.
-        const thenWhatBtn = _deeperElig.ok
-          ? `<button class="msg-action" onclick="askDeeper(${i})">그럼 뭐 하지</button>`
-          : `<button class="msg-action disabled-locked" onclick="_showDeeperCapToast()">그럼 뭐 하지</button>`;
-        actions = `<div class="msg-actions">${_saveInsightBtn}${whyBtn}${connectBtn}${thenWhatBtn}</div>`;
-      } else if (m.fromBranch) {
-        // 가지 결과 (왜 그런지 더 / 이어보기) — 깨달음 핀만.
-        actions = `<div class="msg-actions">${_saveInsightBtn}</div>`;
-      } else {
-        // 일반 assistant 메시지 — ✦ 깨달음으로 + '이거 짚어줘' 진입 칩.
-        // 이미 4단 응답이거나 3턴 게이트 미충족 시 진입 칩 숨김 (옛 deeper 게이트 의도 유지).
-        const has4Stage = /\[내가 본 것\]|\[이게 뭐냐면\]/.test(m.content || '');
-        // V4 (사용자 명시 2026-05-16 cowork): 챕터당 user 3회 누적 후 노출. testerMode/튜토/기존 사용자는 우회.
-        const _chapterUserMsgs = (state.chatMessages || []).filter(mm => mm && mm.role === 'user').length;
-        const _isExistingChatUser = (state.chatPairsCount || 0) >= 3
-          || (typeof _isTutorialEligibleUser === 'function' && !_isTutorialEligibleUser());
-        const _bypassTurnGate = !!(window._onbTutorialMode || (state.preferences && state.preferences.testerMode) || _isExistingChatUser);
-        const _turnsOk = _bypassTurnGate || _chapterUserMsgs >= 3;
-        const beatBtn = (has4Stage || !_turnsOk)
-          ? ''
-          : (_beatElig.ok
-              ? `<button class="msg-action" onclick="askInsightBeat(${i})">이거 짚어줘</button>`
-              : `<button class="msg-action disabled-locked" onclick="_showBeatCapToast()">이거 짚어줘</button>`);
-        // V4 (사용자 명시 2026-05-17 ultrathink): 게스트 첫 '이거 짚어줘' 노출 시 튜토 모달 2page chain.
-        if (beatBtn && state.isGuest
-            && !(state._shownInlineTips || []).includes('firstDeeperBtn')
-            && !window._firstDeeperTutoQueued
-            && typeof _showFirstDeeperTutoIfGuest === 'function') {
-          window._firstDeeperTutoQueued = true;
-          setTimeout(() => _showFirstDeeperTutoIfGuest(), 250);
-        }
-        actions = `<div class="msg-actions">${_saveInsightBtn}${beatBtn}</div>`;
+      // V4 (사용자 명시 2026-05-16 cowork): 3턴 이전 hide. 첫 응답 옆에 깊이 버튼 = "이 앱 = 분석 도구" frame 즉시 박힘.
+      //   결정: 챕터당 user 메시지 3회 누적 후 노출. testerMode / 튜토리얼 모드는 우회.
+      // V4 fix (사용자 명시 2026-05-18 ultrathink): 기존 사용자 (chatPairsCount ≥ 3 누적 OR 구독자) 도 우회 — ✓ 마무리 후 새 이야기 시작 시 매번 3턴 락은 불필요.
+      //   '첫 채팅' 3턴 락의 의도 = 게스트/미구독 신규에게 frame 박지 않기. 이미 사용법 인지한 사용자는 즉시 노출.
+      const _chapterUserMsgs = (state.chatMessages || []).filter(mm => mm && mm.role === 'user').length;
+      const _isExistingChatUser = (state.chatPairsCount || 0) >= 3
+        || (typeof _isTutorialEligibleUser === 'function' && !_isTutorialEligibleUser());
+      const _bypassTurnGate = !!(window._onbTutorialMode || (state.preferences && state.preferences.testerMode) || _isExistingChatUser);
+      const _deeperTurnsOk = _bypassTurnGate || _chapterUserMsgs >= 3;
+      const deeperBtn = (has4Stage || !_deeperTurnsOk)
+        ? ''
+        : (_deeperElig.ok
+            ? `<button class="msg-action" onclick="askDeeper(${i})">더 알고 싶어 ▾</button>`
+            : `<button class="msg-action disabled-locked" onclick="_showDeeperCapToast()">더 알고 싶어 ▾</button>`);
+      // V4 (사용자 명시 2026-05-17 ultrathink): 게스트 첫 '더 알아보기' 노출 시 튜토 모달 2page chain.
+      //   _shownInlineTips 'firstDeeperBtn' 영구 가드 + queued flag 로 같은 render cycle 중복 timer 회피.
+      if (deeperBtn && state.isGuest
+          && !(state._shownInlineTips || []).includes('firstDeeperBtn')
+          && !window._firstDeeperTutoQueued
+          && typeof _showFirstDeeperTutoIfGuest === 'function') {
+        window._firstDeeperTutoQueued = true;
+        setTimeout(() => _showFirstDeeperTutoIfGuest(), 250);
       }
+      // V4 (v8 묶음 9): Core 2 미잠금 시 4단 응답의 🧬 전략으로 disabled-locked
+      // V4 (v2 §6 명시): 클릭 시 단순 토스트 — entry modal 자동 권유는 환영 선물 후
+      const _c2Locked = !!state._core2NotUnlocked && !window._onbTutorialMode && !(state.preferences && state.preferences.testerMode);
+      // V3.13.x: askDeeper 응답이면 깨달음 버튼 대신 '전략으로' (전략 탭에 저장)
+      const saveBtn = m.fromDeeper
+        ? (_c2Locked
+            ? `<button class="msg-action disabled-locked" onclick="_showCore2LockedToast()">🧬 전략으로</button>`
+            : `<button class="msg-action ${m.savedStrategy ? 'saved' : ''}" onclick="saveMsgAsStrategy(${i})">${m.savedStrategy ? '🧬 전략 저장됨' : '🧬 전략으로'}</button>`)
+        : `<button class="msg-action ${m.saved ? 'saved' : ''}" onclick="saveMsgAsInsight(${i})">${m.saved ? '✦ 저장됨' : '✦ 깨달음으로'}</button>`;
+      actions = `<div class="msg-actions">
+        ${saveBtn}
+        ${deeperBtn}
+      </div>`;
     }
 
     let proposalBtns = '';
@@ -191,7 +174,7 @@ function _showFirstDeeperTutoIfGuest() {
   _showSimpleTutoModal({
     key: 'firstDeeperBtn',
     pages: [
-      { html: `고민이 있을 때, 어찌해야 할지 모르겠을 때,<br>고동이에게 털어놓고 <b>'이거 짚어줘'</b>를 눌러보세요.<br><br>마법의 소라고동이 이름값을 할 거예요. 🐚` },
+      { html: `고민이 있을 때, 어찌해야 할지 모르겠을 때,<br>고동이에게 털어놓고 <b>'더 알아보기'</b>를 눌러보세요.<br><br>마법의 소라고동이 이름값을 할 거예요. 🐚` },
       // V4 (사용자 명시 2026-05-17 ultrathink): page 2 카피 단순화 + okLabel='오호라'.
       { html: `이 앱의 모든 정보는<br><b>AI 학습에 전혀 쓰이지 않고</b>,<br>종단간 암호화로 보호됩니다.<br><br><span style="color:var(--text-dim); font-size:13px;">(로그인 후)</span>`, okLabel: '오호라' }
     ]
