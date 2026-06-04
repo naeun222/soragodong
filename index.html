@@ -15828,14 +15828,10 @@ img.pearl-load-fail {
 
 <div class="chat-input-bar" id="chatInputBar" style="display:none;">
   <div class="chat-plus-menu" id="chatPlusMenu" hidden>
-    <!-- V4 (사용자 명시 2026-06-05): 메시지 액션 버튼 '더 알아보기'·'깨달음으로' 를 + 메뉴로 이동 (마지막 AI 응답 대상). -->
+    <!-- V4 (사용자 명시 2026-06-05): '더 알아보기'(마지막 AI 응답 4단 분석) = + 메뉴. '깨달음으로' 는 메시지 ⋮ 메뉴. -->
     <button class="chat-plus-item" onclick="chatPlusAction('deeper')">
       <span class="chat-plus-icon">🔍</span>
       <span class="chat-plus-label">더 알아보기</span>
-    </button>
-    <button class="chat-plus-item" onclick="chatPlusAction('insight')">
-      <span class="chat-plus-icon">✦</span>
-      <span class="chat-plus-label">깨달음으로</span>
     </button>
     <button class="chat-plus-item" onclick="chatPlusAction('memo')">
       <span class="chat-plus-icon">✎</span>
@@ -42165,7 +42161,8 @@ const CHAT_PLACEHOLDERS = [
   '뭐 적을지 모르겠으면 모르겠다고 적어봐',
   '"일기:"로 시작 -> 원본으로 저장',
   '✓ 누르면 이 대화 마무리',
-  '+ 메뉴 -> 더 알아보기 / 깨달음으로 / 메모',
+  '+ 메뉴 -> 더 알아보기 / 메모',
+  'AI 답 ⋮ 메뉴 -> 깨달음으로 저장',
   '+ 메뉴의 "더 알아보기" 눌러봐. 분석해줄게.',
   '"검색해줘" 라고 말하면 인터넷에서 찾아와'
 ];
@@ -45972,9 +45969,9 @@ function closeChatPlusMenu() {
 }
 function chatPlusAction(kind) {
   closeChatPlusMenu();
-  // V4 (사용자 명시 2026-06-05): '더 알아보기'·'깨달음으로' = 메시지 버튼 → + 메뉴로 이동 (마지막 AI 응답 대상).
+  // V4 (사용자 명시 2026-06-05): '더 알아보기' = 메시지 버튼 → + 메뉴로 이동 (마지막 AI 응답 4단 분석).
+  //   '깨달음으로' 는 메시지 ⋮ 메뉴로 이동 (08-message-menu.js).
   if (kind === 'deeper') askDeeperFromPlus();
-  else if (kind === 'insight') saveLastMsgAsInsight();
   else if (kind === 'memo') addMemoArchive();
   // 사용자 명시 2026-05-09 (spec 5-4): 숙고 진입 — reflectionContainer zone 폐기 보완.
   else if (kind === 'reflection') {
@@ -46004,14 +46001,6 @@ function askDeeperFromPlus() {
   // 게스트 첫 사용 안내 (E2EE / AI 학습 0) — _showSimpleTutoModal key 가드로 1회만.
   if (typeof _showFirstDeeperTutoIfGuest === 'function') _showFirstDeeperTutoIfGuest();
   if (typeof askDeeper === 'function') askDeeper(idx);
-}
-// 마지막 AI 응답을 깨달음으로 저장 (옛 메시지 '✦ 깨달음으로' 버튼과 동일 동작).
-function saveLastMsgAsInsight() {
-  const idx = _lastAssistantChatMsgIdx();
-  if (idx < 0) { if (typeof showToast === 'function') showToast('먼저 고동이랑 얘기해봐'); return; }
-  const m = state.chatMessages[idx];
-  if (m.saved) { if (typeof showToast === 'function') showToast('이미 깨달음에 저장했어'); return; }
-  if (typeof saveMsgAsInsight === 'function') saveMsgAsInsight(idx);
 }
 document.addEventListener('click', function(e) {
   const menu = document.getElementById('chatPlusMenu');
@@ -46298,6 +46287,10 @@ async function showMessageMenu(idx) {
     options.push({ label: '✎ 텍스트만 수정', value: 'editText' });
     options.push({ label: '↻ 여기서부터 다시 보내기', value: 'editResend' });
   }
+  // V4 (사용자 명시 2026-06-05): '깨달음으로' = AI 응답 ⋮ 메뉴로 이동 (일반 응답만 — 4단 분석은 버블 '🧬 전략으로').
+  if (!isUser && !msg.fromDeeper) {
+    options.push({ label: msg.saved ? '✦ 깨달음에 저장됨' : '✦ 깨달음으로', value: 'insight' });
+  }
   // V4-1j-a: 숙고 질문으로 보내기 (메시지 텍스트 → 질문 prefill)
   options.push({ label: '🌊 숙고 질문으로 보내기', value: 'reflection' });
   options.push({ label: '✕ 삭제', value: 'delete' });
@@ -46313,6 +46306,12 @@ async function showMessageMenu(idx) {
     } catch (e) {
       showToast('복사 실패. 직접 선택해서 복사해줘.');
     }
+    return;
+  }
+  // V4 (사용자 명시 2026-06-05): AI 응답 → 깨달음으로 저장 (옛 버블 '✦ 깨달음으로' 버튼 동작).
+  if (action === 'insight') {
+    if (msg.saved) { showToast('이미 깨달음에 저장했어'); return; }
+    if (typeof saveMsgAsInsight === 'function') saveMsgAsInsight(idx);
     return;
   }
   if (action === 'reflection') {
@@ -55489,7 +55488,7 @@ function renderLensArchive() {
       html += `<div class="archive-empty">
         <div class="icon">✦</div>
         <div style="font-size:14px; color:var(--text); margin-bottom:8px;">아직은 저장된 깨달음이 없어요</div>
-        + 메뉴의 <b>"✦ 깨달음으로"</b> 또는 <b>"✎ 메모"</b>로 모을 수 있습니다.
+        대화 답의 ⋮ 메뉴 <b>"✦ 깨달음으로"</b> 또는 + 메뉴 <b>"✎ 메모"</b>로 모을 수 있습니다.
       </div>`;
     }
   } else {
@@ -65745,7 +65744,7 @@ function _buildArchiveSummarySlideHTML(inRange) {
     return `
       <div class="stories-label">네 깨달음</div>
       <div class="stories-title">이 분기 깨달음 카드 없음</div>
-      <div class="stories-body">+ 메뉴의 ✦ 깨달음으로, 또는 ✎ 메모로 직접. 다음 분기엔 작은 한 줄도 OK.</div>
+      <div class="stories-body">답 ⋮ 메뉴의 ✦ 깨달음으로, 또는 + 메뉴의 ✎ 메모로 직접. 다음 분기엔 작은 한 줄도 OK.</div>
     `;
   }
   // type 분포
@@ -75510,7 +75509,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.391-plus-menu-actions';
+const APP_VERSION = 'v4.0.392-insight-to-msg-menu';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 

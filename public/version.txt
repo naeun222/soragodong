@@ -1,1 +1,1 @@
-v4.0.391-plus-menu-actions
+v4.0.392-insight-to-msg-menu

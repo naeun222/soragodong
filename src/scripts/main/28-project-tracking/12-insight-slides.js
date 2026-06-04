@@ -5,7 +5,7 @@ function _buildArchiveSummarySlideHTML(inRange) {
     return `
       <div class="stories-label">네 깨달음</div>
       <div class="stories-title">이 분기 깨달음 카드 없음</div>
-      <div class="stories-body">+ 메뉴의 ✦ 깨달음으로, 또는 ✎ 메모로 직접. 다음 분기엔 작은 한 줄도 OK.</div>
+      <div class="stories-body">답 ⋮ 메뉴의 ✦ 깨달음으로, 또는 + 메뉴의 ✎ 메모로 직접. 다음 분기엔 작은 한 줄도 OK.</div>
     `;
   }
   // type 분포

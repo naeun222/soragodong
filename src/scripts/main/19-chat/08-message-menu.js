@@ -7,6 +7,10 @@ async function showMessageMenu(idx) {
     options.push({ label: '✎ 텍스트만 수정', value: 'editText' });
     options.push({ label: '↻ 여기서부터 다시 보내기', value: 'editResend' });
   }
+  // V4 (사용자 명시 2026-06-05): '깨달음으로' = AI 응답 ⋮ 메뉴로 이동 (일반 응답만 — 4단 분석은 버블 '🧬 전략으로').
+  if (!isUser && !msg.fromDeeper) {
+    options.push({ label: msg.saved ? '✦ 깨달음에 저장됨' : '✦ 깨달음으로', value: 'insight' });
+  }
   // V4-1j-a: 숙고 질문으로 보내기 (메시지 텍스트 → 질문 prefill)
   options.push({ label: '🌊 숙고 질문으로 보내기', value: 'reflection' });
   options.push({ label: '✕ 삭제', value: 'delete' });
@@ -22,6 +26,12 @@ async function showMessageMenu(idx) {
     } catch (e) {
       showToast('복사 실패. 직접 선택해서 복사해줘.');
     }
+    return;
+  }
+  // V4 (사용자 명시 2026-06-05): AI 응답 → 깨달음으로 저장 (옛 버블 '✦ 깨달음으로' 버튼 동작).
+  if (action === 'insight') {
+    if (msg.saved) { showToast('이미 깨달음에 저장했어'); return; }
+    if (typeof saveMsgAsInsight === 'function') saveMsgAsInsight(idx);
     return;
   }
   if (action === 'reflection') {

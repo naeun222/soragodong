@@ -1,8 +1,8 @@
 function chatPlusAction(kind) {
   closeChatPlusMenu();
-  // V4 (사용자 명시 2026-06-05): '더 알아보기'·'깨달음으로' = 메시지 버튼 → + 메뉴로 이동 (마지막 AI 응답 대상).
+  // V4 (사용자 명시 2026-06-05): '더 알아보기' = 메시지 버튼 → + 메뉴로 이동 (마지막 AI 응답 4단 분석).
+  //   '깨달음으로' 는 메시지 ⋮ 메뉴로 이동 (08-message-menu.js).
   if (kind === 'deeper') askDeeperFromPlus();
-  else if (kind === 'insight') saveLastMsgAsInsight();
   else if (kind === 'memo') addMemoArchive();
   // 사용자 명시 2026-05-09 (spec 5-4): 숙고 진입 — reflectionContainer zone 폐기 보완.
   else if (kind === 'reflection') {
@@ -32,14 +32,6 @@ function askDeeperFromPlus() {
   // 게스트 첫 사용 안내 (E2EE / AI 학습 0) — _showSimpleTutoModal key 가드로 1회만.
   if (typeof _showFirstDeeperTutoIfGuest === 'function') _showFirstDeeperTutoIfGuest();
   if (typeof askDeeper === 'function') askDeeper(idx);
-}
-// 마지막 AI 응답을 깨달음으로 저장 (옛 메시지 '✦ 깨달음으로' 버튼과 동일 동작).
-function saveLastMsgAsInsight() {
-  const idx = _lastAssistantChatMsgIdx();
-  if (idx < 0) { if (typeof showToast === 'function') showToast('먼저 고동이랑 얘기해봐'); return; }
-  const m = state.chatMessages[idx];
-  if (m.saved) { if (typeof showToast === 'function') showToast('이미 깨달음에 저장했어'); return; }
-  if (typeof saveMsgAsInsight === 'function') saveMsgAsInsight(idx);
 }
 document.addEventListener('click', function(e) {
   const menu = document.getElementById('chatPlusMenu');
