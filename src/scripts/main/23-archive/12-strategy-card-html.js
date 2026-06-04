@@ -128,7 +128,7 @@ function _renderStrategyCardHtml(s) {
       ${bodyHtml}
       ${metaHtml}
       ${hasTree && treeOpen ? genTreeHtml : ''}
-      <div class="strategy-card-source">${dateStr}${s.source === 'manual' ? ' · 직접 추가' : s.source === 'deeper' ? ' · 더 알고 싶어' : ' · 대화 챕터'}</div>
+      <div class="strategy-card-source">${dateStr}${s.source === 'manual' ? ' · 직접 추가' : s.source === 'deeper' ? ' · 더 알아보기' : ' · 대화 챕터'}</div>
       <div class="strategy-card-actions">
         ${tryBtnHtml}
         <button onclick="deleteTopicCard('${s.id}')">🗑 삭제</button>

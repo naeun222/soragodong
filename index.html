@@ -15828,13 +15828,18 @@ img.pearl-load-fail {
 
 <div class="chat-input-bar" id="chatInputBar" style="display:none;">
   <div class="chat-plus-menu" id="chatPlusMenu" hidden>
-    <button class="chat-plus-item" onclick="chatPlusAction('diary')">
-      <span class="chat-plus-icon">📝</span>
-      <span class="chat-plus-label">일기 템플릿</span>
+    <!-- V4 (사용자 명시 2026-06-05): 메시지 액션 버튼 '더 알아보기'·'깨달음으로' 를 + 메뉴로 이동 (마지막 AI 응답 대상). -->
+    <button class="chat-plus-item" onclick="chatPlusAction('deeper')">
+      <span class="chat-plus-icon">🔍</span>
+      <span class="chat-plus-label">더 알아보기</span>
+    </button>
+    <button class="chat-plus-item" onclick="chatPlusAction('insight')">
+      <span class="chat-plus-icon">✦</span>
+      <span class="chat-plus-label">깨달음으로</span>
     </button>
     <button class="chat-plus-item" onclick="chatPlusAction('memo')">
       <span class="chat-plus-icon">✎</span>
-      <span class="chat-plus-label">메모 (깨달음)</span>
+      <span class="chat-plus-label">메모</span>
     </button>
     <!-- 사용자 명시 2026-05-09 (spec 5-4): 숙고 진입 path 추가 — reflectionContainer zone 폐기 보완. -->
     <button class="chat-plus-item" onclick="chatPlusAction('reflection')">
@@ -21011,7 +21016,7 @@ window._startIntakeFromTutorial = async function() {
     // V4 (사용자 명시 2026-05-04 ultrathink): 4단 분석 직후 안내 메시지 inject — '내가 지금은 4단 분석 채워놨다' 톤 (옛 카피 톤)
     state.chatMessages.push({
       role: 'assistant',
-      content: '처음이라 위 4단으로 친절히 정리해줬어 ✦\n평소엔 답 아래 "더 알고 싶어 ▾" 누르면 이렇게 깊게 풀어줄게.',
+      content: '처음이라 위 4단으로 친절히 정리해줬어 ✦\n평소엔 + 메뉴의 "더 알아보기" 누르면 이렇게 깊게 풀어줄게.',
       timestamp: nowIso
     });
     saveState();
@@ -21225,7 +21230,7 @@ function _intakeStep4Html() {
   return `
     <div class="intake-ai-msg"><b>🐚</b> 잘 들었어 ✦<br><br><span class="small intake-quote">"${escapeHtml(preview)}"</span><br><br>이 마음, 어디서 작동하는지 같이 들여다볼래?</div>
     <div class="intake-actions">
-      <button class="intake-send-btn intake-deepen-btn" onclick="_intakeStep4Analyze()">🔍 더 알고 싶어</button>
+      <button class="intake-send-btn intake-deepen-btn" onclick="_intakeStep4Analyze()">🔍 더 알아보기</button>
     </div>
   `;
 }
@@ -40407,7 +40412,7 @@ function openShellCollection() {
     _showSimpleTutoModal({
       key: 'firstShell',
       pages: [{
-        html: `<div style="font-size:18px; font-weight:600; margin-bottom:10px;">🏖 모래사장</div>이곳은 모래사장입니다.<br>소라들을 어떻게 모으는지 궁금하다면,<br>대화탭에서 <b>'더 알아보기'</b> → <b>'해볼게'</b>를 눌러보세요!`
+        html: `<div style="font-size:18px; font-weight:600; margin-bottom:10px;">🏖 모래사장</div>이곳은 모래사장입니다.<br>소라들을 어떻게 모으는지 궁금하다면,<br>대화탭 + 메뉴의 <b>'더 알아보기'</b> → <b>'해볼게'</b>를 눌러보세요!`
       }]
     });
   }
@@ -42160,8 +42165,8 @@ const CHAT_PLACEHOLDERS = [
   '뭐 적을지 모르겠으면 모르겠다고 적어봐',
   '"일기:"로 시작 -> 원본으로 저장',
   '✓ 누르면 이 대화 마무리',
-  '+ 메뉴 -> 일기 템플릿 / 메모',
-  '"더 알고 싶어 ▾" 눌러봐. 분석해줄게.',
+  '+ 메뉴 -> 더 알아보기 / 깨달음으로 / 메모',
+  '+ 메뉴의 "더 알아보기" 눌러봐. 분석해줄게.',
   '"검색해줘" 라고 말하면 인터넷에서 찾아와'
 ];
 
@@ -45294,46 +45299,18 @@ function _renderChatMessageHTML(m, i) {
         <button class="msg-action retry" onclick="retryMessage(${i})">↻ 다시 보내기</button>
       </div>`;
     } else if (m.role === 'assistant' && !m.typing) {
-      // Detect if response was "short" (no 4-stage labels)
-      const has4Stage = /\[내가 본 것\]|\[이게 뭐냐면\]/.test(m.content || '');
-      // V4 (v8 묶음 4): show / disabled / hide 분기 — Plan 별 cap + 쿨다운
-      const _deeperElig = (typeof _checkDeeperEligibility === 'function') ? _checkDeeperEligibility() : { ok: true };
-      // V4 (사용자 명시 2026-05-16 cowork): 3턴 이전 hide. 첫 응답 옆에 깊이 버튼 = "이 앱 = 분석 도구" frame 즉시 박힘.
-      //   결정: 챕터당 user 메시지 3회 누적 후 노출. testerMode / 튜토리얼 모드는 우회.
-      // V4 fix (사용자 명시 2026-05-18 ultrathink): 기존 사용자 (chatPairsCount ≥ 3 누적 OR 구독자) 도 우회 — ✓ 마무리 후 새 이야기 시작 시 매번 3턴 락은 불필요.
-      //   '첫 채팅' 3턴 락의 의도 = 게스트/미구독 신규에게 frame 박지 않기. 이미 사용법 인지한 사용자는 즉시 노출.
-      const _chapterUserMsgs = (state.chatMessages || []).filter(mm => mm && mm.role === 'user').length;
-      const _isExistingChatUser = (state.chatPairsCount || 0) >= 3
-        || (typeof _isTutorialEligibleUser === 'function' && !_isTutorialEligibleUser());
-      const _bypassTurnGate = !!(window._onbTutorialMode || (state.preferences && state.preferences.testerMode) || _isExistingChatUser);
-      const _deeperTurnsOk = _bypassTurnGate || _chapterUserMsgs >= 3;
-      const deeperBtn = (has4Stage || !_deeperTurnsOk)
-        ? ''
-        : (_deeperElig.ok
-            ? `<button class="msg-action" onclick="askDeeper(${i})">더 알고 싶어 ▾</button>`
-            : `<button class="msg-action disabled-locked" onclick="_showDeeperCapToast()">더 알고 싶어 ▾</button>`);
-      // V4 (사용자 명시 2026-05-17 ultrathink): 게스트 첫 '더 알아보기' 노출 시 튜토 모달 2page chain.
-      //   _shownInlineTips 'firstDeeperBtn' 영구 가드 + queued flag 로 같은 render cycle 중복 timer 회피.
-      if (deeperBtn && state.isGuest
-          && !(state._shownInlineTips || []).includes('firstDeeperBtn')
-          && !window._firstDeeperTutoQueued
-          && typeof _showFirstDeeperTutoIfGuest === 'function') {
-        window._firstDeeperTutoQueued = true;
-        setTimeout(() => _showFirstDeeperTutoIfGuest(), 250);
-      }
+      // V4 (사용자 명시 2026-06-05): '더 알아보기'·'깨달음으로' 버튼 → 입력창 + 메뉴로 이동 (마지막 AI 응답 대상).
+      //   메시지엔 4단 분석 응답(fromDeeper)의 '🧬 전략으로'만 유지 — 분석 결과 보고 저장 결정하는 맥락 버튼.
       // V4 (v8 묶음 9): Core 2 미잠금 시 4단 응답의 🧬 전략으로 disabled-locked
       // V4 (v2 §6 명시): 클릭 시 단순 토스트 — entry modal 자동 권유는 환영 선물 후
       const _c2Locked = !!state._core2NotUnlocked && !window._onbTutorialMode && !(state.preferences && state.preferences.testerMode);
-      // V3.13.x: askDeeper 응답이면 깨달음 버튼 대신 '전략으로' (전략 탭에 저장)
+      // V3.13.x: askDeeper 응답이면 '전략으로' (전략 탭에 저장). 일반 응답은 액션 버튼 X.
       const saveBtn = m.fromDeeper
         ? (_c2Locked
             ? `<button class="msg-action disabled-locked" onclick="_showCore2LockedToast()">🧬 전략으로</button>`
             : `<button class="msg-action ${m.savedStrategy ? 'saved' : ''}" onclick="saveMsgAsStrategy(${i})">${m.savedStrategy ? '🧬 전략 저장됨' : '🧬 전략으로'}</button>`)
-        : `<button class="msg-action ${m.saved ? 'saved' : ''}" onclick="saveMsgAsInsight(${i})">${m.saved ? '✦ 저장됨' : '✦ 깨달음으로'}</button>`;
-      actions = `<div class="msg-actions">
-        ${saveBtn}
-        ${deeperBtn}
-      </div>`;
+        : '';
+      actions = saveBtn ? `<div class="msg-actions">${saveBtn}</div>` : '';
     }
 
     let proposalBtns = '';
@@ -45449,7 +45426,7 @@ function _showFirstDeeperTutoIfGuest() {
   _showSimpleTutoModal({
     key: 'firstDeeperBtn',
     pages: [
-      { html: `고민이 있을 때, 어찌해야 할지 모르겠을 때,<br>고동이에게 털어놓고 <b>'더 알아보기'</b>를 눌러보세요.<br><br>마법의 소라고동이 이름값을 할 거예요. 🐚` },
+      { html: `고민이 있을 때, 어찌해야 할지 모르겠을 때,<br>고동이에게 털어놓고 <b>+ 메뉴의 '더 알아보기'</b>를 눌러보세요.<br><br>마법의 소라고동이 이름값을 할 거예요. 🐚` },
       // V4 (사용자 명시 2026-05-17 ultrathink): page 2 카피 단순화 + okLabel='오호라'.
       { html: `이 앱의 모든 정보는<br><b>AI 학습에 전혀 쓰이지 않고</b>,<br>종단간 암호화로 보호됩니다.<br><br><span style="color:var(--text-dim); font-size:13px;">(로그인 후)</span>`, okLabel: '오호라' }
     ]
@@ -45971,58 +45948,7 @@ async function sendChat() {
   //   중복 + Sonnet/Opus 동시 호출 = 비용 낭비. 단일 흐름으로 통합.
 }
 
-// V3.13.x: 일기 템플릿 — 인지심리학 연구 기반 5종.
-// 글쓰기 마찰 ↓ + 검증된 효과:
-//   1) Three Good Things (Seligman 2005, Park et al.) — 긍정성·우울 ↓ 6개월 효과
-//   2) Affect Labeling (Lieberman 2007) — 감정 명명만으로 amygdala 반응 ↓
-//   3) Implementation Intention (Gollwitzer 1999) — if-then 형식이 행동 follow-through 2-3배 ↑
-//   4) Self-compassion (Neff 2003) — 자기비판 → 자기친절. 회복탄력성 ↑
-//   5) Cognitive Reappraisal (Gross 2002) — 감정 재해석 → 정서조절 효과
-// V3.13.x: 클릭만 해도 / 한 단어만 답해도 완성된 일기로 자동 send.
-const DIARY_TEMPLATES = [
-  {
-    id: 'short',
-    label: '🌙 짧게 닫기 (1분)',
-    desc: '오늘 한 단어로',
-    prompt: '오늘 한 일을 한 단어로?',
-    placeholder: '예: 발표, 공부, 휴식, 산책',
-    format: (a) => `일기: 오늘은 ${a || '평범한 하루'}였어. 그래도 살아남음 ✦`
-  },
-  {
-    id: 'tgt',
-    label: '✨ Three Good Things',
-    desc: '오늘 좋았던 일',
-    prompt: '오늘 좋았던 거 한 가지?',
-    placeholder: '예: 친구 만남, 발표 잘됨',
-    format: (a) => `일기: 오늘 좋았던 거 — ${a || '특별한 거 없지만 그래도 무사히 보냄'} ✦`
-  },
-  {
-    id: 'hard',
-    label: '🌧 힘든 날',
-    desc: '자기친절 모드',
-    prompt: '오늘 힘들었던 거 한 줄?',
-    placeholder: '예: 발표 망함, 잠 못 잠, 답답',
-    format: (a) => `일기: 오늘 힘들었던 거 — ${a || '뚜렷한 이유 없이 그냥 힘듦'}. 그래도 여기까지 온 게 어디야 🌊`
-  },
-  {
-    id: 'plan',
-    label: '🎯 내일 계획 (if-then)',
-    desc: '내일 가장 중요한 거',
-    prompt: '내일 가장 중요한 거?',
-    placeholder: '예: 마감, 공부 시작, 약속',
-    format: (a) => `일기: 내일 가장 중요한 건 ${a || '아직 모름. 천천히 시작해보자'}. 작게 시작해도 OK.`
-  },
-  {
-    id: 'feel',
-    label: '🌊 감정 정리',
-    desc: '지금 기분 한 단어',
-    prompt: '지금 기분을 한 단어로?',
-    placeholder: '예: 피곤, 답답, 평온, 설렘',
-    format: (a) => `일기: 지금 기분은 ${a || '뭔지 잘 모르겠음'}. 이대로도 괜찮아.`
-  }
-];
-
-// V3.13.x: + 메뉴 토글 (일기 템플릿/대화 마무리 통합)
+// V3.13.x: + 메뉴 토글
 function toggleChatPlusMenu(e) {
   if (e) e.stopPropagation();
   const menu = document.getElementById('chatPlusMenu');
@@ -46046,13 +45972,46 @@ function closeChatPlusMenu() {
 }
 function chatPlusAction(kind) {
   closeChatPlusMenu();
-  if (kind === 'diary') showDiaryTemplates();
+  // V4 (사용자 명시 2026-06-05): '더 알아보기'·'깨달음으로' = 메시지 버튼 → + 메뉴로 이동 (마지막 AI 응답 대상).
+  if (kind === 'deeper') askDeeperFromPlus();
+  else if (kind === 'insight') saveLastMsgAsInsight();
   else if (kind === 'memo') addMemoArchive();
   // 사용자 명시 2026-05-09 (spec 5-4): 숙고 진입 — reflectionContainer zone 폐기 보완.
   else if (kind === 'reflection') {
     if (typeof addReflectionQuestion === 'function') addReflectionQuestion();
   }
   // 'end'는 + 메뉴 밖 별도 ✓ 버튼으로 빼냄 (V4-fix)
+}
+
+// V4 (사용자 명시 2026-06-05): + 메뉴 '더 알아보기'/'깨달음으로' 대상 = 마지막 AI 응답.
+function _lastAssistantChatMsgIdx() {
+  const msgs = state.chatMessages || [];
+  for (let i = msgs.length - 1; i >= 0; i--) {
+    const m = msgs[i];
+    if (m && m.role === 'assistant' && !m.typing && !m.error) return i;
+  }
+  return -1;
+}
+// 마지막 AI 응답을 4단 분석 (옛 메시지 '더 알아보기' 버튼과 동일 동작). cap/쿨다운은 askDeeper 가 처리.
+function askDeeperFromPlus() {
+  const idx = _lastAssistantChatMsgIdx();
+  if (idx < 0) { if (typeof showToast === 'function') showToast('먼저 고동이랑 얘기해봐'); return; }
+  const m = state.chatMessages[idx];
+  if (m.fromDeeper || /\[내가 본 것\]|\[이게 뭐냐면\]/.test(m.content || '')) {
+    if (typeof showToast === 'function') showToast('이미 깊게 분석한 답이야');
+    return;
+  }
+  // 게스트 첫 사용 안내 (E2EE / AI 학습 0) — _showSimpleTutoModal key 가드로 1회만.
+  if (typeof _showFirstDeeperTutoIfGuest === 'function') _showFirstDeeperTutoIfGuest();
+  if (typeof askDeeper === 'function') askDeeper(idx);
+}
+// 마지막 AI 응답을 깨달음으로 저장 (옛 메시지 '✦ 깨달음으로' 버튼과 동일 동작).
+function saveLastMsgAsInsight() {
+  const idx = _lastAssistantChatMsgIdx();
+  if (idx < 0) { if (typeof showToast === 'function') showToast('먼저 고동이랑 얘기해봐'); return; }
+  const m = state.chatMessages[idx];
+  if (m.saved) { if (typeof showToast === 'function') showToast('이미 깨달음에 저장했어'); return; }
+  if (typeof saveMsgAsInsight === 'function') saveMsgAsInsight(idx);
 }
 document.addEventListener('click', function(e) {
   const menu = document.getElementById('chatPlusMenu');
@@ -46326,44 +46285,6 @@ function toggleArchivePin(date) {
   if (typeof renderChatArchiveModal === 'function') renderChatArchiveModal();
   if (typeof showToast === 'function') {
     showToast(item.pinned ? '📌 위로 고정됨' : '📌 핀 풀림');
-  }
-}
-
-async function showDiaryTemplates() {
-  const choice = await showOptionsModal({
-    title: '📝 일기 템플릿',
-    message: '클릭만 해도, 한 단어만 답해도 자동으로 완성!',
-    options: DIARY_TEMPLATES.map(t => ({ label: t.label, value: t.id, desc: t.desc }))
-  });
-  if (!choice) return;
-  const tpl = DIARY_TEMPLATES.find(t => t.id === choice);
-  if (!tpl) return;
-  // V4-fix v3 (사용자 요청): 테스터 모드 → placeholder 예시 자동 채움
-  const isTester = !!(state.preferences && state.preferences.testerMode);
-  const tplExamples = {
-    'short':  '오늘 잘 지냄. 큰 일 X.',
-    'good':   '카페에서 작업 잘 됨',
-    'hard':   '집중 안 됨. 무력감.',
-    'plan':   '보고서 한 단락',
-    'feel':   '평온'
-  };
-  const answer = await showInputModal({
-    title: tpl.label,
-    message: tpl.prompt + ' (비워두고 OK 누르면 그냥 저장)',
-    placeholder: tpl.placeholder,
-    defaultValue: isTester ? (tplExamples[tpl.id] || '') : '',
-    okLabel: '완성 ✦'
-  });
-  if (answer === null) return;  // 취소
-  const completed = tpl.format((answer || '').trim());
-  // chatInput에 set + 즉시 send
-  const input = document.getElementById('chatInput');
-  if (input) {
-    input.value = completed;
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-  }
-  if (typeof sendChat === 'function') {
-    setTimeout(() => sendChat(), 50);
   }
 }
 
@@ -54947,7 +54868,7 @@ function _renderStrategyCardHtml(s) {
       ${bodyHtml}
       ${metaHtml}
       ${hasTree && treeOpen ? genTreeHtml : ''}
-      <div class="strategy-card-source">${dateStr}${s.source === 'manual' ? ' · 직접 추가' : s.source === 'deeper' ? ' · 더 알고 싶어' : ' · 대화 챕터'}</div>
+      <div class="strategy-card-source">${dateStr}${s.source === 'manual' ? ' · 직접 추가' : s.source === 'deeper' ? ' · 더 알아보기' : ' · 대화 챕터'}</div>
       <div class="strategy-card-actions">
         ${tryBtnHtml}
         <button onclick="deleteTopicCard('${s.id}')">🗑 삭제</button>
@@ -55568,7 +55489,7 @@ function renderLensArchive() {
       html += `<div class="archive-empty">
         <div class="icon">✦</div>
         <div style="font-size:14px; color:var(--text); margin-bottom:8px;">아직은 저장된 깨달음이 없어요</div>
-        대화 응답 아래 <b>"✦ 깨달음으로"</b> 또는 + 메뉴의 <b>✎ 메모</b>로 모을 수 있습니다.
+        + 메뉴의 <b>"✦ 깨달음으로"</b> 또는 <b>"✎ 메모"</b>로 모을 수 있습니다.
       </div>`;
     }
   } else {
@@ -62792,7 +62713,7 @@ function testForceDiagnosisCitation() {
   active.status = 'active';
   saveState({ force: true });
   const labels = { weak_tool: '도구 약함', wrong_layer: '차원 안 맞음', value_clash: '가치 상충', avoidance: '회피 패턴', willpower_cap: '의지 임계치' };
-  showToast(`🐚 "${labels[active.type] || active.type}" 관찰 active. 대화 → AI 응답 밑 [더 알고 싶어 ▾] 클릭하면 응답에 한 줄 자연 인용.`);
+  showToast(`🐚 "${labels[active.type] || active.type}" 관찰 active. 대화 → + 메뉴의 [더 알아보기] 클릭하면 응답에 한 줄 자연 인용.`);
 }
 
 // 숙고 질문 새로 적용하기 (스크랩 진입점 시뮬레이션)
@@ -65824,7 +65745,7 @@ function _buildArchiveSummarySlideHTML(inRange) {
     return `
       <div class="stories-label">네 깨달음</div>
       <div class="stories-title">이 분기 깨달음 카드 없음</div>
-      <div class="stories-body">대화에서 ✦ 깨달음으로, 또는 ✎ 메모로 직접. 다음 분기엔 작은 한 줄도 OK.</div>
+      <div class="stories-body">+ 메뉴의 ✦ 깨달음으로, 또는 ✎ 메모로 직접. 다음 분기엔 작은 한 줄도 OK.</div>
     `;
   }
   // type 분포
@@ -75589,7 +75510,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.390-restore-deeper';
+const APP_VERSION = 'v4.0.391-plus-menu-actions';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 

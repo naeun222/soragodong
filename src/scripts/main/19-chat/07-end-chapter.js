@@ -65,42 +65,4 @@ function toggleArchivePin(date) {
   }
 }
 
-async function showDiaryTemplates() {
-  const choice = await showOptionsModal({
-    title: '📝 일기 템플릿',
-    message: '클릭만 해도, 한 단어만 답해도 자동으로 완성!',
-    options: DIARY_TEMPLATES.map(t => ({ label: t.label, value: t.id, desc: t.desc }))
-  });
-  if (!choice) return;
-  const tpl = DIARY_TEMPLATES.find(t => t.id === choice);
-  if (!tpl) return;
-  // V4-fix v3 (사용자 요청): 테스터 모드 → placeholder 예시 자동 채움
-  const isTester = !!(state.preferences && state.preferences.testerMode);
-  const tplExamples = {
-    'short':  '오늘 잘 지냄. 큰 일 X.',
-    'good':   '카페에서 작업 잘 됨',
-    'hard':   '집중 안 됨. 무력감.',
-    'plan':   '보고서 한 단락',
-    'feel':   '평온'
-  };
-  const answer = await showInputModal({
-    title: tpl.label,
-    message: tpl.prompt + ' (비워두고 OK 누르면 그냥 저장)',
-    placeholder: tpl.placeholder,
-    defaultValue: isTester ? (tplExamples[tpl.id] || '') : '',
-    okLabel: '완성 ✦'
-  });
-  if (answer === null) return;  // 취소
-  const completed = tpl.format((answer || '').trim());
-  // chatInput에 set + 즉시 send
-  const input = document.getElementById('chatInput');
-  if (input) {
-    input.value = completed;
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-  }
-  if (typeof sendChat === 'function') {
-    setTimeout(() => sendChat(), 50);
-  }
-}
-
 // V3.13.x: 메시지 ⋮ 메뉴 — 복사 / 수정 / 삭제

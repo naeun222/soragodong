@@ -1,12 +1,17 @@
 <div class="chat-input-bar" id="chatInputBar" style="display:none;">
   <div class="chat-plus-menu" id="chatPlusMenu" hidden>
-    <button class="chat-plus-item" onclick="chatPlusAction('diary')">
-      <span class="chat-plus-icon">📝</span>
-      <span class="chat-plus-label">일기 템플릿</span>
+    <!-- V4 (사용자 명시 2026-06-05): 메시지 액션 버튼 '더 알아보기'·'깨달음으로' 를 + 메뉴로 이동 (마지막 AI 응답 대상). -->
+    <button class="chat-plus-item" onclick="chatPlusAction('deeper')">
+      <span class="chat-plus-icon">🔍</span>
+      <span class="chat-plus-label">더 알아보기</span>
+    </button>
+    <button class="chat-plus-item" onclick="chatPlusAction('insight')">
+      <span class="chat-plus-icon">✦</span>
+      <span class="chat-plus-label">깨달음으로</span>
     </button>
     <button class="chat-plus-item" onclick="chatPlusAction('memo')">
       <span class="chat-plus-icon">✎</span>
-      <span class="chat-plus-label">메모 (깨달음)</span>
+      <span class="chat-plus-label">메모</span>
     </button>
     <!-- 사용자 명시 2026-05-09 (spec 5-4): 숙고 진입 path 추가 — reflectionContainer zone 폐기 보완. -->
     <button class="chat-plus-item" onclick="chatPlusAction('reflection')">

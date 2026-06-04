@@ -1,12 +1,45 @@
 function chatPlusAction(kind) {
   closeChatPlusMenu();
-  if (kind === 'diary') showDiaryTemplates();
+  // V4 (사용자 명시 2026-06-05): '더 알아보기'·'깨달음으로' = 메시지 버튼 → + 메뉴로 이동 (마지막 AI 응답 대상).
+  if (kind === 'deeper') askDeeperFromPlus();
+  else if (kind === 'insight') saveLastMsgAsInsight();
   else if (kind === 'memo') addMemoArchive();
   // 사용자 명시 2026-05-09 (spec 5-4): 숙고 진입 — reflectionContainer zone 폐기 보완.
   else if (kind === 'reflection') {
     if (typeof addReflectionQuestion === 'function') addReflectionQuestion();
   }
   // 'end'는 + 메뉴 밖 별도 ✓ 버튼으로 빼냄 (V4-fix)
+}
+
+// V4 (사용자 명시 2026-06-05): + 메뉴 '더 알아보기'/'깨달음으로' 대상 = 마지막 AI 응답.
+function _lastAssistantChatMsgIdx() {
+  const msgs = state.chatMessages || [];
+  for (let i = msgs.length - 1; i >= 0; i--) {
+    const m = msgs[i];
+    if (m && m.role === 'assistant' && !m.typing && !m.error) return i;
+  }
+  return -1;
+}
+// 마지막 AI 응답을 4단 분석 (옛 메시지 '더 알아보기' 버튼과 동일 동작). cap/쿨다운은 askDeeper 가 처리.
+function askDeeperFromPlus() {
+  const idx = _lastAssistantChatMsgIdx();
+  if (idx < 0) { if (typeof showToast === 'function') showToast('먼저 고동이랑 얘기해봐'); return; }
+  const m = state.chatMessages[idx];
+  if (m.fromDeeper || /\[내가 본 것\]|\[이게 뭐냐면\]/.test(m.content || '')) {
+    if (typeof showToast === 'function') showToast('이미 깊게 분석한 답이야');
+    return;
+  }
+  // 게스트 첫 사용 안내 (E2EE / AI 학습 0) — _showSimpleTutoModal key 가드로 1회만.
+  if (typeof _showFirstDeeperTutoIfGuest === 'function') _showFirstDeeperTutoIfGuest();
+  if (typeof askDeeper === 'function') askDeeper(idx);
+}
+// 마지막 AI 응답을 깨달음으로 저장 (옛 메시지 '✦ 깨달음으로' 버튼과 동일 동작).
+function saveLastMsgAsInsight() {
+  const idx = _lastAssistantChatMsgIdx();
+  if (idx < 0) { if (typeof showToast === 'function') showToast('먼저 고동이랑 얘기해봐'); return; }
+  const m = state.chatMessages[idx];
+  if (m.saved) { if (typeof showToast === 'function') showToast('이미 깨달음에 저장했어'); return; }
+  if (typeof saveMsgAsInsight === 'function') saveMsgAsInsight(idx);
 }
 document.addEventListener('click', function(e) {
   const menu = document.getElementById('chatPlusMenu');

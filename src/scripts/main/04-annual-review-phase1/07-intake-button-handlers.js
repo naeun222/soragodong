@@ -55,7 +55,7 @@ window._startIntakeFromTutorial = async function() {
     // V4 (사용자 명시 2026-05-04 ultrathink): 4단 분석 직후 안내 메시지 inject — '내가 지금은 4단 분석 채워놨다' 톤 (옛 카피 톤)
     state.chatMessages.push({
       role: 'assistant',
-      content: '처음이라 위 4단으로 친절히 정리해줬어 ✦\n평소엔 답 아래 "더 알고 싶어 ▾" 누르면 이렇게 깊게 풀어줄게.',
+      content: '처음이라 위 4단으로 친절히 정리해줬어 ✦\n평소엔 + 메뉴의 "더 알아보기" 누르면 이렇게 깊게 풀어줄게.',
       timestamp: nowIso
     });
     saveState();

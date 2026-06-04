@@ -193,58 +193,7 @@ async function sendChat() {
   //   중복 + Sonnet/Opus 동시 호출 = 비용 낭비. 단일 흐름으로 통합.
 }
 
-// V3.13.x: 일기 템플릿 — 인지심리학 연구 기반 5종.
-// 글쓰기 마찰 ↓ + 검증된 효과:
-//   1) Three Good Things (Seligman 2005, Park et al.) — 긍정성·우울 ↓ 6개월 효과
-//   2) Affect Labeling (Lieberman 2007) — 감정 명명만으로 amygdala 반응 ↓
-//   3) Implementation Intention (Gollwitzer 1999) — if-then 형식이 행동 follow-through 2-3배 ↑
-//   4) Self-compassion (Neff 2003) — 자기비판 → 자기친절. 회복탄력성 ↑
-//   5) Cognitive Reappraisal (Gross 2002) — 감정 재해석 → 정서조절 효과
-// V3.13.x: 클릭만 해도 / 한 단어만 답해도 완성된 일기로 자동 send.
-const DIARY_TEMPLATES = [
-  {
-    id: 'short',
-    label: '🌙 짧게 닫기 (1분)',
-    desc: '오늘 한 단어로',
-    prompt: '오늘 한 일을 한 단어로?',
-    placeholder: '예: 발표, 공부, 휴식, 산책',
-    format: (a) => `일기: 오늘은 ${a || '평범한 하루'}였어. 그래도 살아남음 ✦`
-  },
-  {
-    id: 'tgt',
-    label: '✨ Three Good Things',
-    desc: '오늘 좋았던 일',
-    prompt: '오늘 좋았던 거 한 가지?',
-    placeholder: '예: 친구 만남, 발표 잘됨',
-    format: (a) => `일기: 오늘 좋았던 거 — ${a || '특별한 거 없지만 그래도 무사히 보냄'} ✦`
-  },
-  {
-    id: 'hard',
-    label: '🌧 힘든 날',
-    desc: '자기친절 모드',
-    prompt: '오늘 힘들었던 거 한 줄?',
-    placeholder: '예: 발표 망함, 잠 못 잠, 답답',
-    format: (a) => `일기: 오늘 힘들었던 거 — ${a || '뚜렷한 이유 없이 그냥 힘듦'}. 그래도 여기까지 온 게 어디야 🌊`
-  },
-  {
-    id: 'plan',
-    label: '🎯 내일 계획 (if-then)',
-    desc: '내일 가장 중요한 거',
-    prompt: '내일 가장 중요한 거?',
-    placeholder: '예: 마감, 공부 시작, 약속',
-    format: (a) => `일기: 내일 가장 중요한 건 ${a || '아직 모름. 천천히 시작해보자'}. 작게 시작해도 OK.`
-  },
-  {
-    id: 'feel',
-    label: '🌊 감정 정리',
-    desc: '지금 기분 한 단어',
-    prompt: '지금 기분을 한 단어로?',
-    placeholder: '예: 피곤, 답답, 평온, 설렘',
-    format: (a) => `일기: 지금 기분은 ${a || '뭔지 잘 모르겠음'}. 이대로도 괜찮아.`
-  }
-];
-
-// V3.13.x: + 메뉴 토글 (일기 템플릿/대화 마무리 통합)
+// V3.13.x: + 메뉴 토글
 function toggleChatPlusMenu(e) {
   if (e) e.stopPropagation();
   const menu = document.getElementById('chatPlusMenu');

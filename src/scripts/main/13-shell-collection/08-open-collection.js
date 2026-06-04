@@ -9,7 +9,7 @@ function openShellCollection() {
     _showSimpleTutoModal({
       key: 'firstShell',
       pages: [{
-        html: `<div style="font-size:18px; font-weight:600; margin-bottom:10px;">🏖 모래사장</div>이곳은 모래사장입니다.<br>소라들을 어떻게 모으는지 궁금하다면,<br>대화탭에서 <b>'더 알아보기'</b> → <b>'해볼게'</b>를 눌러보세요!`
+        html: `<div style="font-size:18px; font-weight:600; margin-bottom:10px;">🏖 모래사장</div>이곳은 모래사장입니다.<br>소라들을 어떻게 모으는지 궁금하다면,<br>대화탭 + 메뉴의 <b>'더 알아보기'</b> → <b>'해볼게'</b>를 눌러보세요!`
       }]
     });
   }

@@ -14,7 +14,7 @@ function testForceDiagnosisCitation() {
   active.status = 'active';
   saveState({ force: true });
   const labels = { weak_tool: '도구 약함', wrong_layer: '차원 안 맞음', value_clash: '가치 상충', avoidance: '회피 패턴', willpower_cap: '의지 임계치' };
-  showToast(`🐚 "${labels[active.type] || active.type}" 관찰 active. 대화 → AI 응답 밑 [더 알고 싶어 ▾] 클릭하면 응답에 한 줄 자연 인용.`);
+  showToast(`🐚 "${labels[active.type] || active.type}" 관찰 active. 대화 → + 메뉴의 [더 알아보기] 클릭하면 응답에 한 줄 자연 인용.`);
 }
 
 // 숙고 질문 새로 적용하기 (스크랩 진입점 시뮬레이션)
