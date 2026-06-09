@@ -63333,7 +63333,7 @@ function _buildDiarySummaryPrompt(date, messages, entry) {
   const checkinSummary = checkinParts.length ? checkinParts.join(' / ') : '체크인 정보 없음';
 
   const chatLog = messages.length > 0 ? messages.map(m => {
-    const role = m.role === 'user' ? '나' : '소라';
+    const role = m.role === 'user' ? '나' : '고동이';
     let content = m.content || '';
     content = content.replace(/```json[\s\S]*?```/g, '').trim();
     content = content.replace(/\{[\s\S]*"(?:new_traits|new_values)[\s\S]*\}\s*$/g, '').trim();
@@ -75512,7 +75512,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.394-reflection-bubble-align';
+const APP_VERSION = 'v4.0.395-summary-godong-label';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 

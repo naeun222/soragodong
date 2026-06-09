@@ -353,7 +353,7 @@ function _buildDiarySummaryPrompt(date, messages, entry) {
   const checkinSummary = checkinParts.length ? checkinParts.join(' / ') : '체크인 정보 없음';
 
   const chatLog = messages.length > 0 ? messages.map(m => {
-    const role = m.role === 'user' ? '나' : '소라';
+    const role = m.role === 'user' ? '나' : '고동이';
     let content = m.content || '';
     content = content.replace(/```json[\s\S]*?```/g, '').trim();
     content = content.replace(/\{[\s\S]*"(?:new_traits|new_values)[\s\S]*\}\s*$/g, '').trim();
