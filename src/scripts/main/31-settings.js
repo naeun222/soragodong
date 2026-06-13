@@ -110,6 +110,8 @@ function _buildBusinessInfoRowsHtml() {
   if (b.ecommerce_no) rows.push(`<div><b>통신판매업 신고번호</b>: ${escapeHtml(b.ecommerce_no)}</div>`);
   // 사용자 보고 2026-05-05 (PortOne 심사): 사업장 주소 UI 직접 노출 (전상법 §13 의무 + PG 심사 요구).
   if (b.address) rows.push(`<div><b>사업장 주소</b>: ${escapeHtml(b.address)}</div>`);
+  // KG이니시스 심사 요구 2026-06-13: 연락처(전화번호) UI 직접 노출 (전상법 §13 의무 + PG 심사 요구).
+  if (b.phone) rows.push(`<div><b>연락처</b>: <a href="tel:${escapeHtml(b.phone)}" style="color:var(--accent);">${escapeHtml(b.phone)}</a></div>`);
   rows.push(`<div style="margin-top:6px; font-size:12px;"><a href="/terms" target="_blank" style="color:var(--accent);">이용약관</a> · <a href="/refund" target="_blank" style="color:var(--accent);">환불정책</a> · <a href="/privacy" target="_blank" style="color:var(--accent);">개인정보처리방침</a></div>`);
   if (b.email) rows.push(`<div><b>이메일</b>: <a href="mailto:${escapeHtml(b.email)}" style="color:var(--accent);">${escapeHtml(b.email)}</a></div>`);
   if (b.cpo) rows.push(`<div><b>개인정보 보호책임자</b>: ${escapeHtml(b.cpo)}</div>`);

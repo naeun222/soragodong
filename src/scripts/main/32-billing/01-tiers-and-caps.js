@@ -105,14 +105,14 @@ const KAKAO_OPEN_CHAT = 'https://open.kakao.com/o/sUP7kIsi';
 // 사용자 명시 2026-05-06: 토스 수동 송금 폐기 → PortOne V2 카드 결제. TOSS_ACCOUNT / _generateUserMemoCode 제거.
 
 // 사업자 정보 (전자상거래법 의무 노출). 사업자등록증·통신판매업 신고증 발급 후 빈 문자열만 채우면 자동 표시.
-// 주소·연락처는 자택이라 민감 — settings UI 노출 X, 약관·환불·개인정보 마크다운에만 풀 명시 (전상법 §13 의무 자리). 사용자 명시 2026-04-30 ultrathink.
+// 주소·연락처는 자택 기반이라 민감하나 PG 심사 요구로 UI 직접 노출 (주소 PortOne 2026-05-05 / 연락처 KG이니시스 2026-06-13). 전상법 §13 의무 표시 — info.html + 사업자정보 모달 + settings inline 공통.
 const BUSINESS_INFO = {
   name: '나은 랩(Lab)',                       // 상호
   representative: '김나은',                // 대표자
   business_no: '261-21-02592',             // 사업자등록번호 (2026-04-30, 일반과세)
   ecommerce_no: '2026-서울동작-0613',          // 통신판매업 신고번호 (2026-05-05 발급)
   address: '서울특별시 동작구 상도로47아길 14',  // 자택 — UI 노출 X, source of truth 만
-  phone: '',                               // 연락처 (선택, 070 가상번호 발급 시)
+  phone: '010-6502-6679',                  // 연락처 (KG이니시스 심사 요구 2026-06-13 — 전상법 §13 의무 표시)
   email: 'soragodongapp@gmail.com',        // 사업용 이메일 (CPO 공시용)
   cpo: '김나은'                             // 개인정보 보호책임자
 };
