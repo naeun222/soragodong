@@ -88,6 +88,10 @@ async function _authedFetch(url, init) {
       resp = await _fetchWithTimeout(url, init);
     }
   }
+  // 2026-10-15: chat-batch 도 AI outage breaker 관찰 (02a-ai-outage.js).
+  if (typeof url === 'string' && url.indexOf('/api/chat-batch') === 0 && typeof _aiOutageObserveResponse === 'function') {
+    try { _aiOutageObserveResponse(resp); } catch {}
+  }
   return resp;
 }
 
@@ -194,6 +198,8 @@ async function _fetchWithRetry5xx(url, init) {
         resp = await _origFetch('/api/chat', Object.assign({}, init || {}, { headers: _withTurnstile(buildHeaders()) }));
       }
     }
+    // 2026-10-15: AI outage circuit breaker — 서버 X-AI-Outage 헤더 관찰 (02a-ai-outage.js).
+    if (typeof _aiOutageObserveResponse === 'function') { try { _aiOutageObserveResponse(resp); } catch {} }
     return resp;
   };
 })();

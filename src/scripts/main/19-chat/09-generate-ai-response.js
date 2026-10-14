@@ -244,6 +244,11 @@ async function generateAIResponse(modelOverride, opts) {
         showToast(`🌙 오늘은 여기까지 — 내일 또 24h ✨${_graceTag}${_hTag}`);
         return;
       }
+      // 2026-10-15: 서버 (functions/api/_lib/upstream-error.ts) 가 분류한 AI 장애 코드.
+      //   벤더 원문 대신 서버가 고른 사용자 문구를 그대로 쓴다. catch 분기에서 [AI_*] 마커로 식별.
+      if (parsed && typeof parsed.code === 'string' && /^AI_[A-Z_]+$/.test(parsed.code)) {
+        throw new Error('[' + parsed.code + '] ' + (parsed.error || ''));
+      }
       // V3.13.x: 응답 본문에서 message 추출해서 사용자에게 보여주기
       // V4 (사용자 보고 2026-05-05 ultrathink-3): err 가 HTML (Cloudflare 자체 5xx 페이지) 면 <title> 추출.
       // backend Worker 가 응답 못 했을 때 Cloudflare 가 자체 페이지 반환 — 진짜 error code (520/522/524 등) 가 title 안에 있음.
@@ -500,7 +505,24 @@ async function generateAIResponse(modelOverride, opts) {
     // 사용자 보고 2026-04-30 ultrathink: Phase C 마이그 후 키 모델 폐기 — 401은 session 만료. 메시지 분기.
     const m = (err && err.message) || '';
     let userMsg;
-    if (/401/.test(m) || /authentication/i.test(m) || /invalid.*api.*key/i.test(m) || /api[_ ]?key/i.test(m)) {
+    // 2026-10-15: 서버 분류 코드 우선 — 사용자 문구는 서버가 결정, 여기선 톤만 맞춤.
+    const _aiCodeMatch = m.match(/^\[(AI_[A-Z_]+)\]\s*([\s\S]*)$/);
+    if (_aiCodeMatch) {
+      const _code = _aiCodeMatch[1];
+      const _serverMsg = (_aiCodeMatch[2] || '').trim();
+      if (_code === 'AI_SERVICE_UNAVAILABLE') {
+        userMsg = '😶 ' + (_serverMsg || 'AI 쪽에 문제가 생겨서 지금은 답을 못 해. 운영자한테 자동으로 알렸어.') + '\n\n네 메시지는 남아 있으니까, 조금 있다가 "다시 보내기" 눌러줘.';
+      } else if (_code === 'AI_RATE_LIMITED') {
+        userMsg = '⏳ ' + (_serverMsg || 'AI 서버가 지금 바빠. 1분쯤 뒤에 다시 보내봐.');
+      } else if (_code === 'AI_OVERLOADED') {
+        userMsg = '⚠️ ' + (_serverMsg || 'AI 서버가 일시적으로 과부하야. 잠깐 뒤에 다시 보내줘.');
+      } else {
+        userMsg = '😅 ' + (_serverMsg || '요청을 처리하다 문제가 생겼어. 다시 보내도 같으면 설정 → 피드백으로 알려줘.');
+      }
+      if (typeof reportError === 'function' && (_code === 'AI_SERVICE_UNAVAILABLE' || _code === 'AI_BAD_REQUEST')) {
+        reportError({ signature: 'chat-' + _code.toLowerCase(), detail: m, stack: err.stack });
+      }
+    } else if (/401/.test(m) || /authentication/i.test(m) || /invalid.*api.*key/i.test(m) || /api[_ ]?key/i.test(m)) {
       // 사용자 명시 2026-05-01 (agent audit): state.apiKey 영구 wipe (마이그레이션) 후 Phase C 백엔드 프록시 — 본인 키 분기 dead. session 만료 분기만 보존.
       if (typeof session !== 'undefined' && session && session.access_token) {
         userMsg = '⏰ 로그인 세션이 만료된 것 같아.\n\n페이지 새로고침 또는 로그아웃 → 다시 로그인 해줘.';
@@ -528,7 +550,12 @@ async function generateAIResponse(modelOverride, opts) {
         reportError({ signature: _sig, detail: m, stack: err.stack });
       }
     } else {
-      userMsg = '연결이 안 됐어 😅\n(' + (m || '알 수 없는 오류') + ')\n\n다시 보내기 버튼을 눌러봐.';
+      // 2026-10-15: raw 에러 문자열 (status / 벤더 본문) 은 사용자에게 안 보여줌 — 어드민만 괄호 안에 detail.
+      const _adminDetail = (typeof _isAdmin === 'function' && _isAdmin() && m) ? '\n(' + m.slice(0, 200) + ')' : '';
+      userMsg = '연결이 잠깐 안 됐어 😅' + _adminDetail + '\n\n"다시 보내기" 눌러봐. 계속 그러면 설정 → 피드백으로 알려줘.';
+      if (typeof reportError === 'function' && m) {
+        reportError({ signature: 'chat-unknown|' + m.replace(/^API\s+\d+\s*(—\s*)?/, '').slice(0, 80), detail: m, stack: err.stack });
+      }
     }
     // V4 (사용자 보고 2026-05-04 VB024): 스트리밍 도중 끊겨도 부분 응답 유지 — 옛 코드는 lastMsg 통째 교체 → 80% 받은 답변도 사라짐.
     // partial content 가 있으면 보존 + 끊김 안내만 suffix 로 붙임. 없으면 옛 동작 (full error 메시지).

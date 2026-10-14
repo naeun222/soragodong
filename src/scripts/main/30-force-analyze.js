@@ -468,7 +468,8 @@ async function _processForceAnalyzeResult(text, isAuto) {
     if (typeof showToast === 'function') {
       showToast(isAuto ? '🔍 일주일 모델 분석 자동 완료 ✦' : '🔍 분석 완료 ✦ (나 탭 확인)');
     }
-    if (isAuto && typeof runSemanticDedup === 'function') {
+    if (isAuto && typeof runSemanticDedup === 'function'
+        && (typeof _aiAutoJobsAllowed !== 'function' || _aiAutoJobsAllowed('semantic_dedup auto'))) {
       try {
         const _sd = await runSemanticDedup({ auto: true });
         if (_sd && _sd.ok) {
@@ -2087,6 +2088,11 @@ async function maybeRunChapterCleanup() {
     saveState();
     if (typeof renderChatArchiveModal === 'function') { try { renderChatArchiveModal(); } catch {} }
   }
+
+  // 2026-10-15: AI outage circuit breaker — 서버가 복구 불가 에러 (잔액/키) 를 돌려준 동안은
+  //   step B~F 자동 LLM 작업 전부 skip. 실패해도 lastXxxAt 이 안 찍혀 매 로드마다 재시도하던 폭주 차단.
+  const _aiPaused = (typeof _aiAutoJobsAllowed === 'function') && !_aiAutoJobsAllowed('maybeRunChapterCleanup B-F');
+  if (_aiPaused) return;
 
   // ─── step B: cleanup batch (어제 큐 처리, daily cooldown) ────────────
   if (!isGuest && _shouldRunSchedule(state.lastChapterCleanupAt, _lastDaily4amCutoff())) {

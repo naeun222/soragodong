@@ -15,6 +15,8 @@ import { checkBudget, deductCost } from './_lib/billing';
 import { applyEndpointSystem, shouldSkipPersona } from './_lib/prompts/endpoint-systems';
 import { applyUserContentTemplate } from './_lib/prompts/user-content-templates';
 import { applyPersonaToBody } from './_lib/prompts/system-persona';
+// 2026-10-15: Anthropic 에러 본문 pass-through 금지.
+import { upstreamErrorResponse } from './_lib/upstream-error';
 
 // V4 (사용자 보고 2026-05-11 ultrathink): Cloudflare AI Gateway native passthrough — HKG colo region block 우회.
 const ANTHROPIC_BASE = 'https://gateway.ai.cloudflare.com/v1/53e0f1f9111983b0d7a4275cf94b6dc0/soragodong-anthropic/anthropic/v1';
@@ -101,7 +103,8 @@ export async function onRequestPost(context: {
     });
     if (!upstream.ok) {
       const errText = await upstream.text();
-      return new Response(errText, { status: upstream.status, headers: { 'Content-Type': 'application/json' } });
+      return upstreamErrorResponse(env as any, waitUntil, upstream.status, errText,
+        { where: 'chat-batch.ts ' + action, endpoint: 'batch', userId: user.id });
     }
     const data: any = await upstream.json();
     return jsonResponse(data);
@@ -115,7 +118,8 @@ export async function onRequestPost(context: {
     const upstream = await fetch(`${ANTHROPIC_BASE}/messages/batches/${batchId}`, { headers });
     if (!upstream.ok) {
       const errText = await upstream.text();
-      return new Response(errText, { status: upstream.status, headers: { 'Content-Type': 'application/json' } });
+      return upstreamErrorResponse(env as any, waitUntil, upstream.status, errText,
+        { where: 'chat-batch.ts ' + action, endpoint: 'batch', userId: user.id });
     }
     return jsonResponse(await upstream.json());
   }
@@ -129,7 +133,8 @@ export async function onRequestPost(context: {
     const statusResp = await fetch(`${ANTHROPIC_BASE}/messages/batches/${batchId}`, { headers });
     if (!statusResp.ok) {
       const errText = await statusResp.text();
-      return new Response(errText, { status: statusResp.status, headers: { 'Content-Type': 'application/json' } });
+      return upstreamErrorResponse(env as any, waitUntil, statusResp.status, errText,
+        { where: 'chat-batch.ts ' + action, endpoint: 'batch', userId: user.id });
     }
     const statusData: any = await statusResp.json();
     if (statusData.processing_status !== 'ended') {
@@ -147,7 +152,8 @@ export async function onRequestPost(context: {
     const resultsResp = await fetch(resultsUrl, { headers });
     if (!resultsResp.ok) {
       const errText = await resultsResp.text();
-      return new Response(errText, { status: resultsResp.status, headers: { 'Content-Type': 'application/json' } });
+      return upstreamErrorResponse(env as any, waitUntil, resultsResp.status, errText,
+        { where: 'chat-batch.ts ' + action, endpoint: 'batch', userId: user.id });
     }
     const text = await resultsResp.text();
     const lines = text.split('\n').filter(l => l.trim());

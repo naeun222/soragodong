@@ -2,7 +2,8 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<!-- 2026-10-15: user-scalable=no / maximum-scale=1 제거 — 확대 금지는 WCAG 1.4.4 위반 (저시력 사용자). iOS 입력 포커스 자동 줌은 01-reset.css 의 16px 규칙으로 막음. -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>소라고동🐚</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -128,6 +129,12 @@
   }
   body::before { content: ''; position: fixed; top: -30%; left: -20%; width: 70%; height: 70%; background: radial-gradient(ellipse, rgba(139, 126, 196, 0.12) 0%, transparent 70%); pointer-events: none; z-index: 0; }
   body::after { content: ''; position: fixed; bottom: -20%; right: -20%; width: 60%; height: 60%; background: radial-gradient(ellipse, rgba(201, 169, 110, 0.08) 0%, transparent 70%); pointer-events: none; z-index: 0; }
+
+  /* 2026-10-15: iOS Safari 는 포커스된 입력 글자가 16px 미만이면 화면을 자동 확대한다. 옛 viewport maximum-scale=1 로 막던 걸
+     접근성 (WCAG 1.4.4) 위해 풀었으므로, iOS 한정으로 텍스트 입력만 16px 보장. Android/데스크톱은 영향 X. */
+  @supports (-webkit-touch-callout: none) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]), textarea, select { font-size: max(16px, 1em); }
+  }
 
   .app { position: relative; z-index: 1; max-width: 520px; margin: 0 auto; height: 100%; display: flex; flex-direction: column; }
   /* V3 main 그대로 복원 — 52px top (PWA standalone 상태바 보호 + Safari 브라우저 자연스러운 cushion) */
@@ -1368,7 +1375,9 @@
     letter-spacing: 0.04em;
   }
   .btn-primary.disabled {
-    opacity: 0.4;
+    opacity: 0.45;
+    filter: grayscale(0.85);
+    box-shadow: none;
     cursor: not-allowed;
     pointer-events: none;
   }
@@ -8281,12 +8290,13 @@
   /* 사용자 명시 2026-05-06 (3차): 또 20px 더 밑 — padding-top 30→50. */
   /* 사용자 명시 2026-05-06 (4차 정직 진단): padding-top 으론 button 화면 절대 좌표 안 변함 (sticky bottom:0 + padding-bottom:0 으로 박혀있어서). 진짜 내리려면 transform translateY. padding-top 50 유지 (gradient bg 미감), translateY(20px) 추가. */
   /* 사용자 명시 2026-05-06 (5차): 또 20px 더 밑 → translateY 20→40px. */
+  /* 2026-10-15: padding-top 50px + 60% 불투명 gradient 가 바로 위 입력창·칩을 덮던 문제 — 덮는 띠를 14px 로 줄이고 fade 만 남김. 버튼 위치 (translateY 40) 는 유지. */
   .sticky-action-bar {
     position: sticky;
     bottom: 0;
     margin-top: 16px;
-    padding: 50px 0 0;
-    background: linear-gradient(to top, var(--bg) 60%, rgba(20,15,30,0));
+    padding: 14px 0 0;
+    background: linear-gradient(to top, var(--bg) 45%, rgba(20,15,30,0));
     z-index: 10;
     transform: translateY(40px);
   }
@@ -15779,12 +15789,11 @@ img.pearl-load-fail {
       <div class="settings-info-card">
         <div class="settings-info-card-title">🛡️ 데이터 보호</div>
         <div id="settingsPrivacyAccessInfo">
-          🔒 본인의 데이터는 본인만 접근 가능합니다<br>
-          🔐 활성화 후 회사조차 귀하의 데이터를 열람할 수 없습니다 (E2EE)<br>
-          🚫 데이터를 광고·판매·외부 공유에 사용하지 않습니다<br>
-          🤖 <b>AI 학습·재활용 절대 X</b> — Anthropic Zero Data Retention 정책 (30일 후 자동 삭제 / 학습·재판매·연구 등 외부 사용 불가)<br>
-          ✅ Anthropic 국제 보안 인증 (SOC 2 Type II / ISO 27001)<br>
-          🔐 모든 통신은 HTTPS로 암호화됩니다
+          🔐 <b>저장 데이터 암호화</b> — 네 기록은 네 비밀번호로만 풀리는 암호화 상태로 서버에 보관돼. 서버엔 평문이 없어서 운영자도 저장된 기록을 열어볼 수 없어.<br>
+          🤖 <b>AI 호출 순간은 예외</b> — 답을 만들려면 그 문장이 소라고동 서버를 거쳐 Anthropic으로 전달돼. 서버는 이걸 저장하지 않고, Anthropic은 API 입력을 모델 학습에 쓰지 않아 (Anthropic 정책상 최대 30일 보관 후 삭제).<br>
+          🚫 데이터를 광고·판매·외부 공유에 쓰지 않아<br>
+          ✅ AI 제공사 Anthropic 보안 인증 (SOC 2 Type II / ISO 27001)<br>
+          🔒 모든 통신은 HTTPS로 암호화돼
         </div>
         <div style="margin-top:10px; font-size:10px; color:var(--text-soft);">
           개인정보 보호책임자: 김나은 · <a href="/privacy" target="_blank" style="color:var(--accent);">개인정보처리방침</a>
@@ -16146,6 +16155,10 @@ async function _authedFetch(url, init) {
       resp = await _fetchWithTimeout(url, init);
     }
   }
+  // 2026-10-15: chat-batch 도 AI outage breaker 관찰 (02a-ai-outage.js).
+  if (typeof url === 'string' && url.indexOf('/api/chat-batch') === 0 && typeof _aiOutageObserveResponse === 'function') {
+    try { _aiOutageObserveResponse(resp); } catch {}
+  }
   return resp;
 }
 
@@ -16252,6 +16265,8 @@ async function _fetchWithRetry5xx(url, init) {
         resp = await _origFetch('/api/chat', Object.assign({}, init || {}, { headers: _withTurnstile(buildHeaders()) }));
       }
     }
+    // 2026-10-15: AI outage circuit breaker — 서버 X-AI-Outage 헤더 관찰 (02a-ai-outage.js).
+    if (typeof _aiOutageObserveResponse === 'function') { try { _aiOutageObserveResponse(resp); } catch {} }
     return resp;
   };
 })();
@@ -17094,6 +17109,69 @@ function _assertStateInvariants() {
   });
 }
 
+// ═══════════════════════════════════════════════════════════════
+// AI OUTAGE CIRCUIT BREAKER (2026-10-15)
+// ═══════════════════════════════════════════════════════════════
+// 배경: 2026-10-15 Anthropic 잔액 소진으로 /api/chat 이 전부 실패하는 동안, 앱은 켤 때마다
+//   synthesis / semantic_dedup / forceAnalyze / insight discover 등 자동 LLM 작업을 전부 재시도했다.
+//   실패 시 lastXxxAt 타임스탬프가 안 찍히니 쿨다운이 영원히 due 상태 → 새로고침 1번 = 실패 호출 N번.
+//   잔액이 돌아와도 같은 구조라, 일시 장애 때마다 비용·로그 폭주.
+//
+// 해결: 서버 (functions/api/_lib/upstream-error.ts) 가 복구 불가 에러에 `X-AI-Outage: <seconds>` 헤더를 붙인다.
+//   클라이언트는 그 시간 동안 "자동" AI 작업만 멈춘다 (사용자가 직접 보내는 채팅은 계속 시도 — 복구 확인 겸).
+//   성공 응답 1번이면 즉시 해제.
+//
+// 저장: localStorage (state 와 분리 — 클라우드 sync / E2EE 와 무관한 기기 로컬 운영 플래그).
+
+const _AI_OUTAGE_LS_KEY = 'sora_ai_outage_until';
+const _AI_OUTAGE_REASON_LS_KEY = 'sora_ai_outage_reason';
+
+function _aiOutageUntil() {
+  try { return parseInt(localStorage.getItem(_AI_OUTAGE_LS_KEY) || '0', 10) || 0; } catch { return 0; }
+}
+
+function _aiOutageActive() {
+  return _aiOutageUntil() > Date.now();
+}
+
+function _aiOutageSet(seconds, reason) {
+  const sec = Math.max(60, Math.min(24 * 3600, parseInt(seconds, 10) || 0));
+  const until = Date.now() + sec * 1000;
+  try {
+    // 더 긴 기존 값은 유지 (짧은 장애가 긴 장애를 덮어쓰지 않게).
+    if (until > _aiOutageUntil()) {
+      localStorage.setItem(_AI_OUTAGE_LS_KEY, String(until));
+      localStorage.setItem(_AI_OUTAGE_REASON_LS_KEY, String(reason || '').slice(0, 80));
+    }
+  } catch {}
+  console.warn(`[ai-outage] 자동 AI 작업 ${Math.round(sec / 60)}분 중지 (${reason || 'unknown'})`);
+}
+
+function _aiOutageClear() {
+  if (!_aiOutageUntil()) return;
+  try {
+    localStorage.removeItem(_AI_OUTAGE_LS_KEY);
+    localStorage.removeItem(_AI_OUTAGE_REASON_LS_KEY);
+  } catch {}
+  console.log('[ai-outage] 해제 — AI 응답 정상');
+}
+
+// 자동 (백그라운드) AI 작업 진입 가드. 사용자가 직접 누른 동작엔 쓰지 말 것.
+function _aiAutoJobsAllowed(tag) {
+  if (!_aiOutageActive()) return true;
+  const remainMin = Math.ceil((_aiOutageUntil() - Date.now()) / 60000);
+  console.log(`[ai-outage] ${tag || 'auto job'} skip — ${remainMin}분 뒤 재개`);
+  return false;
+}
+
+// fetch Response 를 보고 breaker 갱신. /api/chat, /api/chat-batch 응답에 공통 적용.
+function _aiOutageObserveResponse(resp) {
+  if (!resp || typeof resp.status !== 'number') return;
+  if (resp.ok) { _aiOutageClear(); return; }
+  let outage = null;
+  try { outage = resp.headers && resp.headers.get('X-AI-Outage'); } catch {}
+  if (outage) _aiOutageSet(outage, 'server:' + resp.status);
+}
 // 사용자 명시 2026-05-05 ultrathink-3: 에러 자동 개발자 보고 + 1h dedupe.
 // 호출: reportError({ signature, detail, stack, ...meta })
 // signature = dedupe key. localStorage 에 시간 stamp 저장 — 같은 signature 1h 안 다시 안 보냄.
@@ -17982,8 +18060,8 @@ async function maybeShowE2EERecoveryModal() {
     <div class="input-modal" style="max-width:420px; padding:24px;">
       <div style="font-size:18px; font-weight:700; color:var(--text); margin-bottom:8px;">🔐 비밀번호 입력</div>
       <div style="font-size:12px; color:var(--text-dim); line-height:1.7; margin-bottom:14px;">
-        새 기기에서 처음 로그인하셨네요. 활성화 시 설정하신 <strong>비밀번호</strong>를 입력해주세요.<br><br>
-        <span style="color:var(--text-soft);">암호화된 데이터를 복호화해서 가져옵니다.</span>
+        이 기기에선 처음이네. 암호화 켤 때 정한 <strong>비밀번호</strong>를 넣어줘.<br><br>
+        <span style="color:var(--text-soft);">암호화된 기록을 풀어서 가져올게.</span>
       </div>
       <div style="position:relative;">
         <input type="password" id="e2eePassphraseInput" placeholder="비밀번호 (${_minLen}자 이상)" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" style="width:100%; font-size:14px; padding:10px 40px 10px 10px;">
@@ -17992,10 +18070,10 @@ async function maybeShowE2EERecoveryModal() {
       <div id="e2eeRecoveryStatus" style="font-size:11px; color:var(--text-soft); margin-top:8px; min-height:14px;"></div>
       <div style="display:flex; flex-direction:column; gap:8px; margin-top:14px;">
         <button class="btn-primary" onclick="submitE2EERecovery()" style="width:100%;">복호화하고 시작</button>
-        <button class="btn-secondary" onclick="e2eeForgotPasswordReset()" style="width:100%; font-size:12px; opacity:0.85;">🔓 비밀번호 잊음 — 자동 백업에서 복원</button>
+        <button class="btn-secondary" onclick="e2eeForgotPasswordReset()" style="width:100%; font-size:12px; opacity:0.85;" title="암호화를 켜기 전에 만들어진 평문 백업이 남아 있을 때만 복원돼">🔓 비밀번호 잊음 — 암호화 이전 백업이 있는지 확인</button>
       </div>
       <div style="font-size:10.5px; color:#e8a3a3; margin-top:14px; line-height:1.6; padding:8px 10px; background:rgba(232,163,163,0.06); border-left:3px solid rgba(232,163,163,0.4); border-radius:0 6px 6px 0;">
-        ⚠️ 비밀번호 분실 시 데이터 <b>영구 복구 불가</b> (회사도 X). 안전한 곳에 보관해줘.
+        ⚠️ 비밀번호를 잃으면 암호화된 기록은 <b>누구도 못 풀어</b> (운영자도 X). 위 버튼은 암호화 켜기 <b>전</b> 백업만 찾아줘. 비밀번호는 꼭 안전한 곳에 적어둬.
       </div>
     </div>
   `;
@@ -21723,11 +21801,11 @@ function showE2EEPasswordSetupModal(opts) {
         )}
         ${_row('setupConsentSensitive',
           '<span style="color:var(--accent); font-weight:600;">(필수)</span> 민감정보 처리',
-          '· 기분·감정·자기관찰 기록 = 법률상 민감정보 (PIPA §23)<br>· 목적: AI 자기관찰 / 패턴 정리 / 개인 모델<br>· 보유: 회원 탈퇴 시 즉시 삭제<br>· <b>E2EE 암호화</b> — 회사도 평문 접근 X'
+          '· 기분·감정·자기관찰 기록 = 법률상 민감정보 (PIPA §23)<br>· 목적: AI 자기관찰 / 패턴 정리 / 개인 모델<br>· 보유: 회원 탈퇴 시 즉시 삭제<br>· <b>저장 데이터 암호화</b> — 서버에 평문 저장 X (AI 호출 순간에만 서버를 거쳐 전달, 저장 X)'
         )}
         ${_row('setupConsentCrossBorder',
           '<span style="color:var(--accent); font-weight:600;">(필수)</span> 국외이전 (Anthropic 미국)',
-          '· 이전 항목: 사용자 입력 텍스트 (체크인·일기·대화)<br>· 이전 시기: AI 호출 시점 (실시간 처리, 저장 X)<br>· 수신자: Anthropic (미국) / Supabase (미국) / Cloudflare<br>· <b>AI 학습·재활용 X</b> — Zero Data Retention (처리 후 즉시 폐기)<br>· 30일 후 자동 삭제<br>· <a href="/cross-border" target="_blank">자세히 →</a>'
+          '· 이전 항목: 사용자 입력 텍스트 (체크인·일기·대화)<br>· 이전 시기: AI 호출 시점 (실시간 처리, 저장 X)<br>· 수신자: Anthropic (미국) / Supabase (미국) / Cloudflare<br>· <b>AI 학습·재활용 X</b> — Anthropic은 API 입력을 모델 학습에 사용하지 않음<br>· Anthropic 정책상 최대 30일 보관 후 삭제<br>· <a href="/cross-border" target="_blank">자세히 →</a>'
         )}
         ${_row('setupConsentAdult',
           '<span style="color:var(--accent); font-weight:600;">(필수)</span> <b>만 14세 이상입니다</b>',
@@ -21743,8 +21821,8 @@ function showE2EEPasswordSetupModal(opts) {
       <details style="margin-bottom:14px; padding:10px 12px; background:linear-gradient(135deg, rgba(126,200,227,0.06), rgba(143,200,143,0.04)); border:1px solid rgba(126,200,227,0.12); border-radius:10px;">
         <summary style="font-size:12px; color:var(--accent2); font-weight:600; cursor:pointer;">🛡️ 데이터 어떻게 다뤄?</summary>
         <div style="font-size:11.5px; color:var(--text-dim); line-height:1.7; margin-top:10px;">
-          <div style="margin-bottom:8px;"><b style="color:var(--text);">Q. 내 일기가 AI 학습에 들어가?</b><br>A. <b>절대 X.</b> Anthropic Zero Data Retention — 학습·재판매·연구 등 외부 사용 불가. 30일 후 자동 삭제.</div>
-          <div style="margin-bottom:8px;"><b style="color:var(--text);">Q. 개발자가 내 일기 볼 수 있어?</b><br>A. 본인 비밀번호로 잠그면 X. 단 분실 시 복구 X.</div>
+          <div style="margin-bottom:8px;"><b style="color:var(--text);">Q. 내 일기가 AI 학습에 들어가?</b><br>A. <b>X.</b> Anthropic은 API로 들어온 입력을 모델 학습에 쓰지 않아 (정책상 최대 30일 보관 후 삭제).</div>
+          <div style="margin-bottom:8px;"><b style="color:var(--text);">Q. 개발자가 내 일기 볼 수 있어?</b><br>A. 저장된 기록은 X — 비밀번호로 잠긴 암호문만 서버에 있어. AI 답을 만들 때 보내는 문장은 서버를 지나가지만 저장하진 않아. 단 비밀번호 분실 시 복구 X.</div>
           <div style="margin-bottom:8px;"><b style="color:var(--text);">Q. 광고로 팔리거나 외부에 새는 거 아냐?</b><br>A. 절대 X. 구독제로 운영.</div>
           <div style="margin-bottom:8px;"><b style="color:var(--text);">Q. 통신은 안전해?</b><br>A. HTTPS + Anthropic 보안 인증 (SOC 2 Type II / ISO 27001).</div>
           <div><b style="color:var(--text);">Q. 이거 의료·상담 앱이야?</b><br>A. 아니 — 의료·심리상담 대체 X. 위기 시 1393 / 1577-0199.</div>
@@ -21836,7 +21914,7 @@ async function submitE2EESetup() {
     refreshE2EEStatus();
     const overlay = document.getElementById('e2eeSetupOverlay');
     if (overlay) overlay.remove();
-    showToast('🔐 E2EE 활성화 완료 — 회사조차 귀하의 데이터를 열람할 수 없습니다');
+    showToast('🔐 암호화 켜짐 — 저장된 기록은 네 비밀번호로만 열려');
     // 사용자 보고 2026-04-30 + V203 (chooser 폐기): E2EE setup 닫힌 후 firstTimeIntro 재트리거 (silent 환영 보너스 + 자동 코어 튜토리얼 진입).
     // 사용자 명시 2026-05-06 ultrathink: E2EE 비밀번호 설정 직후 V8 시작 튜토 fire (카카오 신규 가입자 — 게스트 이력 X).
     // shouldRunStartTutorialV8 의 _e2eePending 가드가 init 시 V8 fire 막았으므로 여기서 직접 trigger.
@@ -42006,7 +42084,13 @@ function showScreen(name) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   const target = document.getElementById('screen-' + name);
   if (target) target.classList.add('active');
-  const nav = document.querySelector(`.nav-item[data-screen="${name}"]`);
+  // 2026-10-15: 하위 화면 (체크인·결정·숙고·리뷰 등) 에서도 소속 탭이 켜진 채로 — 옛 코드는 탭 4개 전부 꺼져 "내가 어디 있지" 상태.
+  const _NAV_PARENT = {
+    checkin: 'archive', 'archive-reviews': 'archive', review: 'archive', followup: 'archive',
+    decisions: 'chat', 'decision-detail': 'chat', 'magic-help': 'chat', reflection: 'chat'
+  };
+  const _navName = document.querySelector(`.nav-item[data-screen="${name}"]`) ? name : (_NAV_PARENT[name] || name);
+  const nav = document.querySelector(`.nav-item[data-screen="${_navName}"]`);
   if (nav) nav.classList.add('active');
   target && target.scrollTo(0, 0);
   document.getElementById('chatInputBar').style.display = name === 'chat' ? 'block' : 'none';
@@ -46880,6 +46964,11 @@ async function generateAIResponse(modelOverride, opts) {
         showToast(`🌙 오늘은 여기까지 — 내일 또 24h ✨${_graceTag}${_hTag}`);
         return;
       }
+      // 2026-10-15: 서버 (functions/api/_lib/upstream-error.ts) 가 분류한 AI 장애 코드.
+      //   벤더 원문 대신 서버가 고른 사용자 문구를 그대로 쓴다. catch 분기에서 [AI_*] 마커로 식별.
+      if (parsed && typeof parsed.code === 'string' && /^AI_[A-Z_]+$/.test(parsed.code)) {
+        throw new Error('[' + parsed.code + '] ' + (parsed.error || ''));
+      }
       // V3.13.x: 응답 본문에서 message 추출해서 사용자에게 보여주기
       // V4 (사용자 보고 2026-05-05 ultrathink-3): err 가 HTML (Cloudflare 자체 5xx 페이지) 면 <title> 추출.
       // backend Worker 가 응답 못 했을 때 Cloudflare 가 자체 페이지 반환 — 진짜 error code (520/522/524 등) 가 title 안에 있음.
@@ -47136,7 +47225,24 @@ async function generateAIResponse(modelOverride, opts) {
     // 사용자 보고 2026-04-30 ultrathink: Phase C 마이그 후 키 모델 폐기 — 401은 session 만료. 메시지 분기.
     const m = (err && err.message) || '';
     let userMsg;
-    if (/401/.test(m) || /authentication/i.test(m) || /invalid.*api.*key/i.test(m) || /api[_ ]?key/i.test(m)) {
+    // 2026-10-15: 서버 분류 코드 우선 — 사용자 문구는 서버가 결정, 여기선 톤만 맞춤.
+    const _aiCodeMatch = m.match(/^\[(AI_[A-Z_]+)\]\s*([\s\S]*)$/);
+    if (_aiCodeMatch) {
+      const _code = _aiCodeMatch[1];
+      const _serverMsg = (_aiCodeMatch[2] || '').trim();
+      if (_code === 'AI_SERVICE_UNAVAILABLE') {
+        userMsg = '😶 ' + (_serverMsg || 'AI 쪽에 문제가 생겨서 지금은 답을 못 해. 운영자한테 자동으로 알렸어.') + '\n\n네 메시지는 남아 있으니까, 조금 있다가 "다시 보내기" 눌러줘.';
+      } else if (_code === 'AI_RATE_LIMITED') {
+        userMsg = '⏳ ' + (_serverMsg || 'AI 서버가 지금 바빠. 1분쯤 뒤에 다시 보내봐.');
+      } else if (_code === 'AI_OVERLOADED') {
+        userMsg = '⚠️ ' + (_serverMsg || 'AI 서버가 일시적으로 과부하야. 잠깐 뒤에 다시 보내줘.');
+      } else {
+        userMsg = '😅 ' + (_serverMsg || '요청을 처리하다 문제가 생겼어. 다시 보내도 같으면 설정 → 피드백으로 알려줘.');
+      }
+      if (typeof reportError === 'function' && (_code === 'AI_SERVICE_UNAVAILABLE' || _code === 'AI_BAD_REQUEST')) {
+        reportError({ signature: 'chat-' + _code.toLowerCase(), detail: m, stack: err.stack });
+      }
+    } else if (/401/.test(m) || /authentication/i.test(m) || /invalid.*api.*key/i.test(m) || /api[_ ]?key/i.test(m)) {
       // 사용자 명시 2026-05-01 (agent audit): state.apiKey 영구 wipe (마이그레이션) 후 Phase C 백엔드 프록시 — 본인 키 분기 dead. session 만료 분기만 보존.
       if (typeof session !== 'undefined' && session && session.access_token) {
         userMsg = '⏰ 로그인 세션이 만료된 것 같아.\n\n페이지 새로고침 또는 로그아웃 → 다시 로그인 해줘.';
@@ -47164,7 +47270,12 @@ async function generateAIResponse(modelOverride, opts) {
         reportError({ signature: _sig, detail: m, stack: err.stack });
       }
     } else {
-      userMsg = '연결이 안 됐어 😅\n(' + (m || '알 수 없는 오류') + ')\n\n다시 보내기 버튼을 눌러봐.';
+      // 2026-10-15: raw 에러 문자열 (status / 벤더 본문) 은 사용자에게 안 보여줌 — 어드민만 괄호 안에 detail.
+      const _adminDetail = (typeof _isAdmin === 'function' && _isAdmin() && m) ? '\n(' + m.slice(0, 200) + ')' : '';
+      userMsg = '연결이 잠깐 안 됐어 😅' + _adminDetail + '\n\n"다시 보내기" 눌러봐. 계속 그러면 설정 → 피드백으로 알려줘.';
+      if (typeof reportError === 'function' && m) {
+        reportError({ signature: 'chat-unknown|' + m.replace(/^API\s+\d+\s*(—\s*)?/, '').slice(0, 80), detail: m, stack: err.stack });
+      }
     }
     // V4 (사용자 보고 2026-05-04 VB024): 스트리밍 도중 끊겨도 부분 응답 유지 — 옛 코드는 lastMsg 통째 교체 → 80% 받은 답변도 사라짐.
     // partial content 가 있으면 보존 + 끊김 안내만 suffix 로 붙임. 없으면 옛 동작 (full error 메시지).
@@ -68335,7 +68446,8 @@ async function _processForceAnalyzeResult(text, isAuto) {
     if (typeof showToast === 'function') {
       showToast(isAuto ? '🔍 일주일 모델 분석 자동 완료 ✦' : '🔍 분석 완료 ✦ (나 탭 확인)');
     }
-    if (isAuto && typeof runSemanticDedup === 'function') {
+    if (isAuto && typeof runSemanticDedup === 'function'
+        && (typeof _aiAutoJobsAllowed !== 'function' || _aiAutoJobsAllowed('semantic_dedup auto'))) {
       try {
         const _sd = await runSemanticDedup({ auto: true });
         if (_sd && _sd.ok) {
@@ -69954,6 +70066,11 @@ async function maybeRunChapterCleanup() {
     saveState();
     if (typeof renderChatArchiveModal === 'function') { try { renderChatArchiveModal(); } catch {} }
   }
+
+  // 2026-10-15: AI outage circuit breaker — 서버가 복구 불가 에러 (잔액/키) 를 돌려준 동안은
+  //   step B~F 자동 LLM 작업 전부 skip. 실패해도 lastXxxAt 이 안 찍혀 매 로드마다 재시도하던 폭주 차단.
+  const _aiPaused = (typeof _aiAutoJobsAllowed === 'function') && !_aiAutoJobsAllowed('maybeRunChapterCleanup B-F');
+  if (_aiPaused) return;
 
   // ─── step B: cleanup batch (어제 큐 처리, daily cooldown) ────────────
   if (!isGuest && _shouldRunSchedule(state.lastChapterCleanupAt, _lastDaily4amCutoff())) {
@@ -75514,7 +75631,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.396-biz-phone';
+const APP_VERSION = 'v4.0.397-ai-outage';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 

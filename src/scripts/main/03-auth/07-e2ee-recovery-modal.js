@@ -87,8 +87,8 @@ async function maybeShowE2EERecoveryModal() {
     <div class="input-modal" style="max-width:420px; padding:24px;">
       <div style="font-size:18px; font-weight:700; color:var(--text); margin-bottom:8px;">🔐 비밀번호 입력</div>
       <div style="font-size:12px; color:var(--text-dim); line-height:1.7; margin-bottom:14px;">
-        새 기기에서 처음 로그인하셨네요. 활성화 시 설정하신 <strong>비밀번호</strong>를 입력해주세요.<br><br>
-        <span style="color:var(--text-soft);">암호화된 데이터를 복호화해서 가져옵니다.</span>
+        이 기기에선 처음이네. 암호화 켤 때 정한 <strong>비밀번호</strong>를 넣어줘.<br><br>
+        <span style="color:var(--text-soft);">암호화된 기록을 풀어서 가져올게.</span>
       </div>
       <div style="position:relative;">
         <input type="password" id="e2eePassphraseInput" placeholder="비밀번호 (${_minLen}자 이상)" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" style="width:100%; font-size:14px; padding:10px 40px 10px 10px;">
@@ -97,10 +97,10 @@ async function maybeShowE2EERecoveryModal() {
       <div id="e2eeRecoveryStatus" style="font-size:11px; color:var(--text-soft); margin-top:8px; min-height:14px;"></div>
       <div style="display:flex; flex-direction:column; gap:8px; margin-top:14px;">
         <button class="btn-primary" onclick="submitE2EERecovery()" style="width:100%;">복호화하고 시작</button>
-        <button class="btn-secondary" onclick="e2eeForgotPasswordReset()" style="width:100%; font-size:12px; opacity:0.85;">🔓 비밀번호 잊음 — 자동 백업에서 복원</button>
+        <button class="btn-secondary" onclick="e2eeForgotPasswordReset()" style="width:100%; font-size:12px; opacity:0.85;" title="암호화를 켜기 전에 만들어진 평문 백업이 남아 있을 때만 복원돼">🔓 비밀번호 잊음 — 암호화 이전 백업이 있는지 확인</button>
       </div>
       <div style="font-size:10.5px; color:#e8a3a3; margin-top:14px; line-height:1.6; padding:8px 10px; background:rgba(232,163,163,0.06); border-left:3px solid rgba(232,163,163,0.4); border-radius:0 6px 6px 0;">
-        ⚠️ 비밀번호 분실 시 데이터 <b>영구 복구 불가</b> (회사도 X). 안전한 곳에 보관해줘.
+        ⚠️ 비밀번호를 잃으면 암호화된 기록은 <b>누구도 못 풀어</b> (운영자도 X). 위 버튼은 암호화 켜기 <b>전</b> 백업만 찾아줘. 비밀번호는 꼭 안전한 곳에 적어둬.
       </div>
     </div>
   `;

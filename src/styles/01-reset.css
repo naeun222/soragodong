@@ -11,3 +11,9 @@
   }
   body::before { content: ''; position: fixed; top: -30%; left: -20%; width: 70%; height: 70%; background: radial-gradient(ellipse, rgba(139, 126, 196, 0.12) 0%, transparent 70%); pointer-events: none; z-index: 0; }
   body::after { content: ''; position: fixed; bottom: -20%; right: -20%; width: 60%; height: 60%; background: radial-gradient(ellipse, rgba(201, 169, 110, 0.08) 0%, transparent 70%); pointer-events: none; z-index: 0; }
+
+  /* 2026-10-15: iOS Safari 는 포커스된 입력 글자가 16px 미만이면 화면을 자동 확대한다. 옛 viewport maximum-scale=1 로 막던 걸
+     접근성 (WCAG 1.4.4) 위해 풀었으므로, iOS 한정으로 텍스트 입력만 16px 보장. Android/데스크톱은 영향 X. */
+  @supports (-webkit-touch-callout: none) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]), textarea, select { font-size: max(16px, 1em); }
+  }

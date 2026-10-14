@@ -359,7 +359,9 @@
     letter-spacing: 0.04em;
   }
   .btn-primary.disabled {
-    opacity: 0.4;
+    opacity: 0.45;
+    filter: grayscale(0.85);
+    box-shadow: none;
     cursor: not-allowed;
     pointer-events: none;
   }
@@ -7272,12 +7274,13 @@
   /* 사용자 명시 2026-05-06 (3차): 또 20px 더 밑 — padding-top 30→50. */
   /* 사용자 명시 2026-05-06 (4차 정직 진단): padding-top 으론 button 화면 절대 좌표 안 변함 (sticky bottom:0 + padding-bottom:0 으로 박혀있어서). 진짜 내리려면 transform translateY. padding-top 50 유지 (gradient bg 미감), translateY(20px) 추가. */
   /* 사용자 명시 2026-05-06 (5차): 또 20px 더 밑 → translateY 20→40px. */
+  /* 2026-10-15: padding-top 50px + 60% 불투명 gradient 가 바로 위 입력창·칩을 덮던 문제 — 덮는 띠를 14px 로 줄이고 fade 만 남김. 버튼 위치 (translateY 40) 는 유지. */
   .sticky-action-bar {
     position: sticky;
     bottom: 0;
     margin-top: 16px;
-    padding: 50px 0 0;
-    background: linear-gradient(to top, var(--bg) 60%, rgba(20,15,30,0));
+    padding: 14px 0 0;
+    background: linear-gradient(to top, var(--bg) 45%, rgba(20,15,30,0));
     z-index: 10;
     transform: translateY(40px);
   }

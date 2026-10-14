@@ -80,7 +80,7 @@
 // v60 (2026-05-27 사용자 명시 ultrathink): 전체화면 트리거 빡빡하게 — 바닥 도달만으론 X, 바닥에서 추가로 당기는 오버스크롤(touch 70px / wheel 180) 필요. index.html 갱신.
 // v61 (2026-05-27 사용자 명시 ultrathink): 인라인 캘린더 sticky 상단 바 헤더와 틈(.screen padding-top 4px) → top -4px 로 딱 붙임. index.html 갱신.
 // v62 (2026-05-27 사용자 보고 ultrathink): 일정/할 일 알림 클릭 → 해당 day view 이동 안 됨 fix. 로컬 알림 data id→item_id 통일 + SW notificationclick item_id||id + Capacitor extra/탭 리스너.
-const CACHE_NAME = 'soragodong-v4-cache-v62';
+const CACHE_NAME = 'soragodong-v4-cache-v63';
 const PHOTO_CACHE_NAME = 'sora-photo-v1';
 const PHOTO_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
 const PHOTO_MAX_ENTRIES = 200;

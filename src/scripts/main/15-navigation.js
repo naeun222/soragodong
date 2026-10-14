@@ -41,7 +41,13 @@ function showScreen(name) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   const target = document.getElementById('screen-' + name);
   if (target) target.classList.add('active');
-  const nav = document.querySelector(`.nav-item[data-screen="${name}"]`);
+  // 2026-10-15: 하위 화면 (체크인·결정·숙고·리뷰 등) 에서도 소속 탭이 켜진 채로 — 옛 코드는 탭 4개 전부 꺼져 "내가 어디 있지" 상태.
+  const _NAV_PARENT = {
+    checkin: 'archive', 'archive-reviews': 'archive', review: 'archive', followup: 'archive',
+    decisions: 'chat', 'decision-detail': 'chat', 'magic-help': 'chat', reflection: 'chat'
+  };
+  const _navName = document.querySelector(`.nav-item[data-screen="${name}"]`) ? name : (_NAV_PARENT[name] || name);
+  const nav = document.querySelector(`.nav-item[data-screen="${_navName}"]`);
   if (nav) nav.classList.add('active');
   target && target.scrollTo(0, 0);
   document.getElementById('chatInputBar').style.display = name === 'chat' ? 'block' : 'none';

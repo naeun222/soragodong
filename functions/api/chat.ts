@@ -21,6 +21,8 @@ import { applyEndpointSystem, shouldSkipPersona } from './_lib/prompts/endpoint-
 // 사용자 명시 2026-05-11 ultrathink: user message instruction (mutation / extract_chapter / decision_step / archive_summary / force_analyze / magic_summary / review_insight / chat_rolling_summary / shell_story / brain_dump / mission_verify / reflection card_summary / first_touch / intake) backend 이전.
 // _userContentType 매칭 시 마지막 user message content 강제 합성.
 import { applyUserContentTemplate } from './_lib/prompts/user-content-templates';
+// 2026-10-15: Anthropic 에러 본문 pass-through 금지 — 사용자 안전 문구 + 운영자 알림 + X-AI-Outage.
+import { upstreamErrorResponse } from './_lib/upstream-error';
 
 // 사용자 명시 2026-05-05: 게스트 (anonymous) 사용자 max_tokens 강제 cap — 비용 폭주 방어.
 // chat = 800 (대화 응답). 분석 endpoint (extract_chapter / extract_topic / intake / first_touch) = 2000 (JSON 출력 길이 보장).
@@ -524,8 +526,8 @@ async function _handleChatRequest(context: {
     const upstream = await _fetchAnthropicWithRetry(upstreamHeaders, JSON.stringify(body));
     if (!upstream.ok) {
       const errText = await upstream.text();
-      console.error(`[chat.ts] stream Anthropic upstream ${upstream.status}:`, errText.slice(0, 500));
-      return new Response(errText, { status: upstream.status });
+      return upstreamErrorResponse(env as any, waitUntil, upstream.status, errText,
+        { where: 'chat.ts stream', endpoint, model: body.model, userId: user.id });
     }
     if (!upstream.body) {
       return jsonResponse({ error: 'upstream body 없음' }, 502);
@@ -545,10 +547,9 @@ async function _handleChatRequest(context: {
         const _titleMatch = _raw.match(/<title>([^<]+)<\/title>/i);
         _detail = _titleMatch ? _titleMatch[1].trim().slice(0, 200) : 'upstream HTML';
       } else if (_trimmed.startsWith('{')) {
-        try {
-          const _j = JSON.parse(_raw);
-          _detail = _j?.error?.message || _j?.error || JSON.stringify(_j).slice(0, 200);
-        } catch { _detail = _raw.slice(0, 200); }
+        // 2026-10-15: JSON 에러면 벤더 문구 노출 없이 분류된 응답으로.
+        return upstreamErrorResponse(env as any, waitUntil, upstream.status, _raw,
+          { where: 'chat.ts stream non-SSE', endpoint, model: body.model, userId: user.id });
       } else {
         _detail = _raw.slice(0, 200) || `Content-Type=${_upstreamCT}`;
       }
@@ -659,8 +660,8 @@ async function _handleChatRequest(context: {
 
   if (!upstream.ok) {
     const errText = await upstream.text();
-    console.error(`[chat.ts] non-stream Anthropic upstream ${upstream.status}:`, errText.slice(0, 500));
-    return new Response(errText, { status: upstream.status, headers: { 'Content-Type': 'application/json' } });
+    return upstreamErrorResponse(env as any, waitUntil, upstream.status, errText,
+      { where: 'chat.ts non-stream', endpoint, model: body.model, userId: user.id });
   }
 
   const data: any = await upstream.json();

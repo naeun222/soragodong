@@ -60,11 +60,11 @@ function showE2EEPasswordSetupModal(opts) {
         )}
         ${_row('setupConsentSensitive',
           '<span style="color:var(--accent); font-weight:600;">(필수)</span> 민감정보 처리',
-          '· 기분·감정·자기관찰 기록 = 법률상 민감정보 (PIPA §23)<br>· 목적: AI 자기관찰 / 패턴 정리 / 개인 모델<br>· 보유: 회원 탈퇴 시 즉시 삭제<br>· <b>E2EE 암호화</b> — 회사도 평문 접근 X'
+          '· 기분·감정·자기관찰 기록 = 법률상 민감정보 (PIPA §23)<br>· 목적: AI 자기관찰 / 패턴 정리 / 개인 모델<br>· 보유: 회원 탈퇴 시 즉시 삭제<br>· <b>저장 데이터 암호화</b> — 서버에 평문 저장 X (AI 호출 순간에만 서버를 거쳐 전달, 저장 X)'
         )}
         ${_row('setupConsentCrossBorder',
           '<span style="color:var(--accent); font-weight:600;">(필수)</span> 국외이전 (Anthropic 미국)',
-          '· 이전 항목: 사용자 입력 텍스트 (체크인·일기·대화)<br>· 이전 시기: AI 호출 시점 (실시간 처리, 저장 X)<br>· 수신자: Anthropic (미국) / Supabase (미국) / Cloudflare<br>· <b>AI 학습·재활용 X</b> — Zero Data Retention (처리 후 즉시 폐기)<br>· 30일 후 자동 삭제<br>· <a href="/cross-border" target="_blank">자세히 →</a>'
+          '· 이전 항목: 사용자 입력 텍스트 (체크인·일기·대화)<br>· 이전 시기: AI 호출 시점 (실시간 처리, 저장 X)<br>· 수신자: Anthropic (미국) / Supabase (미국) / Cloudflare<br>· <b>AI 학습·재활용 X</b> — Anthropic은 API 입력을 모델 학습에 사용하지 않음<br>· Anthropic 정책상 최대 30일 보관 후 삭제<br>· <a href="/cross-border" target="_blank">자세히 →</a>'
         )}
         ${_row('setupConsentAdult',
           '<span style="color:var(--accent); font-weight:600;">(필수)</span> <b>만 14세 이상입니다</b>',
@@ -80,8 +80,8 @@ function showE2EEPasswordSetupModal(opts) {
       <details style="margin-bottom:14px; padding:10px 12px; background:linear-gradient(135deg, rgba(126,200,227,0.06), rgba(143,200,143,0.04)); border:1px solid rgba(126,200,227,0.12); border-radius:10px;">
         <summary style="font-size:12px; color:var(--accent2); font-weight:600; cursor:pointer;">🛡️ 데이터 어떻게 다뤄?</summary>
         <div style="font-size:11.5px; color:var(--text-dim); line-height:1.7; margin-top:10px;">
-          <div style="margin-bottom:8px;"><b style="color:var(--text);">Q. 내 일기가 AI 학습에 들어가?</b><br>A. <b>절대 X.</b> Anthropic Zero Data Retention — 학습·재판매·연구 등 외부 사용 불가. 30일 후 자동 삭제.</div>
-          <div style="margin-bottom:8px;"><b style="color:var(--text);">Q. 개발자가 내 일기 볼 수 있어?</b><br>A. 본인 비밀번호로 잠그면 X. 단 분실 시 복구 X.</div>
+          <div style="margin-bottom:8px;"><b style="color:var(--text);">Q. 내 일기가 AI 학습에 들어가?</b><br>A. <b>X.</b> Anthropic은 API로 들어온 입력을 모델 학습에 쓰지 않아 (정책상 최대 30일 보관 후 삭제).</div>
+          <div style="margin-bottom:8px;"><b style="color:var(--text);">Q. 개발자가 내 일기 볼 수 있어?</b><br>A. 저장된 기록은 X — 비밀번호로 잠긴 암호문만 서버에 있어. AI 답을 만들 때 보내는 문장은 서버를 지나가지만 저장하진 않아. 단 비밀번호 분실 시 복구 X.</div>
           <div style="margin-bottom:8px;"><b style="color:var(--text);">Q. 광고로 팔리거나 외부에 새는 거 아냐?</b><br>A. 절대 X. 구독제로 운영.</div>
           <div style="margin-bottom:8px;"><b style="color:var(--text);">Q. 통신은 안전해?</b><br>A. HTTPS + Anthropic 보안 인증 (SOC 2 Type II / ISO 27001).</div>
           <div><b style="color:var(--text);">Q. 이거 의료·상담 앱이야?</b><br>A. 아니 — 의료·심리상담 대체 X. 위기 시 1393 / 1577-0199.</div>
@@ -173,7 +173,7 @@ async function submitE2EESetup() {
     refreshE2EEStatus();
     const overlay = document.getElementById('e2eeSetupOverlay');
     if (overlay) overlay.remove();
-    showToast('🔐 E2EE 활성화 완료 — 회사조차 귀하의 데이터를 열람할 수 없습니다');
+    showToast('🔐 암호화 켜짐 — 저장된 기록은 네 비밀번호로만 열려');
     // 사용자 보고 2026-04-30 + V203 (chooser 폐기): E2EE setup 닫힌 후 firstTimeIntro 재트리거 (silent 환영 보너스 + 자동 코어 튜토리얼 진입).
     // 사용자 명시 2026-05-06 ultrathink: E2EE 비밀번호 설정 직후 V8 시작 튜토 fire (카카오 신규 가입자 — 게스트 이력 X).
     // shouldRunStartTutorialV8 의 _e2eePending 가드가 init 시 V8 fire 막았으므로 여기서 직접 trigger.
