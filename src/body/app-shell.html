@@ -232,14 +232,19 @@
       <!-- 사용자 명시 2026-05-18 ultrathink: 설정 진입 헤더 통일 — '나' 탭 ⚙ 2개 (top-right + bottom) 제거. 메인 헤더 cog 가 canonical. -->
       <div class="screen-header-row">
         <div>
-          <div class="screen-title">너에 대해 ✦</div>
+          <div class="screen-title">나</div>
         </div>
         <div style="display:flex; gap:6px; align-items:center;">
           <!-- 사용자 명시 2026-05-10 (옵션 A): 정리 버튼 — 설정 왼쪽, 작게. 사용자 컨펌 dedup. -->
           <button class="screen-dedup-btn" onclick="openModelDedupModal()" aria-label="중복 정리" title="중복 정리">🧹</button>
         </div>
       </div>
-      <div id="modelContent"></div>
+      <!-- 2026-10-15: 규칙이 먼저. 특성·가치·패턴 카드와 통합 분석은 '더 보기' 밑으로 (삭제 아님). -->
+      <div id="modelRulesTop"></div>
+      <details class="model-more" id="modelMore">
+        <summary>더 보기 — 특성·가치·패턴 카드, 통합 분석</summary>
+        <div id="modelContent"></div>
+      </details>
     </div>
 
     <!-- LIBRARY (안 C: 도서관 = 새 홈. 홈 탭 흡수. 사용자 명시 2026-05-17) -->
@@ -257,11 +262,17 @@
       <!-- 사용자 명시 2026-05-17: 회전카드 4-source — Hook / 체크인 / 오늘의 너 / 리뷰 링크. -->
       <div id="rotatingCardContainer"></div>
 
+      <!-- 2026-10-15: 이번 달 규칙 — 홈에서 체크인 카드 다음으로 보이는 것. -->
+      <div id="homeRulesContainer"></div>
+
+      <!-- 2026-10-15: 아래 모듈은 '더 보기' 를 눌러야 보인다 (18e-rules-panel.js applyHomeMoreState). 삭제 아님. -->
+      <div id="homeExtras" style="display:none;">
       <!-- 활성 미션 (소라의 부름) -->
       <div id="missionContainer"></div>
 
       <!-- 활성 숙고 (homeSmallCards / 리뷰 preview / change hint 카드 다 폐기 — 회전카드로 흡수). -->
       <div id="reflectionContainer"></div>
+      </div>
 
       <!-- noop containers (compat) -->
       <div id="mainActionContainer" style="display:none"></div>
@@ -275,11 +286,15 @@
       <div class="library-top-row">
         <div class="library-cats">
           <button class="lib-cat-chip active" data-cat="diary"     onclick="switchLibraryCat('diary')"><span class="cat-icon">📔</span><span class="cat-label">일기·대화</span></button>
-          <!-- 사용자 요청 2026-05-27: 일정 chip — 일기·대화 오른쪽 + 양생방 왼쪽 (재배치). -->
+          <!-- 2026-10-15: 나머지 칩은 '더 보기' 뒤로. 기능은 그대로 (18e-rules-panel.js toggleHomeMore). -->
+          <span id="libMoreChips" style="display:none;">
           <button class="lib-cat-chip"        data-cat="execute"   onclick="switchLibraryCat('execute')"><span class="cat-icon">🗓️</span><span class="cat-label">일정</span></button>
           <button class="lib-cat-chip"        data-cat="yangsaeng" onclick="switchLibraryCat('yangsaeng')"><span class="cat-icon">🌱</span><span class="cat-label">키움</span></button>
           <button class="lib-cat-chip"        data-cat="insights"  onclick="switchLibraryCat('insights')"><span class="cat-icon">✨</span><span class="cat-label">깨달음</span></button>
           <button class="lib-cat-chip"        data-cat="galpi"     onclick="switchLibraryCat('galpi')"><span class="cat-icon">🌀</span><span class="cat-label">마법·리뷰</span></button>
+          <button class="lib-cat-chip"        data-cat="pearls"    onclick="showScreen('pearls')"><span class="cat-icon">💎</span><span class="cat-label">진주</span></button>
+          </span>
+          <button class="lib-cat-chip lib-more-chip" id="libMoreChip" onclick="toggleHomeMore()"><span class="cat-label">더 보기</span></button>
         </div>
       </div>
 
@@ -1071,6 +1086,7 @@
     <div class="nav-item active" data-screen="archive" onclick="showScreen('archive')"><div class="nav-icon">🏠</div><div class="nav-label">홈</div></div>
     <div class="nav-item" data-screen="chat" onclick="showScreen('chat')"><div class="nav-icon">🐚</div><div class="nav-label">대화</div></div>
     <div class="nav-item" data-screen="model" onclick="showScreen('model')"><div class="nav-icon">🔮</div><div class="nav-label">나</div></div>
-    <div class="nav-item" data-screen="pearls" onclick="showScreen('pearls')"><div class="nav-icon">💎</div><div class="nav-label">진주</div></div>
+    <!-- 2026-10-15: 진주 탭은 홈 '더 보기' 칩으로 이동. 화면 자체는 유지. -->
+    <div class="nav-item" data-screen="pearls" onclick="showScreen('pearls')" style="display:none;"><div class="nav-icon">💎</div><div class="nav-label">진주</div></div>
   </div>
 </div>

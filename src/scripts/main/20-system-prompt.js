@@ -28,15 +28,15 @@ function buildSystemPromptParts() {
   // V4 사용자 명시 2026-05-26 ultrathink — 대화탭 표정 출력 규칙.
   //   응답 첫 줄에 [expr: XXX] prefix → 클라가 strip + 아바타 표정 갱신. 12 표정 풀 = CHAT_MODE_EXPRESSIONS (19-chat/15-chat-mode.js).
   //   stable 영역에 넣어 cache hit (변동 X). 모델 vent + laugh 무시 가드는 클라 sanitize 도 추가 (15-chat-mode.js _sanitizeChatExpression).
-  stable.push('[대화탭 표정 출력 규칙 — 매 응답 첫 줄 의무]');
-  stable.push('  · 응답 *맨 첫 줄* 에 [expr: XXX] 형식으로 표정 ID 1개 + 줄바꿈. 본문은 그 다음 줄부터.');
-  stable.push('  · XXX 풀 (정확히 12 개 중 하나):');
+  stable.push('[대화탭 표정 출력 규칙 — 매 응답 첫 줄]');
+  stable.push('  · 응답 맨 첫 줄에 [expr: XXX] 형식으로 표정 ID 하나를 쓰고 줄을 바꾼다. 본문은 그 다음 줄부터 쓴다.');
+  stable.push('  · XXX 는 아래 열두 개 중 하나다:');
   stable.push('    serious, soft-smile, bright-smile, laugh, surprised, curious, thinking, tilt, empathic, warm, nod, focused');
-  stable.push('  · 대화 흐름·사용자 감정에 맞춰 매번 자연스럽게 선택. 같은 표정 연속 반복 X.');
-  stable.push('  · 모드 제약: chatMode=vent (마음 털어놓기) 일 때 laugh 금지 → warm / empathic / soft-smile 권장.');
-  stable.push('  · 본문 안에는 [expr:...] 안 박음. prefix 한 번, 첫 줄만.');
+  stable.push('  · 대화 내용과 사용자 감정에 맞춰 고른다. 같은 표정을 연달아 반복하지 않는다.');
+  stable.push('  · chatMode 가 vent (마음 털어놓기) 일 때는 laugh 를 쓰지 않는다. warm, empathic, soft-smile 중에서 고른다.');
+  stable.push('  · 본문 안에는 [expr:...] 를 넣지 않는다. 첫 줄에 한 번만 쓴다.');
   stable.push('');
-  stable.push('\n━━━━━━━━━━━━━━━━━━━━━\n📂 사용자에 대한 현재 모델\n━━━━━━━━━━━━━━━━━━━━━\n');
+  stable.push('\n━━━━━━━━━━━━━━━━━━━━━\n사용자에 대한 현재 모델\n━━━━━━━━━━━━━━━━━━━━━\n');
   if (state.profile) stable.push(`[사용자 프로필]\n${state.profile}\n`);
 
   // 사용자 요청 2026-04-29 (perf #5): 시스템 프롬프트 cap — 매우 많을 때 verified 우선 + 최대 30개 (확신도 높은 순)
@@ -134,10 +134,10 @@ function buildSystemPromptParts() {
       snLines.push('정체성: ' + sn.identityKeywords.slice(0, 12).join(', '));
     }
     if (snLines.length) {
-      stable.push('— 자기서사·핵심 신념 —');
+      stable.push('— 자기 이야기·핵심 신념 —');
       snLines.forEach(l => stable.push(l));
     }
-    stable.push('  · 위 정보는 사용자가 직접 입력한 깊은 자기 정보. 자연스럽게 짚어 인용 가능 (단정 X, 외재화 톤).');
+    stable.push('  · 위 정보는 사용자가 직접 입력한 자기 정보다. 관련이 있을 때 자연스럽게 인용할 수 있다. 단정하지 않는다.');
     stable.push('');
   }
 
@@ -163,13 +163,13 @@ function buildSystemPromptParts() {
   if (_dayKeyVal !== _realDate) {
     const _dayDate = new Date(_dayKeyVal);
     const _dowEntry = ['일', '월', '화', '수', '목', '금', '토'][_dayDate.getDay()];
-    perCall.push(`[entry 기준 날짜] ${_dayKeyVal} (${_dowEntry}요일) — 새벽 4시까지는 전날 entry로 묶임`);
+    perCall.push(`[entry 기준 날짜] ${_dayKeyVal} (${_dowEntry}요일) — 새벽 4시까지는 전날 entry 로 묶인다`);
   }
   perCall.push('');
 
   const activeModes = Object.keys(state.modes || {}).filter(k => state.modes[k]);
   if (activeModes.length > 0) {
-    const modeMap = { exam: '📚 마감/시험', travel: '✈️ 여행 중', sick: '🤒 아픔', rest: '🏖 휴식', period: '🩸 월경' };
+    const modeMap = { exam: '마감/시험', travel: '여행 중', sick: '아픔', rest: '휴식', period: '월경' };
     sessionStable.push('[현재 활성 모드]');
     activeModes.forEach(m => sessionStable.push('- ' + (modeMap[m] || m)));
     const phase = getCyclePhase();
@@ -193,20 +193,20 @@ function buildSystemPromptParts() {
   // 사용자 보고 2026-05-10 (검증 결과 fix): 옛 가드 모호 → 8턴쯤 AI 시뮬 망각. 구체 X-list + ✓-list 강화 + N턴 후 동일.
   const _simContextMsg = (state.chatMessages || []).find(m => m && m.isSimulationContext === true);
   if (_simContextMsg) {
-    sessionStable.push('[시나리오 토론 컨텍스트 — 매 응답 유지, 매우 중요]');
-    sessionStable.push('- 사용자가 가상 시나리오 제안 — 답도 그 시뮬 안 가정. 실제 일 X.');
-    sessionStable.push('- 시뮬 시작 후 5턴, 10턴 지나도 동일. 사용자가 짧게 "응" / "맞네" 답해도 시뮬 안 답으로 인식.');
-    sessionStable.push('- 절대 X (실제 일 인 양 묻기 금지) — 시뮬 컨텍스트 망각 방지:');
-    sessionStable.push('  · "그 다큐 뭐였어?" / "어떤 장르?" / "어떤 영상?"');
-    sessionStable.push('  · "실제로 본 거였어?" / "정말 그랬어?"');
-    sessionStable.push('  · "그날 어땠어?" / "결국 어떻게 됐어?"');
-    sessionStable.push('  · "더 자세히 알려줘" 식 실제 사실 캐묻기');
-    sessionStable.push('- ✓ OK (토론 톤만):');
-    sessionStable.push('  · "그 답을 보면 X 성향이 보여"');
+    sessionStable.push('[시나리오 토론 컨텍스트 — 매 응답에서 유지한다]');
+    sessionStable.push('- 사용자가 가상 시나리오를 제안했다. 답도 그 시나리오 안에서 한다. 실제로 있었던 일이 아니다.');
+    sessionStable.push('- 시나리오가 시작된 뒤 다섯 턴, 열 턴이 지나도 같다. 사용자가 짧게 "응", "맞네"라고만 답해도 시나리오 안의 답으로 받아들인다.');
+    sessionStable.push('- 실제 일인 것처럼 묻지 않는다. 다음과 같은 질문은 하지 않는다:');
+    sessionStable.push('  · "그 다큐 뭐였어?", "어떤 장르?", "어떤 영상?"');
+    sessionStable.push('  · "실제로 본 거였어?", "정말 그랬어?"');
+    sessionStable.push('  · "그날 어땠어?", "결국 어떻게 됐어?"');
+    sessionStable.push('  · "더 자세히 알려줘" 같이 실제 사실을 캐묻는 말');
+    sessionStable.push('- 되는 것은 시나리오 안에서 이어가는 말이다:');
+    sessionStable.push('  · "그 답을 보면 이런 쪽으로 가는 것 같아"');
     sessionStable.push('  · "다른 식으로 가면 어떨까"');
-    sessionStable.push('  · "그 상황에선 어떻게 반응할 거 같아?"');
-    sessionStable.push('  · "시뮬 안에서 X 라면?" 가정 분기');
-    sessionStable.push('- 추출은 자동 격리 (extractedFrom=simulation, 약한 신호) — 모델은 토론 자연스럽게 이어가면 됨.');
+    sessionStable.push('  · "그 상황에선 어떻게 반응할 것 같아?"');
+    sessionStable.push('  · "시나리오 안에서 이랬다면?" 같은 가정');
+    sessionStable.push('- 여기서 나온 내용은 따로 격리되어 자기 모델에 약하게만 반영된다. 모델은 토론을 자연스럽게 이어가면 된다.');
     const _scenarioLine = (_simContextMsg.content || '').split('\n').find(l => l.startsWith('[시뮬레이션]')) || '';
     if (_scenarioLine) sessionStable.push(`- 시뮬 시나리오: ${_scenarioLine.replace(/^\[시뮬레이션\]\s*/, '')}`);
     sessionStable.push('');
@@ -233,17 +233,17 @@ function buildSystemPromptParts() {
   if (activeDiag && _DIAG_LABELS && _DIAG_LABELS[activeDiag.type]) {
     const lbl = _DIAG_LABELS[activeDiag.type];
     if (_isTesterMode) {
-      perCall.push(`[관찰된 패턴 — 테스트 모드 강제 인용. 응답 안에 반드시 한 줄 끼워야]`);
-      perCall.push(`- ${lbl.emoji} ${lbl.name}: ${activeDiag.evidence}`);
-      perCall.push(`  · 응답 마지막에 한 줄로 자연스럽게 한 번 인용. "${lbl.name}" 단어 직접 써도 OK.`);
-      perCall.push(`  · 톤: 외재화 (X 패턴이 작동 중 / 이 도구 안 맞을 수도). 단정 X.`);
+      perCall.push(`[관찰된 패턴 — 테스트 모드. 응답 안에 반드시 한 줄 넣는다]`);
+      perCall.push(`- ${lbl.name}: ${activeDiag.evidence}`);
+      perCall.push(`  · 응답 마지막에 한 줄로 자연스럽게 한 번 인용한다. "${lbl.name}" 이라는 말을 직접 써도 된다.`);
+      perCall.push(`  · 사람이 아니라 패턴을 주어로 말한다 ("이 패턴이 돌고 있는 것 같아"). 단정하지 않는다.`);
       perCall.push('');
     } else {
-      perCall.push(`[관찰된 패턴 — "더 알아보기" 트리거됨, 4단 응답 [내가 본 것] 또는 [이게 뭐냐면]에 자연스럽게 한 번 인용]`);
-      perCall.push(`- ${lbl.emoji} ${lbl.name}: ${activeDiag.evidence}`);
-      perCall.push(`  · 인용 위치: 4단 응답 [내가 본 것] 첫 줄 또는 [이게 뭐냐면]에 살짝 끼워. "X 패턴이 작동 중" 형식.`);
-      perCall.push(`  · 톤: 외재화("X 패턴이 작동 중" / "너 X적이야" X), 사용자 자기 발견 유도(결론 단정 X)`);
-      perCall.push(`  · 한 번만. 사용자 거부하면 다시 X.`);
+      perCall.push(`[관찰된 패턴 — "더 알아보기" 요청. 4단 응답의 [내가 본 것] 또는 [이게 뭐냐면]에 자연스럽게 한 번 인용한다]`);
+      perCall.push(`- ${lbl.name}: ${activeDiag.evidence}`);
+      perCall.push(`  · 인용 위치: [내가 본 것] 첫 줄 또는 [이게 뭐냐면] 안. "이 패턴이 돌고 있는 것 같아" 정도로.`);
+      perCall.push(`  · 사람이 아니라 패턴을 주어로 말한다. "너는 이런 사람이야"처럼 사람에게 이름표를 붙이지 않는다. 결론을 단정하지 않는다.`);
+      perCall.push(`  · 한 번만 인용한다. 사용자가 아니라고 하면 다시 꺼내지 않는다.`);
       perCall.push('');
       if (typeof markDiagnosisShown === 'function' && activeDiag.status === 'active') {
         try { markDiagnosisShown(activeDiag.id); } catch (e) { console.warn('markDiagnosisShown:', e); }
@@ -251,10 +251,10 @@ function buildSystemPromptParts() {
     }
   } else if (_isDeeperContext) {
     // 사용자 요청 2026-04-29: 활성 진단이 없을 때도 4단 응답 — 사용자 본인 데이터(traits/patterns/case formulation) 우선 인용 강제
-    perCall.push(`[4단 응답 깊이 강화 — 관찰 X여도 사용자 본인 데이터 우선]`);
-    perCall.push(`  · [내가 본 것]은 사용자 traits/patterns/case formulation에서 직접 인용. generic textbook 개념 (Gollwitzer / Neff 등) 단독 사용 X.`);
-    perCall.push(`  · [이게 뭐냐면]에 심리학 개념 들어가도 OK, 단 위 [내가 본 것]에서 짚은 사용자 본인 패턴이랑 연결.`);
-    perCall.push(`  · 사용자가 "현실적으로 별로야" 류 반응 보이면 = generic 분석. 다음엔 더 사용자 specific하게.`);
+    perCall.push(`[4단 응답 — 관찰된 패턴이 없어도 사용자 본인 데이터를 먼저 쓴다]`);
+    perCall.push(`  · [내가 본 것]은 위의 특성, 관찰된 패턴, 자기 모델에서 직접 가져온다. 교과서에 나오는 일반론만으로 채우지 않는다.`);
+    perCall.push(`  · [이게 뭐냐면]은 일상어로 풀어 쓴다. 심리학 용어나 연구자 이름은 쓰지 않는다. [내가 본 것]에서 말한 이 사람의 패턴과 이어져야 한다.`);
+    perCall.push(`  · 사용자가 "현실적으로 별로야" 같은 반응을 보이면 분석이 두루뭉술했다는 뜻이다. 다음엔 이 사람의 기록에 더 붙여서 쓴다.`);
     perCall.push('');
   }
 
@@ -298,11 +298,11 @@ function buildSystemPromptParts() {
     })
     .slice(0, 3);
   if (pendingFollowups.length > 0) {
-    sessionStable.push('[사용자가 약속한 후속 — 자연스럽게 물어볼 수 있음]');
+    sessionStable.push('[사용자가 약속한 후속 — 관련 주제가 나오면 물어볼 수 있다]');
     pendingFollowups.forEach(m => {
-      sessionStable.push(`- "${m.title}" (${m.completedAt && m.completedAt.slice(0, 10) || ''} 완료, 결과 체크 X)`);
+      sessionStable.push(`- "${m.title}" (${m.completedAt && m.completedAt.slice(0, 10) || ''} 완료, 결과는 아직 확인 안 됨)`);
     });
-    sessionStable.push('  · 사용자가 관련 주제 꺼내면 "지난번 X 어떻게 됐어?" 자연스럽게 한 번. 매 대화마다 X. 사용자가 거절하면 다시 X.');
+    sessionStable.push('  · 사용자가 관련 주제를 꺼내면 "지난번 그거 어떻게 됐어?" 정도로 한 번만 묻는다. 매 대화마다 묻지 않는다. 사용자가 넘기면 다시 묻지 않는다.');
     sessionStable.push('');
   }
 
@@ -331,7 +331,7 @@ function buildSystemPromptParts() {
     if (_todayEntry.dailyQuestion && _todayEntry.dailyQuestion.text) perCall.push(`- 오늘의 질문: "${_todayEntry.dailyQuestion.text}"`);
     if (_todayEntry.note) perCall.push(`- 메모/답변: ${_todayEntry.note}`);
     if (_todayEntry.diary) perCall.push(`- 일기: ${_todayEntry.diary}`);
-    perCall.push('(참고용 컨텍스트. 사용자가 명시적으로 묻지 않은 한 굳이 분석/되짚지 말 것.)');
+    perCall.push('(참고용이다. 사용자가 묻지 않았으면 분석하거나 되짚지 않는다.)');
     perCall.push('');
   }
 
@@ -369,7 +369,7 @@ function buildSystemPromptParts() {
 
   // Mission state
   if (hasActivePendingMission()) {
-    sessionStable.push('\n[현재 상태] 오늘의 미션이 이미 있음. 새 제안은 신중하게 - 이미 있는 미션을 언급하거나, 진짜 다른 것일 때만 제안.');
+    sessionStable.push('\n[현재 상태] 오늘의 미션이 이미 있다. 새 미션을 제안하지 않는다. 이미 있는 미션을 언급하거나, 사용자가 묻고 그것과 정말 다른 것일 때만 제안한다.');
   }
 
   return {

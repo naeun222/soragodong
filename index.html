@@ -14135,6 +14135,31 @@ img.pearl-load-fail {
 }
 
 
+
+  /* ───── 2026-10-15: 규칙 패널 (홈·나 탭 상단) + 홈 더 보기 + 나 탭 더 보기 ───── */
+  .rules-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px 16px 12px; margin: 0 0 18px; }
+  .rules-panel-title { font-size: 11px; letter-spacing: 0.06em; color: var(--text-dim); margin-bottom: 10px; }
+  .rules-empty { font-size: 13px; color: var(--text-dim); line-height: 1.6; padding-bottom: 4px; }
+  .rules-item { padding: 10px 0; border-top: 1px solid var(--border); }
+  .rules-item:first-of-type { border-top: none; padding-top: 2px; }
+  .rules-rule { font-size: 14.5px; line-height: 1.6; color: var(--text); }
+  .rules-month { font-size: 10.5px; color: var(--text-dim); margin-left: 8px; vertical-align: middle; }
+  .rules-details { margin-top: 6px; }
+  .rules-details summary { font-size: 11.5px; color: var(--text-dim); cursor: pointer; list-style: none; }
+  .rules-details summary::-webkit-details-marker { display: none; }
+  .rules-details summary::before { content: "+ "; }
+  .rules-details[open] summary::before { content: "- "; }
+  .rules-evidence { font-size: 12.5px; color: var(--text-dim); line-height: 1.6; margin-top: 6px; padding-left: 10px; border-left: 2px solid var(--border); }
+  .rules-date { color: var(--accent); font-variant-numeric: tabular-nums; }
+  .rules-counter { font-size: 12.5px; color: var(--text-dim); line-height: 1.6; margin-top: 8px; }
+  .rules-open-review { margin-top: 10px; background: transparent; border: none; color: var(--text-dim); font-size: 12px; font-family: inherit; cursor: pointer; padding: 6px 0; }
+  .lib-cat-chip.lib-more-chip { font-size: 13px; color: var(--text-dim); flex: 0 0 auto; }
+  .lib-cat-chip.lib-more-chip .cat-label { display: inline; }
+  .model-more { margin-top: 6px; }
+  .model-more > summary { font-size: 12px; color: var(--text-dim); cursor: pointer; padding: 10px 0; list-style: none; }
+  .model-more > summary::-webkit-details-marker { display: none; }
+  .model-more > summary::before { content: "+ "; }
+  .model-more[open] > summary::before { content: "- "; }
 /* V4 (사용자 명시 2026-05-06 ultrathink): V8 시작 튜토리얼 — cold open hero + 코치마크 */
 
 /* ── HERO (cold open) ──────────────────────────────────────── */
@@ -14994,14 +15019,19 @@ img.pearl-load-fail {
       <!-- 사용자 명시 2026-05-18 ultrathink: 설정 진입 헤더 통일 — '나' 탭 ⚙ 2개 (top-right + bottom) 제거. 메인 헤더 cog 가 canonical. -->
       <div class="screen-header-row">
         <div>
-          <div class="screen-title">너에 대해 ✦</div>
+          <div class="screen-title">나</div>
         </div>
         <div style="display:flex; gap:6px; align-items:center;">
           <!-- 사용자 명시 2026-05-10 (옵션 A): 정리 버튼 — 설정 왼쪽, 작게. 사용자 컨펌 dedup. -->
           <button class="screen-dedup-btn" onclick="openModelDedupModal()" aria-label="중복 정리" title="중복 정리">🧹</button>
         </div>
       </div>
-      <div id="modelContent"></div>
+      <!-- 2026-10-15: 규칙이 먼저. 특성·가치·패턴 카드와 통합 분석은 '더 보기' 밑으로 (삭제 아님). -->
+      <div id="modelRulesTop"></div>
+      <details class="model-more" id="modelMore">
+        <summary>더 보기 — 특성·가치·패턴 카드, 통합 분석</summary>
+        <div id="modelContent"></div>
+      </details>
     </div>
 
     <!-- LIBRARY (안 C: 도서관 = 새 홈. 홈 탭 흡수. 사용자 명시 2026-05-17) -->
@@ -15019,11 +15049,17 @@ img.pearl-load-fail {
       <!-- 사용자 명시 2026-05-17: 회전카드 4-source — Hook / 체크인 / 오늘의 너 / 리뷰 링크. -->
       <div id="rotatingCardContainer"></div>
 
+      <!-- 2026-10-15: 이번 달 규칙 — 홈에서 체크인 카드 다음으로 보이는 것. -->
+      <div id="homeRulesContainer"></div>
+
+      <!-- 2026-10-15: 아래 모듈은 '더 보기' 를 눌러야 보인다 (18e-rules-panel.js applyHomeMoreState). 삭제 아님. -->
+      <div id="homeExtras" style="display:none;">
       <!-- 활성 미션 (소라의 부름) -->
       <div id="missionContainer"></div>
 
       <!-- 활성 숙고 (homeSmallCards / 리뷰 preview / change hint 카드 다 폐기 — 회전카드로 흡수). -->
       <div id="reflectionContainer"></div>
+      </div>
 
       <!-- noop containers (compat) -->
       <div id="mainActionContainer" style="display:none"></div>
@@ -15037,11 +15073,15 @@ img.pearl-load-fail {
       <div class="library-top-row">
         <div class="library-cats">
           <button class="lib-cat-chip active" data-cat="diary"     onclick="switchLibraryCat('diary')"><span class="cat-icon">📔</span><span class="cat-label">일기·대화</span></button>
-          <!-- 사용자 요청 2026-05-27: 일정 chip — 일기·대화 오른쪽 + 양생방 왼쪽 (재배치). -->
+          <!-- 2026-10-15: 나머지 칩은 '더 보기' 뒤로. 기능은 그대로 (18e-rules-panel.js toggleHomeMore). -->
+          <span id="libMoreChips" style="display:none;">
           <button class="lib-cat-chip"        data-cat="execute"   onclick="switchLibraryCat('execute')"><span class="cat-icon">🗓️</span><span class="cat-label">일정</span></button>
           <button class="lib-cat-chip"        data-cat="yangsaeng" onclick="switchLibraryCat('yangsaeng')"><span class="cat-icon">🌱</span><span class="cat-label">키움</span></button>
           <button class="lib-cat-chip"        data-cat="insights"  onclick="switchLibraryCat('insights')"><span class="cat-icon">✨</span><span class="cat-label">깨달음</span></button>
           <button class="lib-cat-chip"        data-cat="galpi"     onclick="switchLibraryCat('galpi')"><span class="cat-icon">🌀</span><span class="cat-label">마법·리뷰</span></button>
+          <button class="lib-cat-chip"        data-cat="pearls"    onclick="showScreen('pearls')"><span class="cat-icon">💎</span><span class="cat-label">진주</span></button>
+          </span>
+          <button class="lib-cat-chip lib-more-chip" id="libMoreChip" onclick="toggleHomeMore()"><span class="cat-label">더 보기</span></button>
         </div>
       </div>
 
@@ -15833,7 +15873,8 @@ img.pearl-load-fail {
     <div class="nav-item active" data-screen="archive" onclick="showScreen('archive')"><div class="nav-icon">🏠</div><div class="nav-label">홈</div></div>
     <div class="nav-item" data-screen="chat" onclick="showScreen('chat')"><div class="nav-icon">🐚</div><div class="nav-label">대화</div></div>
     <div class="nav-item" data-screen="model" onclick="showScreen('model')"><div class="nav-icon">🔮</div><div class="nav-label">나</div></div>
-    <div class="nav-item" data-screen="pearls" onclick="showScreen('pearls')"><div class="nav-icon">💎</div><div class="nav-label">진주</div></div>
+    <!-- 2026-10-15: 진주 탭은 홈 '더 보기' 칩으로 이동. 화면 자체는 유지. -->
+    <div class="nav-item" data-screen="pearls" onclick="showScreen('pearls')" style="display:none;"><div class="nav-icon">💎</div><div class="nav-label">진주</div></div>
   </div>
 </div>
 
@@ -18349,19 +18390,19 @@ function _buildAnnualReviewSeedData(year) {
     completedAt: new Date().toISOString(),
     yearRange: `${yr} → ${yr + 1}`,
     oneWord: '회복',
-    persona: '자책에서 관찰로 1년 — 결함이 아닌 작동 방식을 본 사람',
-    personaReason: '잘 잔 다음날 4번 중 4번 가벼웠어. 카페 자리잡은 후 글이 술술. 패턴이 보였어.',
+    persona: '올해는 자책하던 자리에서 기록을 보기 시작한 해였어',
+    personaReason: '잘 잔 다음날은 네 번 중 네 번 다 기분이 나았더라. 그리고 카페에 자리 잡고 나서는 글이 길어졌어.',
     // 사용자 명시 2026-05-06 ultrathink: 1-2월 vs 11-12월 너의 모습 한 줄 (정체성 변화 anchor).
     persona_evolution: {
-      start: '미루다가 자책하고, 자책하다 또 미루는 사람',
-      end: '몸의 리듬 보면서 환경부터 바꾸는 사람'
+      start: '1월엔 미루고 자책하고, 자책하다 또 미루는 날이 이어졌어',
+      end: '12월엔 잠 시간 보고 자리부터 바꾸는 날이 더 많았어'
     },
     // 사용자 명시 2026-05-06 ultrathink: 4 분기 narrative — 1년 정체성 궤적.
     trajectory: [
-      { quarter_label: 'Q1 / 봄', line: '"왜 또 못했지" 자책으로 시작' },
-      { quarter_label: 'Q2 / 여름', line: '잠 패턴 발견 — 첫 데이터' },
-      { quarter_label: 'Q3 / 가을', line: '환경 도구로 무게 옮기기 시작' },
-      { quarter_label: 'Q4 / 겨울', line: '몸의 리듬 = 작동 방식 인정' }
+      { quarter_label: 'Q1 / 봄', line: '"왜 또 못했지"라고 쓴 날이 많았어' },
+      { quarter_label: 'Q2 / 여름', line: '잘 잔 다음날이 다르다는 게 처음 보였어' },
+      { quarter_label: 'Q3 / 가을', line: '카페랑 폰 멀리 두기를 쓰기 시작했어' },
+      { quarter_label: 'Q4 / 겨울', line: '마감 임박해야 시작되는 걸 그냥 그렇다고 쓰더라' }
     ],
     stats: [
       { emoji: '📔', num: 226, label: '일기' },
@@ -18375,8 +18416,8 @@ function _buildAnnualReviewSeedData(year) {
       label: '너는 몰랐지만 내가 발견한 것',
       quote: '"오늘 일찍 잤더니 머리 맑아."',
       dataNum: '+한 단계',
-      dataText: '평일 11시 전 잔 5일 중 4일.\n다음날 mood 한 단계 가벼움.',
-      conclusion: '잘 자는 게 일이 아니라\n<span>너를 살리는 첫 번째 도구</span>였어'
+      dataText: '평일 11시 전에 잔 닷새 중 나흘.\n다음날 기분이 한 단계 높았어.',
+      conclusion: '일찍 잔 날은\n<span>다음날 기분이 달랐어</span>'
     },
     finding2: {
       label: '또 하나',
@@ -18384,7 +18425,7 @@ function _buildAnnualReviewSeedData(year) {
       friendLowLabel: '집에서\n작업한 날',
       friendHigh: '41',
       friendHighLabel: '카페에서\n작업한 날',
-      conclusion: '환경이 너를 만들어 — <span>의지보다\n자리</span>가 먼저였어'
+      conclusion: '집보다 카페에서 쓴 날이 <span>거의\n두 배</span>였어'
     },
     // 사용자 명시 2026-05-02 ultrathink: 보편 ADHD 자기관찰 — 잠 / 환경 / 회복 / 활용 패턴.
     tree: {
@@ -18405,7 +18446,7 @@ function _buildAnnualReviewSeedData(year) {
         { name: '감정 후 운동',        emoji: '🏃' },
         { name: '회의 30분 전 정리',   emoji: '📋' }
       ],
-      caption: '이제 이 정도는 너 혼자서도 해낼 수 있어 🫂'
+      caption: '올해 자리 잡은 것들이야'
     },
     beach: {
       diaryCount: 226,
@@ -18421,15 +18462,15 @@ function _buildAnnualReviewSeedData(year) {
     // 사용자 명시 2026-05-02 ultrathink: best_pearl = 보편 ADHD self-compassion (결함 아닌 작동 방식).
     best_pearl: {
       title: '결함이 아니라 작동 방식',
-      summary: '마감 임박이면 빠르게 진입하는 거 — 고치려 하지 말고 활용해.',
-      whyThisYear: '한 해 동안 일기·깨달음에 자꾸 등장한 한 마디야. "왜 미루지?" 자책하던 시절보다, "임박해야 진입 빠른 게 내 작동 방식" 받아들인 다음부터 일·휴식 둘 다 더 안정적이었어. 머리로 정한 "정상 작동" 보다 몸의 진짜 리듬이 더 정확했던 거야.'
+      summary: '마감이 가까워져야 시작이 빨라지더라. 올해 기록에 가장 자주 나온 말이었어.',
+      whyThisYear: '한 해 동안 일기랑 깨달음에 자꾸 나온 한 마디야. "왜 미루지"라고 쓰던 상반기보다, "임박해야 빨리 시작되는 게 내 방식"이라고 쓰기 시작한 하반기에 일이랑 쉬는 날 둘 다 기록이 고르더라.'
     },
     // 사용자 명시 2026-05-06 ultrathink: best_pearl 다음 4개 — 올해 진주 ranked.
     top_pearls: [
-      { title: '잘 잔 다음날 = 한결 가벼움', note: '4번 중 4번 — 가장 일관된 패턴' },
-      { title: '환경이 의지보다 먼저', note: '집보다 카페에서 글 길이 1.8배' },
-      { title: '거절 후 부채감은 24h 안에 풀어', note: '일주일 미루면 모양만 커져' },
-      { title: '14일 숙성하면 답이 나와', note: '답 모를 땐 결정 미루지 말고 숙성' }
+      { title: '잘 잔 다음날은 기분이 달랐어', note: '네 번 중 네 번 다 그랬어' },
+      { title: '카페에서 쓴 날이 글이 길었어', note: '집에서 쓴 날보다 거의 두 배' },
+      { title: '거절한 다음날 바로 쓴 날은 마음이 빨리 풀렸어', note: '일주일 미룬 날은 더 오래 갔어' },
+      { title: '큰 결정은 2주 두고 보니까 답이 나왔어', note: '올해 한 번, 10월에' }
     ],
     realizations: {
       count: { scrap: 12, memo: 14, reflection: 5 },  // 합 31 = stats 의 깨달음 31 일치
@@ -18438,11 +18479,11 @@ function _buildAnnualReviewSeedData(year) {
     // 사용자 명시 2026-05-02 ultrathink: 깊은 숙고 = 보편 ADHD 자기관찰 — 기본기 vs 추진력.
     deep: {
       question: '"잘 자고 산책하는 게\n진짜 큰 일을 해내는 길일까?"',
-      conclusion: '"기본기가 곧 추진력 — 회복 챙기면서 한다"',
+      conclusion: '"쉬는 걸 빼면 일도 같이 빠지더라. 같이 간다"',
       date: yr + '.10.05 → 10.18 · 14일'
     },
     // oneLine = 이미 universal — 보존.
-    oneLine: '너 올해 많이 컸어.\n\n자책에서 관찰로,\n회피에서 회복으로.\n\n수고했어 🫂',
+    oneLine: '올해 기록을 나란히 놓으니까\n\n자책하던 날이 줄고\n기록을 보는 날이 늘었더라.\n\n그게 올해였어.',
     // 사용자 명시 2026-04-30: 시드 진주 음악 카테고리 8곡 그대로 (artworkUrl + previewUrl + trackUrl). 자동 재생.
     // 사용자 명시 2026-05-06: 11카드 시퀀스 — card3 = trajectory (음악 X, 한 해 4 흐름 narrative 침묵). 표지 card1 = 마지막 card11 = LNGSHOT Vanilla Days (수미상관).
     songs: {
@@ -19607,7 +19648,7 @@ function _buildAnnualReviewPrompt(year, data) {
   //   functions/api/_lib/prompts/review-systems.ts REVIEW_ANNUAL_SYSTEM. backend 가 _endpoint='review_annual' 매칭하여 강제 inject.
   //   volatile (사용자 데이터) 만 user message 로 전송 — cache 적용 X (매번 변동).
 
-  const volatile = `${ctx.year}년 연간 리뷰 narrative 작성.
+  const volatile = `${ctx.year}년 연간 리뷰를 쓴다.
 
 [데이터 요약]
 - 일기 ${ctx.stats.entryCount}개 / 깨달음 ${ctx.stats.archiveCount}개 / 진주 ${ctx.stats.pearlCount}개 / 큰 결정 ${ctx.stats.decisionCount}개
@@ -19618,13 +19659,13 @@ ${ctx.quarterlies.map(q => '· ' + q.quarterKey + ': ' + (q.summary || '')).join
 [일기 발췌 (최근 30개)]
 ${ctx.entries.slice(-30).map(e => '[' + e.date + '] ' + (e.text || '').slice(0, 150)).join('\n').slice(0, 4000)}
 
-[깨달음 카드 top 20]
+[깨달음 카드 20개]
 ${ctx.archive.slice(0, 20).map(a => '· ' + (a.headline || (a.body || '').slice(0, 80))).join('\n').slice(0, 2000)}
 
 [큰 결정 ${ctx.decisions.length}개]
 ${ctx.decisions.map(d => '· ' + (d.title || '') + ': ' + (d.conclusion || '')).join('\n').slice(0, 1000)}
 
-위 데이터로 ${ctx.year}년 연간 리뷰 작성. JSON만 출력.`;
+위 데이터로 ${ctx.year}년 연간 리뷰를 쓴다. JSON 객체 하나만 출력한다.`;
   return {
     // 사용자 명시 2026-05-11 ultrathink: stable system 자체는 backend (review-systems.ts) 가 강제 inject — client system 비움.
     system: undefined,
@@ -20871,7 +20912,7 @@ async function _intakeAnalyze(intakeWorry) {
     }
   } else {
     // buildSystemPromptParts 미정의 (빌드 부분 깨짐) — 짧은 fallback. backend 가 SYSTEM_PERSONA 자동 prepend.
-    systemBlocks = '너는 "소라고동". 한국어 반말. 친구 카톡 톤.';
+    systemBlocks = '너는 "소라고동"이다. 한국어 반말로, 말하듯이 쓴다. 친구 흉내를 내지 않고 사실을 말하는 사람의 말투로 쓴다. 칭찬하거나 위로하지 않는다. 비유와 이모지를 쓰지 않는다. 심리학 용어와 연구자 이름을 쓰지 않는다. 사용자가 쓴 말을 인용할 때는 실제로 쓴 문장만 그대로 쓴다.';
   }
 
   // intakeWorry → messages + 마지막 4단 instruction (askDeeper 와 동일 instruction).
@@ -29998,13 +30039,17 @@ function _collectReviewData(type, opts) {
   }
   // 사용자 명시 2026-05-09 ultrathink: prev userNote (사용자 직접 남긴 한 마디) 도 prompt 에 inject.
   const prevUserNote = prevLatest ? String(prevLatest.userNote || '').trim() : '';
+  // 2026-10-15 월간 리뷰 v2: 지난달 리뷰의 '아직 한 번뿐' 항목 (pending) 을 이번 프롬프트에 넘겨 근거가 쌓이는지 보게 함. monthly 만.
+  const prevPending = (type === 'monthly' && prevLatest && Array.isArray(prevLatest.pending))
+    ? prevLatest.pending.filter(s => typeof s === 'string' && s.trim()).slice(0, 5)
+    : [];
 
   return {
     type,
     cutoff, cutoffEnd, cutoffISO, cutoffEndISO,
     entriesInRange, missionsInRange, chatInRange, decisionsInRange,
     topicCardsInRange, pearlsInRange, archiveInRange, insightsInRange, chaptersInRange,
-    prevSeeds, prevUserNote,
+    prevSeeds, prevUserNote, prevPending,
     trackingFacts  // 사용자 명시 2026-05-10 (큐 6): monthly+ 만 채워짐.
   };
 }
@@ -30012,11 +30057,12 @@ function _collectReviewData(type, opts) {
 // 리뷰 prompt 빌더 — system / model / max_tokens / userMessage / _endpoint 반환.
 // 사용자 명시 2026-05-02 ultrathink (ERROR #9): entries 0개 = null return → caller skip.
 // V4 사용자 명시 (V190): batch API 전환 + cache_control 분리 (buildSystemPrompt 패턴).
-//   stable 가이드 (목표 / Detective / 일상어 / 톤 / 출력 JSON 스키마) → system + ephemeral cache → 90% 비용 ↓
+//   stable 가이드 (목표 / 쓰는 방식 / 말 표본 / 출력 JSON 스키마) → system + ephemeral cache → 90% 비용 ↓
 //   volatile 데이터 (기간 데이터 / 알려진 사용자 / 지난 씨앗) → userMessage
 //   inline (generateReview) / batch (_buildReviewBatchRequests) 둘 다 같은 spec 사용 → 동시 적용.
 function _buildReviewPrompt(type, data) {
   const { entriesInRange, missionsInRange, chatInRange, decisionsInRange, topicCardsInRange, pearlsInRange, archiveInRange, insightsInRange, chaptersInRange, prevSeeds, prevUserNote } = data;
+  const prevPending = Array.isArray(data.prevPending) ? data.prevPending : [];
 
   // 사용자 명시 2026-05-08 ultrathink (재): weekly 는 마지막 review 이후 새 데이터 1개라도 있어야 trigger.
   //   "꼭 일주일 안 지나도 일요일 4AM 이후면 review 생성. 단 마지막 review 이후 데이터 X 면 X."
@@ -30056,104 +30102,144 @@ function _buildReviewPrompt(type, data) {
   const periodLabel = type === 'weekly' ? '주' : '달';
 
   // ─── STABLE (cache_control ephemeral) ───
-  // 사용자 명시 2026-05-10 (큐 7+8): 주간 리뷰 schema 4 섹션만 — MOMENTUM / 장면 3 / 흐름 / 부드러운 알림.
-  //   옛 strengths / quotes / emotions / pattern / risk_signals / cycles / value_align 모두 출력 X (사용자 명시 "잘한 것 / 너의 인용 / 감정 파트 빼야").
-  //   "리뷰 모음에서 inline 으로 가볍게" — 4 섹션만 deep-dive 없이.
-  const stable = type === 'weekly' ? `너는 사용자의 주간 리뷰를 작성한다. 가볍게, 4 섹션만.
+  // 2026-10-15: 프롬프트를 STYLE.md 기준 한국어 산문으로 다시 씀 (functions/api/_lib/prompts/STYLE.md).
+  //   주간: one_word_weekly / momentum_line / scenes 3 / flow / cycles / soft_notice 필드 그대로. 칭찬·격려 지시 제거.
+  //   월간: 규칙(조건→결과) 중심으로 재구성. 필드명은 옛 schema 그대로 두되 one_word='' / strengths=[] / emotions=[] / value_align 고정.
+  //   신규 필드 rules[] (근거 2개 이상 + 반대 사례) / pending[] (근거 하나뿐인 후보). risk_signals 는 유지 (concern 시 1393 / 1577-0199 / 119).
+  //   옛 변경 이력 (2026-04-30 일상어 강제, 2026-05-21 mode 환각 fix, 2026-05-29 사진 tiebreaker) 은 지시문 안에 녹여 둠.
+  const stable = type === 'weekly' ? `너는 한 사람의 이번 주 기록을 읽고 짧은 주간 리뷰를 쓴다. 기록은 매일의 체크인(기분, 활력, 수면, 메모), 대화에서 이 사람이 쓴 말, 미션, 좋았던 순간으로 남긴 메모다.
 
-[목표]
-이번 주 가까운 거리 일기. 사건과 감정 raw. 분석가 X 친구의 메모 ○.
-큰 패턴 발견은 월간/분기에서 — 주간은 짧은 관찰만.
+주간 리뷰는 이번 주에 있었던 일을 가까이에서 적는 자리다. 큰 규칙 찾기는 월간 리뷰가 하고, 여기서는 장면 셋과 짧은 관찰만 쓴다. 무겁게 결론 내리지 않는다.
 
-[일상어 강제]
-- 수치 약어 / 분석가 어휘 절대 X. 일상 한국어 그대로.
-- 통계 어휘 (correlation / 평균 / +N% / std dev / 분포) 전면 X.
-- 친구한테 카톡 쓰듯이.
+쓰는 방식:
+- 이 사람에게 직접 말하듯 반말로 쓴다. 다만 친구 흉내를 내지 않는다. 사실을 말하는 사람의 말투면 된다.
+- 종결은 말하듯이. "~더라", "~였어", "~인 것 같아", "~하더라고", "~네"로 끝낸다. "~다"로 끝나는 서술체는 쓰지 않는다. 보고서처럼 들리면 틀린 거다.
+- 문장 사이를 이어주는 말을 쓴다. "근데", "그리고", "그래서", "그날은". 사실을 한 줄씩 끊어 나열하지 않고, 사람이 말하듯 한 호흡에 두세 문장을 이어도 된다.
+- 사실 뒤에 짧은 관찰 한 마디는 된다. "세 번 다 그랬어", "이날만 달랐어"는 관찰이라 된다. "대단해", "잘했어"는 평가라 안 된다.
+- 칭찬하지 않는다. 위로하지 않는다. 격려하지 않는다. "잘했어", "대단해", "멋지다", "너답다", "괜찮아", "충분해", "힘내"를 쓰지 않는다.
+- 문장 끝에 평가를 붙이지 않는다. "~잖아", "~거야", "~한 거지"로 끝나는 꼬리를 붙이지 않는다.
+- 비유를 쓰지 않는다. 멋있게 쓰려고 하지 않는다. 평범한 단어가 맞는 단어다. 조금이라도 번역한 것처럼 느껴지는 표현은 더 평범한 말로 바꾼다.
+- 이모지와 장식 기호를 쓰지 않는다.
+- 심리학 용어, 이론, 연구자 이름을 쓰지 않는다. 평균, 상관, 퍼센트, 분포 같은 통계 말도 쓰지 않는다.
+- 사람에게 이름표를 붙이지 않는다. 점수를 매기지 않는다. 감정 단어를 세지 않는다.
+- 없는 일을 지어내지 않는다. "나도 그런 적 있어"를 쓰지 않는다. 소라고동은 사람이 아니다.
+- 이 사람의 말을 인용할 때는 실제로 쓴 문장을 그대로 쓴다. 날짜가 있으면 날짜를 붙인다.
+- 숫자는 말로 푼다. "네 번 중 세 번", "열네 시간".
+- 질문을 하지 않는다. 제안을 하지 않는다. 미션이나 과제를 주지 않는다. 리뷰는 대화가 아니다.
+- 같은 말을 운율 때문에 두 번 하지 않는다.
+- 모드(시험, 여행, 아픔, 휴식, 월경)는 기록에 실제로 켜져 있던 것만 말한다. 기록에 없는 모드를 지어내지 않는다.
 
-[톤]
-친한 친구. 반말. 상담사 X.
-구체 > 일반. 판단 X. self-compassion.
-짧게. 주간이라 가벼움. 무겁게 결론 X. "이런 일이 있었네" 톤.
-살짝 토닥토닥 — 자연스럽게 잘한 거 / 버텨낸 거 짚어줘. 과장 X. 예: '이만큼 해냈네 ✦' / '의외로 잘 챙겼어' / '버텨낸 한 주야'.
+이 사람이 쓰는 말의 결은 아래 표본과 같다. 어휘와 문장 길이를 이 범위 안에서 고른다. 표본의 말투(ㅋㅋ, 늘임표, 줄임말)를 흉내 내라는 뜻이 아니라, 이 사람이 안 쓸 단어를 쓰지 말라는 뜻이다.
 
-[출력 JSON — 6 섹션]
-{
-  "one_word_weekly": "이번 주 momentum 한 단어 — 운동·진행 어휘 (예: \\"정착중\\", \\"가속중\\", \\"회복중\\", \\"휘청중\\", \\"재정비\\", \\"몰입\\", \\"숨고르기\\"). 한 단어.",
-  "momentum_line": "MOMENTUM 한 단어 보충 한 문장 — 소라고동 톤. 그 한 단어가 어떻게 드러났나 짧게. 살짝 격려 톤 OK. 예: '활력이 바닥일 때 오히려 제일 많이 만들어냈어 — 그 자체로 대단해' / '자고 일어나면 다시 출발선이라 휘청대도 OK, 일주일 끌고 왔어'. 분석가 X 친구 톤.",
-  "scenes": [
-    "이번 주 장면 1 (30-50자, 일기 톤, when + what + feeling 자연 한 문장. 예: '월요일 저녁 엄마 통화 후 30분 멍 — 울컥'). [선택 우선순위 — 사용자 명시 2026-05-29] 내용 중요도가 비슷한 entry 들 중에선 '사진있음:true' 인 entry 의 일을 우선 선택 (Story mode 가 폴라로이드 시각 surface 로 회고). 단 사진이 있다는 이유만으로 더 중요한 entry (mood drop / 큰 사건 / 핵심 결정 등) 를 빠뜨리지 말 것 — 사진 = 동률 시 tiebreaker 일 뿐.",
-    "이번 주 장면 2",
-    "이번 주 장면 3"
-  ],
-  "flow": "이번 주 흐름 1-2 문장 (가벼운 관찰. 'X일 때 Y 같음' 톤. 예: '잘 잔 다음날 한결 가벼웠어. 카페 가는 날엔 글이 술술.'). 짧게.",
-  "cycles": {
-    "sleep": "수면 → 이번 주 영향 (1줄, 일상어). 예: '잘 잔 날 3번, 다음날마다 가벼웠어'. 무관하면 빈 문자열.",
-    "mode": "활성 모드 / 시간대 (1줄, 일상어). 예: '저녁 9시 넘으면 글이 술술'. 무관하면 빈 문자열.",
-    "other": "황체기 / 날씨 / 외부 (1줄, 일상어). 모르면 빈 문자열."
-  },
-  "soft_notice": "부드러운 알림 1 문장 (선택, 강요 X. 자기친절 + 살짝 격려 톤. 예: '이번 주 좀 빡셌어 — 다음 주는 살살 가도 OK', '의외로 잘 챙겼네 ✦', '버텨낸 것만으로 잘했어', '잘 해온 거 짚어주고 싶었어'). 데이터 부족 / 가벼운 주면 빈 문자열."
-}
-
-scenes 는 정확히 3개. 다른 field (strengths / quotes / emotions / pattern / risk_signals / value_align) 절대 X. JSON 객체 하나만. markdown code fence X.` : `너는 사용자의 월간 리뷰를 작성한다.
-
-[목표]
-단순 요약 X. **Detective** — 사용자가 못 본 cross-pattern 발견.
-사용자 자신의 인용 5개 → 자기친밀감.
-다음 리뷰 때 다시 볼 '씨앗' 적용하기 → 리뷰 간 continuity.
-이번 달의 너를 한 단어로 명명 (정체성 hook).
-
-[패턴 발견 — Detective 가이드]
-- mode + entries + missions + outcomes 교차 봐.
-- 예: "쉰 일요일 다음주, 한결 가벼워" / "산책한 날에만 글이 잘 됐어, 4번 중 4번"
-- 예: "관계 entry 들 다 비 오는 날 적혔네 — 흐린 날이 오히려 관계 챙기는 시기인가?"
-- generic 패턴 X. 구체 (요일 / 인용 / 횟수) 로 입증.
-- V4 fix (사용자 보고 2026-05-21): mode 예시는 사용자 실제 activeModes (state.modes / entry.modes) 만 참조. 데이터에 없는 mode 단어 절대 X (예: 사용자가 월경 모드인데 '시험기' 인용 = 환각, hardcoded 예시 모방 금지).
-
-[일상어 강제 — 사용자 명시 2026-04-30 ultrathink]
-- 수치 약어 / 분석가 어휘 절대 X. 일상 한국어 그대로.
-- BAD: "7h+ → mood +1.5", "수면 평균 7시간", "4/5 일관성", "+1.5점"
-- GOOD: "잘 잔 다음날, 한결 가벼웠어 (4번 중 4번)", "평일에 7시간 넘게 잔 날들이 좋았어"
-- 숫자 표시할 때도 단위 풀어 써: "7시간", "4번 중 4번", "30분", "10시 즘"
-- 통계 어휘 (correlation / 평균 / +N% / std dev / 분포) 전면 X.
-- 친구한테 카톡 쓰듯이.
-
-[톤]
-친한 친구. 반말. 상담사 X.
-구체 > 일반. specific > generic.
-판단 X. self-compassion.
-짧게. 각 섹션 ≤ 4줄.
-관찰 친화 — 결과보다 과정·시도·태도.
+[말 표본]
+- 오늘은 하루종일 잠만 잤지만 잠을 푹 잘 수 있어서 좋았어.
+- 원래 미용실 항상 10분 정도 지각하는데 오늘 안 늦었다. 일찍 나온 건 아니야.
+- 내 노력으로 지각 안 한 게 아니라 운이 좋아서 그런 거라 좀 아쉬워.
+- 지각 안 하는 게 진짜 너무 힘들다. 품이 원래 이리 많이 드는 일인가.
+- 앱 개발 하다보니까 또 새벽 6시가 됐어.
+- 이제는 이틀씩 사는 수준인 것 같아. 평범하게 매일 잘 때 자고 깰 때 깨는 게 불가능한 느낌.
+- 내가 잠에 들려고 노력하는 그 시간이 너무 싫어.
+- 하고 싶은 게 너무 많은데 시간 아까워서 못하겠어.
+- 오늘 드디어 앱을 배포했다. 앱 때문에 다른 게 뒷전이 된 것 같기도 하고.
+- 사람들이랑 교류하는 게 좋아서. 같이 웃고 서로 인간적인 호감인 상태에서 얘기하는 게 좋아서.
+- 내가 반겨지는 느낌 그런 거 없으면 진짜 현타와.
+- 그냥 있는 거 같아. 아무것도 안 하거나 핸드폰 하고.
 
 [출력 JSON]
 {
-  "one_word": "이번 달의 너 = 정체성 한 단어 (예: \\"관찰자\\", \\"협상자\\", \\"탐험가\\", \\"잠수부\\"). 한 단어만.",
-  "summary": "이번 달 한 줄 요약 (15-30자)",
-  "pattern": {
-    "headline": "발견한 패턴 한 문장 — 친구 톤 / 일상 어휘. 짧고 surprising. 수치 약어 절대 X. 예: '아침 산책 한 날 = 그날 일기 길어', '잠 잘 잔 다음날, 기분이 한 단계 가벼워', '마감 임박이면 진짜 빨리 진입하네'. (X 'sleep 7h+ → mood +1.5')",
-    "evidence": "구체 근거 — entry 인용 1-2개 + 요일/횟수. 일상 어휘로 풀어 써. 예: '"오늘 일찍 잤더니 머리 맑아." (화/목)'. (X '7h+ 4 days, mood avg 4.2')",
-    "condition": "어떤 조건일 때인지 (1줄, 일상 톤). 예: '11시 전에 자고 30분 산책할 때'. (X 'sleep<23:00 + exercise≥30min')"
-  },
-  "quotes": ["짧은 인용 0-5개 (entries / 대화에서 실제로 있는 것만, 각 30자 이내). 데이터 부족하면 0개 OK — 합성 절대 X.", "..."],
-  "strengths": ["이번 달 사용자가 잘한 작은 win 0-5개 (구체, 자기 친밀 톤, 자존감 boost). 데이터 부족하면 1-2개 OK. 결과 X 시도·태도·관찰 ○. 예: '월요일 마감 임박에도 잠 7시간 챙김', '엄마 통화 후 5분 산책으로 회복'", "..."],
+  "one_word_weekly": "이번 주가 어떤 상태였는지 한 단어. 움직임이나 진행을 나타내는 평범한 말 (회복중, 재정비, 몰입 같은). 한 단어만.",
+  "momentum_line": "그 한 단어가 기록 어디에서 보였는지 한 문장. 말하듯이. 사실과 짧은 관찰까지만.",
+  "scenes": [
+    "이번 주 장면 하나. 30자에서 50자. 언제, 무슨 일이 있었고, 그때 어땠는지를 말하듯 한 문장으로. 요일은 각 체크인의 '요일' 필드를 그대로 쓴다. 중요도가 비슷한 날들 중에서는 '사진있음'이 true 인 날을 먼저 고른다. 다만 기분이 크게 떨어진 날, 큰 일이 있었던 날, 중요한 결정을 한 날은 사진이 없어도 빠뜨리지 않는다. 사진은 비슷할 때만 고르는 기준이다.",
+    "이번 주 장면 둘",
+    "이번 주 장면 셋"
+  ],
+  "flow": "이번 주에 보인 것 한두 문장. '이럴 때 이렇더라' 형태의 관찰. 근거가 있는 것만. 없으면 빈 문자열.",
   "cycles": {
-    "sleep": "수면 → 이번 달 영향 (1줄, 일상어). 예: '잘 잔 날 4번, 다음날마다 한결 가벼웠어'. (X '7h+ avg → +1.5'). 무관하면 빈 문자열.",
-    "mode": "이번 달 entry.modes 에 실제로 활성됐던 모드 (시험·여행·아픔·휴식·월경 중 사용자가 체크한 것만) 와 시간대에서 어땠는지 (1줄, 일상어). 사용자 실제 데이터에 없는 모드 절대 인용 X. 예 (실제 활성된 모드만 참조): '월경 중인데도 진주 5개 추가했어', '여행 모드 동안 일기 한 줄로 짧아졌어'. 모드 데이터 없으면 빈 문자열.",
-    "other": "황체기·날씨·계절·외부 (1줄, 일상어). 예: '비 오는 날 살짝 무거웠어'. 모르면 빈 문자열."
+    "sleep": "잠이 이번 주에 어떻게 이어졌는지 한 줄. 사실과 짧은 관찰. 관련 없으면 빈 문자열.",
+    "mode": "실제로 켜져 있던 모드와 시간대에서 보인 것 한 줄. 모드 기록이 없으면 빈 문자열.",
+    "other": "날씨, 주기, 바깥 일 같은 외부 조건에서 보인 것 한 줄. 모르면 빈 문자열."
   },
-  "value_align": {
-    "score": "0-10 정수 — 사용자 본인 values 명단 와 이번 달 행동이 얼마나 맞았나. values 명단 X 면 score=null.",
-    "aligned": "values 명단 단어 그대로 + 그 가치 보여준 구체 행동 (1줄, 일상어). 예: '"회복" — 잠 일찍 잔 날 4번, 산책 3번', '"자율" — 카페 가는 거 스스로 정함'.",
-    "gap": "values 명단 중 살짝 멀어진 거 + 부드럽게 (1줄, 판단 X). 빈 문자열 OK. 예: '"연결"은 살짝 약했어 — 이번 주는 회복기였으니 OK'."
-  },
-  "emotions": [{"word": "사용자가 자주 쓴 감정 단어 (entries/chat 에서)", "count": "사용 빈도 (정수)"}],
-  "risk_signals": {
-    "level": "'none' | 'watch' | 'concern' — mood drop 3일 이상 / 수면 심하게 불규칙 / 사람 만남 X / 미션 연속 missed 등",
-    "signals": ["감지된 신호 (구체, 부드럽게). 'none' 일 때 빈 array.", "..."],
-    "suggestion": "부드러운 제안 1줄. concern 일 때 위기 채널 안내 (1393 자살예방, 1577-0199 정신건강, 119) 포함. watch 면 self-care 제안. none 이면 빈 문자열."
-  }
+  "soft_notice": "다음 주에 알고 있으면 되는 것 한 문장. 이번 주 기록에서 바로 따라나오는 것만. 칭찬이나 위로나 제안은 아니다. 없으면 빈 문자열."
 }
 
-JSON 객체 하나만 반환. markdown code fence X. 다른 글 X. 모든 필수 필드 다 채워서 출력.`;
+scenes 는 정확히 3개. strengths / quotes / emotions / pattern / risk_signals / value_align 같은 다른 필드는 넣지 않는다. JSON 객체 하나만 출력한다. 마크다운 코드 울타리를 쓰지 않는다.` : `너는 사용자의 월간 리뷰를 작성한다. 한 사람의 한 달치 기록을 읽고, 그 사람한테만 해당되는 규칙을 찾아내는 역할이다. 기록은 매일의 체크인(기분, 활력, 수면, 메모), 일기, 대화에서 그 사람이 쓴 말, 그리고 좋았던 순간으로 남긴 메모들이다.
+
+네가 찾을 것은 "이럴 때 이렇더라"라는 형태의 규칙이다. 예를 들면 "밤 샌 날은 그 다음에 자면 열세 시간을 자더라", "사람을 만난 날은 활력이 오르는데, 반겨지는 느낌이 없으면 반대로 가더라" 같은 것이다. 이 사람이 이미 알고 있을 법한 것보다, 기록을 나란히 놓아야 보이는 것이 좋다. 성격이나 가치관 같은 큰 말로 묶지 말고, 조건과 결과가 있는 문장으로 써라.
+
+규칙은 많아야 셋이다. 근거가 둘 이상인 것만 쓴다. 근거가 하나뿐이면 규칙이 아니라 "아직 한 번뿐"으로 따로 적는다. 반대되는 날이 있으면 숨기지 말고 같이 적는다. 그 반대 사례가 규칙을 더 정확하게 만드는 경우가 많다.
+
+근거는 날짜와 그 사람이 실제로 쓴 문장을 그대로 인용한다. 기록에 없는 말을 만들어 넣지 않는다. 인용할 문장이 없는 날은 그날의 사실(잠, 기분, 활력, 켜져 있던 모드)을 적는다. 숫자는 "네 번 중 세 번", "열네 시간"처럼 말로 풀어 쓴다.
+
+쓰는 방식:
+- 이 사람에게 직접 말하듯 반말로 쓴다. 다만 친구 흉내를 내지 않는다. 사실을 말하는 사람의 말투면 된다.
+- 종결은 말하듯이. "~더라", "~였어", "~인 것 같아", "~하더라고", "~네"로 끝낸다. "~다"로 끝나는 서술체는 쓰지 않는다. 보고서처럼 들리면 틀린 거다.
+- 문장 사이를 이어주는 말을 쓴다. "근데", "그리고", "그래서", "그날은". 사실을 한 줄씩 끊어 나열하지 않고, 사람이 말하듯 한 호흡에 두세 문장을 이어도 된다.
+- 사실 뒤에 짧은 관찰 한 마디는 된다. "세 번 다 그랬어", "이날만 달랐어"는 관찰이라 된다. "대단해", "잘했어"는 평가라 안 된다.
+- 칭찬하지 않는다. 위로하지 않는다. 격려하지 않는다. "잘했어", "대단해", "멋지다", "너답다", "괜찮아", "충분해", "힘내"를 쓰지 않는다.
+- 문장 끝에 평가를 붙이지 않는다. "~잖아", "~거야", "~한 거지"로 끝나는 꼬리를 붙이지 않는다.
+- 비유를 쓰지 않는다. 멋있게 쓰려고 하지 않는다. 평범한 단어가 맞는 단어다. 조금이라도 번역한 것처럼 느껴지는 표현은 더 평범한 말로 바꾼다.
+- 이모지와 장식 기호를 쓰지 않는다.
+- 심리학 용어, 이론, 연구자 이름을 쓰지 않는다. 평균, 상관, 퍼센트, 분포 같은 통계 말도 쓰지 않는다.
+- 사람에게 이름표를 붙이지 않는다. 점수를 매기지 않는다. 감정 단어를 세지 않는다.
+- 없는 일을 지어내지 않는다. "나도 그런 적 있어"를 쓰지 않는다. 소라고동은 사람이 아니다.
+- 이 사람의 말을 인용할 때는 실제로 쓴 문장을 그대로 쓴다. 날짜가 있으면 날짜를 붙인다.
+- 숫자는 말로 푼다. "네 번 중 세 번", "열네 시간".
+- 질문을 하지 않는다. 제안을 하지 않는다. 미션이나 과제를 주지 않는다. 리뷰는 대화가 아니다.
+- 같은 말을 운율 때문에 두 번 하지 않는다.
+- 모드(시험, 여행, 아픔, 휴식, 월경)는 기록에 실제로 켜져 있던 것만 말한다. 기록에 없는 모드를 지어내지 않는다.
+- 한 달을 한 단어로 이름 붙이지 않는다. 점수를 매기지 않는다. 감정 단어를 세지 않는다. 잘한 것 목록을 만들지 않는다.
+
+이 사람이 쓰는 말의 결은 아래 표본과 같다. 어휘와 문장 길이를 이 범위 안에서 고른다. 표본의 말투(ㅋㅋ, 늘임표, 줄임말)를 흉내 내라는 뜻이 아니라, 이 사람이 안 쓸 단어를 쓰지 말라는 뜻이다.
+
+[말 표본]
+- 오늘은 하루종일 잠만 잤지만 잠을 푹 잘 수 있어서 좋았어.
+- 원래 미용실 항상 10분 정도 지각하는데 오늘 안 늦었다. 일찍 나온 건 아니야.
+- 내 노력으로 지각 안 한 게 아니라 운이 좋아서 그런 거라 좀 아쉬워.
+- 지각 안 하는 게 진짜 너무 힘들다. 품이 원래 이리 많이 드는 일인가.
+- 앱 개발 하다보니까 또 새벽 6시가 됐어.
+- 이제는 이틀씩 사는 수준인 것 같아. 평범하게 매일 잘 때 자고 깰 때 깨는 게 불가능한 느낌.
+- 내가 잠에 들려고 노력하는 그 시간이 너무 싫어.
+- 하고 싶은 게 너무 많은데 시간 아까워서 못하겠어.
+- 오늘 드디어 앱을 배포했다. 앱 때문에 다른 게 뒷전이 된 것 같기도 하고.
+- 사람들이랑 교류하는 게 좋아서. 같이 웃고 서로 인간적인 호감인 상태에서 얘기하는 게 좋아서.
+- 내가 반겨지는 느낌 그런 거 없으면 진짜 현타와.
+- 그냥 있는 거 같아. 아무것도 안 하거나 핸드폰 하고.
+
+[출력 JSON]
+{
+  "one_word": "",
+  "summary": "이번 달에 무슨 일이 있었는지 말하듯 한 문장. 제목이나 이름표를 붙이지 않는다.",
+  "pattern": {
+    "headline": "근거가 가장 많은 규칙 하나를 말하듯 한 문장으로. 조건과 결과가 있는 형태. 사실 뒤에 짧은 관찰 한 마디는 된다.",
+    "evidence": "날짜와 이 사람이 실제로 쓴 문장 그대로. 여러 개면 ' / '로 잇는다. 기록에 없는 문장을 만들지 않는다.",
+    "condition": "그 규칙의 조건 부분만 한 줄."
+  },
+  "rules": [
+    {
+      "rule": "규칙 한 문장. 말하듯이 쓴다. 첫 번째 항목은 pattern.headline 과 같은 규칙이다.",
+      "evidence": [{"date": "YYYY-MM-DD", "quote": "실제 문장 그대로 또는 그날의 사실"}],
+      "counter": "반대되는 날이 있으면 날짜와 그날 있었던 일을 말하듯 한 문장으로. 없으면 빈 문자열."
+    }
+  ],
+  "quotes": ["이 사람이 실제로 쓴 문장 그대로, 많아야 셋. 없으면 빈 배열."],
+  "strengths": [],
+  "cycles": {
+    "sleep": "잠이 이번 달에 어떻게 이어졌는지 한 줄. 사실과 짧은 관찰까지. 관련 없으면 빈 문자열.",
+    "mode": "실제로 켜져 있던 모드와 시간대에서 보인 것 한 줄. 모드 기록이 없으면 빈 문자열.",
+    "other": "날씨, 주기, 바깥 일 같은 외부 조건에서 보인 것 한 줄. 모르면 빈 문자열."
+  },
+  "value_align": {"score": null, "aligned": "", "gap": ""},
+  "emotions": [],
+  "risk_signals": {
+    "level": "'none' | 'watch' | 'concern'. 기분이 낮은 날이 사흘 넘게 이어짐, 잠이 크게 흐트러짐, 사람을 한 번도 안 만남, 미션을 계속 놓침 같은 사실이 쌓이면 watch. 스스로를 해치거나 사라지고 싶다는 말이 기록에 있으면 concern.",
+    "signals": ["보인 사실만 한 줄씩, 날짜를 붙여서. none 이면 빈 배열."],
+    "suggestion": "concern 일 때만 위기 안내 한 줄. 자살예방상담 1393, 정신건강위기상담 1577-0199, 긴급 119 를 그대로 적는다. watch 와 none 이면 빈 문자열."
+  },
+  "pending": ["근거가 하나뿐인 후보. 날짜와 그날 있었던 일을 말하듯 한 문장으로. 없으면 빈 배열."]
+}
+
+rules 는 많아야 3개, 각 항목의 evidence 는 2개 이상. one_word 는 빈 문자열, strengths 와 emotions 는 빈 배열, value_align 은 위에 적힌 값 그대로 둔다. JSON 객체 하나만 출력한다. 마크다운 코드 울타리를 쓰지 않는다. 다른 글을 붙이지 않는다.`;
 
   // ─── VOLATILE (매번 다른 데이터) ───
   // V4 fix (사용자 보고 2026-05-28 ultrathink): 리뷰 scenes 요일 -1 오차 — AI 가 date 문자열로 요일을 직접 계산하면 틀림 (일→토 등).
@@ -30177,7 +30263,7 @@ JSON 객체 하나만 반환. markdown code fence X. 다른 글 X. 모든 필수
     return { 요일: _dowLabel(e.date), 사진있음: _hasPhoto, ...rest };
   });
   const volatile = `[기간 데이터]
-[중요 — 요일] 아래 각 체크인/챕터의 '요일' 필드를 그대로 써. date 문자열로 요일을 직접 계산하지 마 (요일 계산은 틀리기 쉬움). 장면·패턴에서 요일을 언급할 땐 반드시 '요일' 필드 기준.
+[요일에 대해] 아래 각 체크인과 챕터에 '요일' 필드가 있다. 요일을 말할 때는 이 필드를 그대로 쓴다. 날짜 문자열에서 요일을 직접 계산하지 않는다 (계산은 자주 틀린다).
 체크인: ${JSON.stringify(_entriesForPrompt, null, 2).slice(0, 4000)}
 미션: ${JSON.stringify(missionsInRange.map(m => ({title: m.title, status: m.status, attemptStatus: m.attemptStatus, strategyId: m.strategyId})), null, 2).slice(0, 1500)}
 대화 발췌 (사용자): ${chatInRange.map(m => {
@@ -30195,33 +30281,33 @@ JSON 객체 하나만 반환. markdown code fence X. 다른 글 X. 모든 필수
 인사이트: ${JSON.stringify(insightsInRange.map(i => ({content: i.content, type: i.type})), null, 0).slice(0, 800)}
 활성 모드: ${Object.keys(state.modes || {}).filter(k => state.modes[k]).join(', ') || '없음'}
 
-이미 알려진 사용자 (user_verified ✓ 만):
-- traits: ${(state.traits || []).filter(t => t.user_verified !== false).slice(0, 5).map(t => t.name).join(', ')}
-- patterns: ${(state.patterns || []).filter(p => p.user_verified !== false).slice(0, 5).map(p => p.name).join(', ')}
-- values: ${(state.values || []).filter(v => v.user_verified !== false).slice(0, 3).map(v => v.name).join(', ')}
+이미 확인된 사용자 정보 (사용자가 맞다고 확인한 것만):
+- 특성: ${(state.traits || []).filter(t => t.user_verified !== false).slice(0, 5).map(t => t.name).join(', ')}
+- 패턴: ${(state.patterns || []).filter(p => p.user_verified !== false).slice(0, 5).map(p => p.name).join(', ')}
+- 가치: ${(state.values || []).filter(v => v.user_verified !== false).slice(0, 3).map(v => v.name).join(', ')}
 
-[지난 리뷰 씨앗] ${prevSeeds.length > 0 ? '(callback 추천 — 씨앗이 어떻게 됐는지 짚어주면 사용자 신뢰↑)' : '(없음)'}
-${prevSeeds.length > 0 ? prevSeeds.map(s => '· ' + s).join('\n') : '(이번이 첫 리뷰 또는 이전 씨앗 X)'}
+[지난 리뷰에서 다음에 다시 보기로 한 것] ${prevSeeds.length > 0 ? '(이번 기록에서 어떻게 됐는지 보이면 사실로 적는다. 안 보이면 건너뛴다.)' : '(없음)'}
+${prevSeeds.length > 0 ? prevSeeds.map(s => '· ' + s).join('\n') : '(이번이 첫 리뷰이거나 지난 항목이 없음)'}
 
-[지난 리뷰 사용자 한 마디] ${prevUserNote ? '(사용자가 직접 남긴 메모 — 어휘 그대로 짚어주면 자기친밀감 ↑)' : '(없음)'}
-${prevUserNote ? '· "' + prevUserNote + '"' : '(이번이 첫 리뷰 또는 사용자 메모 X)'}
+[지난 리뷰에 사용자가 직접 남긴 한 마디] ${prevUserNote ? '(관련이 있으면 이 말을 그대로 인용할 수 있다.)' : '(없음)'}
+${prevUserNote ? '· "' + prevUserNote + '"' : '(이번이 첫 리뷰이거나 메모가 없음)'}
+${prevPending.length > 0 ? `
+[지난달 리뷰에서 '아직 한 번뿐'이었던 것] (이번 달 기록에서 두 번째 근거가 생겼으면 rules 로 올린다. 여전히 하나뿐이면 pending 에 다시 적는다. 이번 달에 아무 근거도 없으면 뺀다.)
+${prevPending.map(s => '· ' + s).join('\n')}` : ''}
 ${(data.trackingFacts && data.trackingFacts.length > 0) ? `
-[이 기간 추적 항목] (사용자 명시 2026-05-10 — 행동 actual 데이터. 패턴/강점/가치 일관성/위험 신호 추출 시 활용.)
+[이 기간 추적 항목] (이 사람이 실제로 한 행동의 기록. 규칙의 근거로 쓸 수 있다.)
 ${data.trackingFacts.map(f => {
   const _corr = (typeof f.moodCorrelation === 'number')
-    ? (f.moodCorrelation > 0.3 ? ` · 한 날 기분 한결 좋음 (+${f.moodCorrelation.toFixed(1)})` : f.moodCorrelation < -0.3 ? ` · 한 날 기분 살짝 무거움 (${f.moodCorrelation.toFixed(1)})` : '')
+    ? (f.moodCorrelation > 0.3 ? ' · 체크한 날이 안 한 날보다 기분이 높았음' : f.moodCorrelation < -0.3 ? ' · 체크한 날이 안 한 날보다 기분이 낮았음' : '')
     : '';
   const _prog = f.progress ? ` · 진척: ${f.progress}` : '';
-  const _check = f.type === 'check' ? `${f.checkedDays}/${f.totalDaysInRange}일 체크${_corr}` : (f.type === 'measurement' ? '측정형' : '');
+  const _check = f.type === 'check' ? `${f.totalDaysInRange}일 중 ${f.checkedDays}일 체크${_corr}` : (f.type === 'measurement' ? '측정형' : '');
   return `- "${f.title}" — ${_check}${_prog}`;
 }).join('\n')}
 
-[활용 가이드]
-- 추적 항목 = 사용자 행동 사실 (추측 X). pattern / strengths / value_align / risk_signals 추출 시 evidence 로 활용.
-- 모델 자체 추측 X — 위 fact 를 그대로 인용 ("X 한 날 기분 더 좋았어" 식).
-- 체크율 급락 = risk 신호 (부드럽게).` : ''}
+위 사실을 그대로 쓰고 추측을 보태지 않는다. 체크가 갑자기 끊긴 건 risk_signals 에 사실로 적는다.` : ''}
 
-위 데이터로 [출력 JSON] 스키마에 맞춰 JSON 객체 하나만 반환.`;
+위 데이터로 [출력 JSON] 스키마에 맞춰 JSON 객체 하나만 출력한다.`;
 
   return {
     system: [{ type: 'text', text: stable, cache_control: { type: 'ephemeral', ttl: '1h' } }],
@@ -30453,8 +30539,37 @@ function renderReviewScreen(type, reviewData, opts) {
     // Pattern — 핵심 카드 2
     // weekly = {headline, note} 가벼움 / monthly = {headline, evidence, condition} Detective.
     const pat = reviewData.pattern || {};
-    const patHasContent = pat.headline || pat.evidence || pat.condition || pat.note;
-    const patternLabel = type === 'weekly' ? '🌙 이번 주 흐름' : '🔍 패턴 발견';
+    // 2026-10-15: 월간 리뷰가 rules[] (규칙 최대 3개 + 근거 + 반대) 를 주면 pattern 카드 대신 규칙 블록을 그린다.
+    //   rules[0] 은 pattern 과 같은 내용이라 둘 다 그리면 중복. pending[] = 근거 하나뿐인 후보.
+    const _rulesArr = Array.isArray(reviewData.rules)
+      ? reviewData.rules.filter(x => x && typeof x.rule === 'string' && x.rule.trim())
+      : [];
+    const _pendingArr = Array.isArray(reviewData.pending)
+      ? reviewData.pending.filter(x => typeof x === 'string' && x.trim())
+      : [];
+    const rulesBlock = _rulesArr.length > 0 ? `
+    <div style="background:var(--surface); border:1px solid rgba(201,169,110,0.20); border-radius:14px; padding:16px 18px; margin-bottom:14px;">
+      <div style="font-size:11px; color:var(--accent); letter-spacing:0.15em; margin-bottom:10px;">이번 달에 보인 것</div>
+      ${_rulesArr.slice(0, 3).map((x, i) => {
+        const ev = (Array.isArray(x.evidence) ? x.evidence : []).filter(e => e && (e.quote || e.text)).slice(0, 4).map(e => {
+          const d = e.date ? `<span style="color:var(--accent); font-variant-numeric:tabular-nums;">${escapeHtml(String(e.date).slice(5).replace('-', '/'))}</span> ` : '';
+          return `<div style="font-size:12px; color:var(--text-dim); line-height:1.7; padding:4px 0 4px 12px; border-left:2px solid rgba(201,169,110,0.35); margin-top:4px;">${d}${escapeHtml(String(e.quote || e.text || ''))}</div>`;
+        }).join('');
+        const counter = (typeof x.counter === 'string' && x.counter.trim())
+          ? `<div style="font-size:12px; color:var(--text-soft); line-height:1.6; margin-top:8px;">반대: ${escapeHtml(x.counter.trim())}</div>` : '';
+        return `<div style="padding:${i === 0 ? '0' : '12px'} 0 ${i === _rulesArr.length - 1 ? '0' : '12px'}; ${i > 0 ? 'border-top:1px solid var(--border);' : ''}">
+          <div style="font-size:14.5px; font-weight:600; color:var(--text); line-height:1.6; margin-bottom:4px;">${escapeHtml(x.rule.trim())}</div>
+          ${ev}${counter}
+        </div>`;
+      }).join('')}
+      ${_pendingArr.length > 0 ? `
+      <div style="margin-top:14px; padding-top:10px; border-top:1px solid var(--border);">
+        <div style="font-size:11px; color:var(--text-soft); letter-spacing:0.1em; margin-bottom:6px;">아직 한 번뿐</div>
+        ${_pendingArr.slice(0, 4).map(p => `<div style="font-size:12px; color:var(--text-dim); line-height:1.6; margin-top:4px;">${escapeHtml(p.trim())}</div>`).join('')}
+      </div>` : ''}
+    </div>` : '';
+    const patHasContent = !rulesBlock && (pat.headline || pat.evidence || pat.condition || pat.note);
+    const patternLabel = type === 'weekly' ? '이번 주 흐름' : '이번 달에 보인 것';
     const patternBlock = patHasContent ? `
     <div style="background:var(--surface); border:1px solid rgba(201,169,110,0.20); border-radius:14px; padding:16px 18px; margin-bottom:14px;">
       <div style="font-size:11px; color:var(--accent); letter-spacing:0.15em; text-transform:uppercase; margin-bottom:10px;">${patternLabel}</div>
@@ -30486,7 +30601,7 @@ function renderReviewScreen(type, reviewData, opts) {
     const quotesArr = Array.isArray(reviewData.quotes) ? reviewData.quotes.filter(q => q && q.trim()) : [];
     const quotesBlock = quotesArr.length > 0 ? `
     <div style="margin-bottom:18px;">
-      <div style="font-size:11px; color:var(--accent); letter-spacing:0.15em; text-transform:uppercase; margin-bottom:10px;">📝 너의 인용</div>
+      <div style="font-size:11px; color:var(--accent); letter-spacing:0.15em; margin-bottom:10px;">네가 쓴 말</div>
       <div style="display:flex; gap:10px; overflow-x:auto; padding:2px 2px 8px; -webkit-overflow-scrolling:touch; scrollbar-width:thin;">
         ${quotesArr.map(q => `<div style="flex:0 0 auto; min-width:200px; max-width:280px; font-family:'Gowun Batang',serif; font-size:13.5px; color:var(--text); line-height:1.65; padding:10px 14px; background:var(--surface); border-left:2px solid rgba(126,200,227,0.40); border-radius:0 10px 10px 0; white-space:normal;">"${escapeHtml(q)}"</div>`).join('')}
       </div>
@@ -30588,8 +30703,9 @@ function renderReviewScreen(type, reviewData, opts) {
       ${heroBlock}
       ${scenesBlock}
       ${flowBlock}
-      ${strengthsBlock}
+      ${rulesBlock}
       ${patternBlock}
+      ${strengthsBlock}
       ${experimentBlock}
       ${seedsBlock}
       ${insightsBlock}
@@ -30726,7 +30842,10 @@ function saveReview(type) {
     value_align: reviewData.value_align,
     risk_signals: reviewData.risk_signals,
     scenes: reviewData.scenes,
-    seeds: reviewData.seeds
+    seeds: reviewData.seeds,
+    // 2026-10-15: 규칙 중심 월간 리뷰 필드 (18e-rules-panel.js 가 읽음)
+    rules: reviewData.rules,
+    pending: reviewData.pending
   };
 
   // 사용자 보고 2026-05-01 ultrathink: 중복 가드 — 같은 weekKey/monthKey 이미 있으면 replace (auto 가 먼저 push 한 후 사용자 manual click 시 중복 방지)
@@ -42115,6 +42234,7 @@ function showScreen(name) {
   }
   if (name === 'model') {
     renderModel();
+    if (typeof renderModelRulesTop === 'function') { try { renderModelRulesTop(); } catch (e) { console.warn('[rules]', e); } }
     // V4 (사용자 명시 2026-05-08 ultrathink): 나 탭 진입 시 batch dot 클리어.
     if (typeof _clearNavBatchUpdate === 'function') _clearNavBatchUpdate('model');
   }
@@ -42142,6 +42262,9 @@ function showScreen(name) {
     if (typeof renderShellBar === 'function') renderShellBar();  // 양생방 안 shellCount 갱신
     if (typeof renderReflectionHome === 'function') renderReflectionHome();
     if (typeof renderRotatingCard === 'function') renderRotatingCard();
+    // 2026-10-15: 규칙 패널 + '더 보기' 상태 (18e-rules-panel.js)
+    if (typeof renderHomeRules === 'function') { try { renderHomeRules(); } catch (e) { console.warn('[rules]', e); } }
+    if (typeof applyHomeMoreState === 'function') { try { applyHomeMoreState(); } catch (e) { console.warn('[home more]', e); } }
     if (typeof runDiagnosesIfNeeded === 'function') {
       try { runDiagnosesIfNeeded(); } catch (e) { console.warn('runDiagnoses:', e); }
     }
@@ -45280,6 +45403,136 @@ function _findEmbedMatch(item, arr, tau) {
     if (sim >= bestSim) { bestSim = sim; best = e; }
   }
   return best;
+}
+// ═══════════════════════════════════════════════════════════════
+// 규칙 패널 (2026-10-15) — 홈과 나 탭의 첫 화면
+// ═══════════════════════════════════════════════════════════════
+// 배경: 2026-10-15 회의. 다섯 달 동안 실제로 행동으로 이어진 건 리뷰의 pattern 한 칸에서 나온
+//   "이럴 때 이렇다" 형태의 규칙뿐이었다. 특성·가치 카드 스무 장은 읽히고 끝났다.
+//   그래서 홈과 나 탭의 맨 위에는 규칙만 둔다. 나머지는 '더 보기' 밑으로.
+//
+// 데이터 출처 (우선순위):
+//   1) 월간 리뷰의 rules[] (2026-10-15 이후 프롬프트가 만드는 새 필드)
+//   2) 없으면 월간 리뷰의 pattern (headline / evidence / condition) 을 규칙 하나로 변환
+//   최신 리뷰부터 모아서 최대 3개.
+
+function _rulesFromReview(r) {
+  if (!r) return [];
+  const out = [];
+  if (Array.isArray(r.rules)) {
+    for (const x of r.rules) {
+      if (!x || typeof x.rule !== 'string' || !x.rule.trim()) continue;
+      out.push({
+        rule: x.rule.trim(),
+        evidence: Array.isArray(x.evidence) ? x.evidence.filter(e => e && (e.quote || e.text)).slice(0, 3) : [],
+        counter: typeof x.counter === 'string' ? x.counter.trim() : '',
+        monthKey: r.monthKey || ''
+      });
+    }
+  }
+  if (out.length === 0 && r.pattern && typeof r.pattern.headline === 'string' && r.pattern.headline.trim()) {
+    out.push({
+      rule: r.pattern.headline.trim(),
+      evidence: r.pattern.evidence ? [{ date: '', quote: String(r.pattern.evidence) }] : [],
+      counter: '',
+      monthKey: r.monthKey || ''
+    });
+  }
+  return out;
+}
+
+function _collectMonthlyRules(limit) {
+  const max = limit || 3;
+  const arr = Array.isArray(state.monthlyReviews) ? state.monthlyReviews.slice() : [];
+  arr.sort((a, b) => String(b.monthKey || '').localeCompare(String(a.monthKey || '')));
+  const rules = [];
+  for (const r of arr) {
+    for (const x of _rulesFromReview(r)) {
+      rules.push(x);
+      if (rules.length >= max) return rules;
+    }
+  }
+  return rules;
+}
+
+function _monthKeyLabel(mk) {
+  const m = /^(\d{4})-(\d{2})$/.exec(mk || '');
+  if (!m) return '';
+  return `${parseInt(m[2], 10)}월`;
+}
+
+function renderRulesPanelHtml() {
+  const rules = _collectMonthlyRules(3);
+  const latestMonthly = (Array.isArray(state.monthlyReviews) && state.monthlyReviews.length > 0);
+  if (rules.length === 0) {
+    const sub = latestMonthly
+      ? '지난 리뷰에는 규칙으로 부를 만한 게 없었다.'
+      : '체크인이 한 달쯤 이어지면 여기에 생긴다.';
+    return `
+      <div class="rules-panel" id="rulesPanel">
+        <div class="rules-panel-title">지금까지 보인 것</div>
+        <div class="rules-empty">${escapeHtml(sub)}</div>
+      </div>`;
+  }
+  const items = rules.map((x, i) => {
+    const ev = x.evidence.map(e => {
+      const d = e.date ? `<span class="rules-date">${escapeHtml(String(e.date).slice(5).replace('-', '/'))}</span> ` : '';
+      return `<div class="rules-evidence">${d}${escapeHtml(String(e.quote || e.text || ''))}</div>`;
+    }).join('');
+    const counter = x.counter ? `<div class="rules-counter">반대: ${escapeHtml(x.counter)}</div>` : '';
+    const mk = _monthKeyLabel(x.monthKey);
+    return `
+      <div class="rules-item">
+        <div class="rules-rule">${escapeHtml(x.rule)}${mk ? `<span class="rules-month">${mk}</span>` : ''}</div>
+        <details class="rules-details">
+          <summary>근거</summary>
+          ${ev || '<div class="rules-evidence">근거가 기록돼 있지 않다.</div>'}
+          ${counter}
+        </details>
+      </div>`;
+  }).join('');
+  return `
+    <div class="rules-panel" id="rulesPanel">
+      <div class="rules-panel-title">지금까지 보인 것</div>
+      ${items}
+      <button class="rules-open-review" onclick="showScreen('archive-reviews')">리뷰 전체 보기</button>
+    </div>`;
+}
+
+function renderHomeRules() {
+  const el = document.getElementById('homeRulesContainer');
+  if (!el) return;
+  el.innerHTML = renderRulesPanelHtml();
+}
+
+function renderModelRulesTop() {
+  const el = document.getElementById('modelRulesTop');
+  if (!el) return;
+  el.innerHTML = renderRulesPanelHtml();
+}
+
+// 홈 '더 보기' — 숨겨둔 모듈 (미션·숙고·칩 4개·진주) 펼치기. 기기 로컬 기억.
+const _HOME_MORE_LS_KEY = 'sora_home_more_open';
+function _homeMoreIsOpen() {
+  try { return localStorage.getItem(_HOME_MORE_LS_KEY) === '1'; } catch { return false; }
+}
+function applyHomeMoreState() {
+  const open = _homeMoreIsOpen();
+  const extras = document.getElementById('homeExtras');
+  const chips = document.getElementById('libMoreChips');
+  const btn = document.getElementById('libMoreChip');
+  if (extras) extras.style.display = open ? '' : 'none';
+  if (chips) chips.style.display = open ? 'contents' : 'none';
+  if (btn) btn.querySelector('.cat-label').textContent = open ? '접기' : '더 보기';
+  // 접을 때 다른 칩에 가 있었으면 일기·대화로 복귀
+  if (!open && typeof _currentLens !== 'undefined' && _currentLens !== 'diary' && typeof switchLibraryCat === 'function') {
+    try { switchLibraryCat('diary'); } catch {}
+  }
+}
+function toggleHomeMore() {
+  const next = !_homeMoreIsOpen();
+  try { localStorage.setItem(_HOME_MORE_LS_KEY, next ? '1' : '0'); } catch {}
+  applyHomeMoreState();
 }
 // ═══════════════════════════════════════════════════════════════
 // CHAT
@@ -48490,15 +48743,15 @@ function buildSystemPromptParts() {
   // V4 사용자 명시 2026-05-26 ultrathink — 대화탭 표정 출력 규칙.
   //   응답 첫 줄에 [expr: XXX] prefix → 클라가 strip + 아바타 표정 갱신. 12 표정 풀 = CHAT_MODE_EXPRESSIONS (19-chat/15-chat-mode.js).
   //   stable 영역에 넣어 cache hit (변동 X). 모델 vent + laugh 무시 가드는 클라 sanitize 도 추가 (15-chat-mode.js _sanitizeChatExpression).
-  stable.push('[대화탭 표정 출력 규칙 — 매 응답 첫 줄 의무]');
-  stable.push('  · 응답 *맨 첫 줄* 에 [expr: XXX] 형식으로 표정 ID 1개 + 줄바꿈. 본문은 그 다음 줄부터.');
-  stable.push('  · XXX 풀 (정확히 12 개 중 하나):');
+  stable.push('[대화탭 표정 출력 규칙 — 매 응답 첫 줄]');
+  stable.push('  · 응답 맨 첫 줄에 [expr: XXX] 형식으로 표정 ID 하나를 쓰고 줄을 바꾼다. 본문은 그 다음 줄부터 쓴다.');
+  stable.push('  · XXX 는 아래 열두 개 중 하나다:');
   stable.push('    serious, soft-smile, bright-smile, laugh, surprised, curious, thinking, tilt, empathic, warm, nod, focused');
-  stable.push('  · 대화 흐름·사용자 감정에 맞춰 매번 자연스럽게 선택. 같은 표정 연속 반복 X.');
-  stable.push('  · 모드 제약: chatMode=vent (마음 털어놓기) 일 때 laugh 금지 → warm / empathic / soft-smile 권장.');
-  stable.push('  · 본문 안에는 [expr:...] 안 박음. prefix 한 번, 첫 줄만.');
+  stable.push('  · 대화 내용과 사용자 감정에 맞춰 고른다. 같은 표정을 연달아 반복하지 않는다.');
+  stable.push('  · chatMode 가 vent (마음 털어놓기) 일 때는 laugh 를 쓰지 않는다. warm, empathic, soft-smile 중에서 고른다.');
+  stable.push('  · 본문 안에는 [expr:...] 를 넣지 않는다. 첫 줄에 한 번만 쓴다.');
   stable.push('');
-  stable.push('\n━━━━━━━━━━━━━━━━━━━━━\n📂 사용자에 대한 현재 모델\n━━━━━━━━━━━━━━━━━━━━━\n');
+  stable.push('\n━━━━━━━━━━━━━━━━━━━━━\n사용자에 대한 현재 모델\n━━━━━━━━━━━━━━━━━━━━━\n');
   if (state.profile) stable.push(`[사용자 프로필]\n${state.profile}\n`);
 
   // 사용자 요청 2026-04-29 (perf #5): 시스템 프롬프트 cap — 매우 많을 때 verified 우선 + 최대 30개 (확신도 높은 순)
@@ -48596,10 +48849,10 @@ function buildSystemPromptParts() {
       snLines.push('정체성: ' + sn.identityKeywords.slice(0, 12).join(', '));
     }
     if (snLines.length) {
-      stable.push('— 자기서사·핵심 신념 —');
+      stable.push('— 자기 이야기·핵심 신념 —');
       snLines.forEach(l => stable.push(l));
     }
-    stable.push('  · 위 정보는 사용자가 직접 입력한 깊은 자기 정보. 자연스럽게 짚어 인용 가능 (단정 X, 외재화 톤).');
+    stable.push('  · 위 정보는 사용자가 직접 입력한 자기 정보다. 관련이 있을 때 자연스럽게 인용할 수 있다. 단정하지 않는다.');
     stable.push('');
   }
 
@@ -48625,13 +48878,13 @@ function buildSystemPromptParts() {
   if (_dayKeyVal !== _realDate) {
     const _dayDate = new Date(_dayKeyVal);
     const _dowEntry = ['일', '월', '화', '수', '목', '금', '토'][_dayDate.getDay()];
-    perCall.push(`[entry 기준 날짜] ${_dayKeyVal} (${_dowEntry}요일) — 새벽 4시까지는 전날 entry로 묶임`);
+    perCall.push(`[entry 기준 날짜] ${_dayKeyVal} (${_dowEntry}요일) — 새벽 4시까지는 전날 entry 로 묶인다`);
   }
   perCall.push('');
 
   const activeModes = Object.keys(state.modes || {}).filter(k => state.modes[k]);
   if (activeModes.length > 0) {
-    const modeMap = { exam: '📚 마감/시험', travel: '✈️ 여행 중', sick: '🤒 아픔', rest: '🏖 휴식', period: '🩸 월경' };
+    const modeMap = { exam: '마감/시험', travel: '여행 중', sick: '아픔', rest: '휴식', period: '월경' };
     sessionStable.push('[현재 활성 모드]');
     activeModes.forEach(m => sessionStable.push('- ' + (modeMap[m] || m)));
     const phase = getCyclePhase();
@@ -48655,20 +48908,20 @@ function buildSystemPromptParts() {
   // 사용자 보고 2026-05-10 (검증 결과 fix): 옛 가드 모호 → 8턴쯤 AI 시뮬 망각. 구체 X-list + ✓-list 강화 + N턴 후 동일.
   const _simContextMsg = (state.chatMessages || []).find(m => m && m.isSimulationContext === true);
   if (_simContextMsg) {
-    sessionStable.push('[시나리오 토론 컨텍스트 — 매 응답 유지, 매우 중요]');
-    sessionStable.push('- 사용자가 가상 시나리오 제안 — 답도 그 시뮬 안 가정. 실제 일 X.');
-    sessionStable.push('- 시뮬 시작 후 5턴, 10턴 지나도 동일. 사용자가 짧게 "응" / "맞네" 답해도 시뮬 안 답으로 인식.');
-    sessionStable.push('- 절대 X (실제 일 인 양 묻기 금지) — 시뮬 컨텍스트 망각 방지:');
-    sessionStable.push('  · "그 다큐 뭐였어?" / "어떤 장르?" / "어떤 영상?"');
-    sessionStable.push('  · "실제로 본 거였어?" / "정말 그랬어?"');
-    sessionStable.push('  · "그날 어땠어?" / "결국 어떻게 됐어?"');
-    sessionStable.push('  · "더 자세히 알려줘" 식 실제 사실 캐묻기');
-    sessionStable.push('- ✓ OK (토론 톤만):');
-    sessionStable.push('  · "그 답을 보면 X 성향이 보여"');
+    sessionStable.push('[시나리오 토론 컨텍스트 — 매 응답에서 유지한다]');
+    sessionStable.push('- 사용자가 가상 시나리오를 제안했다. 답도 그 시나리오 안에서 한다. 실제로 있었던 일이 아니다.');
+    sessionStable.push('- 시나리오가 시작된 뒤 다섯 턴, 열 턴이 지나도 같다. 사용자가 짧게 "응", "맞네"라고만 답해도 시나리오 안의 답으로 받아들인다.');
+    sessionStable.push('- 실제 일인 것처럼 묻지 않는다. 다음과 같은 질문은 하지 않는다:');
+    sessionStable.push('  · "그 다큐 뭐였어?", "어떤 장르?", "어떤 영상?"');
+    sessionStable.push('  · "실제로 본 거였어?", "정말 그랬어?"');
+    sessionStable.push('  · "그날 어땠어?", "결국 어떻게 됐어?"');
+    sessionStable.push('  · "더 자세히 알려줘" 같이 실제 사실을 캐묻는 말');
+    sessionStable.push('- 되는 것은 시나리오 안에서 이어가는 말이다:');
+    sessionStable.push('  · "그 답을 보면 이런 쪽으로 가는 것 같아"');
     sessionStable.push('  · "다른 식으로 가면 어떨까"');
-    sessionStable.push('  · "그 상황에선 어떻게 반응할 거 같아?"');
-    sessionStable.push('  · "시뮬 안에서 X 라면?" 가정 분기');
-    sessionStable.push('- 추출은 자동 격리 (extractedFrom=simulation, 약한 신호) — 모델은 토론 자연스럽게 이어가면 됨.');
+    sessionStable.push('  · "그 상황에선 어떻게 반응할 것 같아?"');
+    sessionStable.push('  · "시나리오 안에서 이랬다면?" 같은 가정');
+    sessionStable.push('- 여기서 나온 내용은 따로 격리되어 자기 모델에 약하게만 반영된다. 모델은 토론을 자연스럽게 이어가면 된다.');
     const _scenarioLine = (_simContextMsg.content || '').split('\n').find(l => l.startsWith('[시뮬레이션]')) || '';
     if (_scenarioLine) sessionStable.push(`- 시뮬 시나리오: ${_scenarioLine.replace(/^\[시뮬레이션\]\s*/, '')}`);
     sessionStable.push('');
@@ -48695,17 +48948,17 @@ function buildSystemPromptParts() {
   if (activeDiag && _DIAG_LABELS && _DIAG_LABELS[activeDiag.type]) {
     const lbl = _DIAG_LABELS[activeDiag.type];
     if (_isTesterMode) {
-      perCall.push(`[관찰된 패턴 — 테스트 모드 강제 인용. 응답 안에 반드시 한 줄 끼워야]`);
-      perCall.push(`- ${lbl.emoji} ${lbl.name}: ${activeDiag.evidence}`);
-      perCall.push(`  · 응답 마지막에 한 줄로 자연스럽게 한 번 인용. "${lbl.name}" 단어 직접 써도 OK.`);
-      perCall.push(`  · 톤: 외재화 (X 패턴이 작동 중 / 이 도구 안 맞을 수도). 단정 X.`);
+      perCall.push(`[관찰된 패턴 — 테스트 모드. 응답 안에 반드시 한 줄 넣는다]`);
+      perCall.push(`- ${lbl.name}: ${activeDiag.evidence}`);
+      perCall.push(`  · 응답 마지막에 한 줄로 자연스럽게 한 번 인용한다. "${lbl.name}" 이라는 말을 직접 써도 된다.`);
+      perCall.push(`  · 사람이 아니라 패턴을 주어로 말한다 ("이 패턴이 돌고 있는 것 같아"). 단정하지 않는다.`);
       perCall.push('');
     } else {
-      perCall.push(`[관찰된 패턴 — "더 알아보기" 트리거됨, 4단 응답 [내가 본 것] 또는 [이게 뭐냐면]에 자연스럽게 한 번 인용]`);
-      perCall.push(`- ${lbl.emoji} ${lbl.name}: ${activeDiag.evidence}`);
-      perCall.push(`  · 인용 위치: 4단 응답 [내가 본 것] 첫 줄 또는 [이게 뭐냐면]에 살짝 끼워. "X 패턴이 작동 중" 형식.`);
-      perCall.push(`  · 톤: 외재화("X 패턴이 작동 중" / "너 X적이야" X), 사용자 자기 발견 유도(결론 단정 X)`);
-      perCall.push(`  · 한 번만. 사용자 거부하면 다시 X.`);
+      perCall.push(`[관찰된 패턴 — "더 알아보기" 요청. 4단 응답의 [내가 본 것] 또는 [이게 뭐냐면]에 자연스럽게 한 번 인용한다]`);
+      perCall.push(`- ${lbl.name}: ${activeDiag.evidence}`);
+      perCall.push(`  · 인용 위치: [내가 본 것] 첫 줄 또는 [이게 뭐냐면] 안. "이 패턴이 돌고 있는 것 같아" 정도로.`);
+      perCall.push(`  · 사람이 아니라 패턴을 주어로 말한다. "너는 이런 사람이야"처럼 사람에게 이름표를 붙이지 않는다. 결론을 단정하지 않는다.`);
+      perCall.push(`  · 한 번만 인용한다. 사용자가 아니라고 하면 다시 꺼내지 않는다.`);
       perCall.push('');
       if (typeof markDiagnosisShown === 'function' && activeDiag.status === 'active') {
         try { markDiagnosisShown(activeDiag.id); } catch (e) { console.warn('markDiagnosisShown:', e); }
@@ -48713,10 +48966,10 @@ function buildSystemPromptParts() {
     }
   } else if (_isDeeperContext) {
     // 사용자 요청 2026-04-29: 활성 진단이 없을 때도 4단 응답 — 사용자 본인 데이터(traits/patterns/case formulation) 우선 인용 강제
-    perCall.push(`[4단 응답 깊이 강화 — 관찰 X여도 사용자 본인 데이터 우선]`);
-    perCall.push(`  · [내가 본 것]은 사용자 traits/patterns/case formulation에서 직접 인용. generic textbook 개념 (Gollwitzer / Neff 등) 단독 사용 X.`);
-    perCall.push(`  · [이게 뭐냐면]에 심리학 개념 들어가도 OK, 단 위 [내가 본 것]에서 짚은 사용자 본인 패턴이랑 연결.`);
-    perCall.push(`  · 사용자가 "현실적으로 별로야" 류 반응 보이면 = generic 분석. 다음엔 더 사용자 specific하게.`);
+    perCall.push(`[4단 응답 — 관찰된 패턴이 없어도 사용자 본인 데이터를 먼저 쓴다]`);
+    perCall.push(`  · [내가 본 것]은 위의 특성, 관찰된 패턴, 자기 모델에서 직접 가져온다. 교과서에 나오는 일반론만으로 채우지 않는다.`);
+    perCall.push(`  · [이게 뭐냐면]은 일상어로 풀어 쓴다. 심리학 용어나 연구자 이름은 쓰지 않는다. [내가 본 것]에서 말한 이 사람의 패턴과 이어져야 한다.`);
+    perCall.push(`  · 사용자가 "현실적으로 별로야" 같은 반응을 보이면 분석이 두루뭉술했다는 뜻이다. 다음엔 이 사람의 기록에 더 붙여서 쓴다.`);
     perCall.push('');
   }
 
@@ -48760,11 +49013,11 @@ function buildSystemPromptParts() {
     })
     .slice(0, 3);
   if (pendingFollowups.length > 0) {
-    sessionStable.push('[사용자가 약속한 후속 — 자연스럽게 물어볼 수 있음]');
+    sessionStable.push('[사용자가 약속한 후속 — 관련 주제가 나오면 물어볼 수 있다]');
     pendingFollowups.forEach(m => {
-      sessionStable.push(`- "${m.title}" (${m.completedAt && m.completedAt.slice(0, 10) || ''} 완료, 결과 체크 X)`);
+      sessionStable.push(`- "${m.title}" (${m.completedAt && m.completedAt.slice(0, 10) || ''} 완료, 결과는 아직 확인 안 됨)`);
     });
-    sessionStable.push('  · 사용자가 관련 주제 꺼내면 "지난번 X 어떻게 됐어?" 자연스럽게 한 번. 매 대화마다 X. 사용자가 거절하면 다시 X.');
+    sessionStable.push('  · 사용자가 관련 주제를 꺼내면 "지난번 그거 어떻게 됐어?" 정도로 한 번만 묻는다. 매 대화마다 묻지 않는다. 사용자가 넘기면 다시 묻지 않는다.');
     sessionStable.push('');
   }
 
@@ -48793,7 +49046,7 @@ function buildSystemPromptParts() {
     if (_todayEntry.dailyQuestion && _todayEntry.dailyQuestion.text) perCall.push(`- 오늘의 질문: "${_todayEntry.dailyQuestion.text}"`);
     if (_todayEntry.note) perCall.push(`- 메모/답변: ${_todayEntry.note}`);
     if (_todayEntry.diary) perCall.push(`- 일기: ${_todayEntry.diary}`);
-    perCall.push('(참고용 컨텍스트. 사용자가 명시적으로 묻지 않은 한 굳이 분석/되짚지 말 것.)');
+    perCall.push('(참고용이다. 사용자가 묻지 않았으면 분석하거나 되짚지 않는다.)');
     perCall.push('');
   }
 
@@ -48831,7 +49084,7 @@ function buildSystemPromptParts() {
 
   // Mission state
   if (hasActivePendingMission()) {
-    sessionStable.push('\n[현재 상태] 오늘의 미션이 이미 있음. 새 제안은 신중하게 - 이미 있는 미션을 언급하거나, 진짜 다른 것일 때만 제안.');
+    sessionStable.push('\n[현재 상태] 오늘의 미션이 이미 있다. 새 미션을 제안하지 않는다. 이미 있는 미션을 언급하거나, 사용자가 묻고 그것과 정말 다른 것일 때만 제안한다.');
   }
 
   return {
@@ -55011,7 +55264,7 @@ function openStrategyBuilder() {
   // 첫 AI 가이드
   _strategyBuilderState.messages.push({
     role: 'assistant',
-    content: '🧬 전략 DNA 같이 만들자.\n\n어떤 상황에서 막혀? 한 줄로 적어봐 — 네가 자주 마주치는 패턴이나 풀고 싶은 고민.'
+    content: '전략 카드를 같이 만들어 보자.\n\n어떤 상황에서 막히는지 한 줄로 적어줘. 자주 겪는 일이든 풀고 싶은 고민이든.'
   });
   const overlay = document.createElement('div');
   overlay.id = 'strategyBuilder';
@@ -63326,7 +63579,7 @@ function _buildQuarterlyReviewPrompt(quarterKey, stats, data) {
 - 진주: ${stats.pearls}개${stats.dnaPearls ? ` + DNA 진주 ${stats.dnaPearls}개 결정화` : ''}
 - 활성 모드 빈도: ${Object.entries(stats.modeCount).map(([k, v]) => `${k} ${v}일`).join(' / ') || '거의 없음'}
 - 추적 항목 변화: ${stats.trackerStats.map(t => `${t.title} ${t.first}→${t.last}${t.unit || ''}`).join(' / ') || '데이터 부족'}
-- 너의 결: 짚어본 곳 ${stats.problemsTotal} / 잘 풀린 곳 ${stats.strengthsTotal} / 자라는 곳 ${stats.growthCount}
+- 자기 모델 항목 수: 다루어야 할 곳 ${stats.problemsTotal} / 강점 ${stats.strengthsTotal} / 자라는 곳 ${stats.growthCount}
 - 체화 완료 가닥 (누적): ${recentEmbodied}개
 
 [분기 entries 발췌]
@@ -63350,24 +63603,22 @@ ${JSON.stringify(archiveIn.map(a => ({headline: a.headline, body: (a.body || '')
 [분기 인사이트]
 ${JSON.stringify(insightsIn.map(i => ({content: i.content, type: i.type})), null, 0).slice(0, 1000)}
 
-[지난 분기 씨앗] ${prevSeeds.length > 0 ? '(callback 추천)' : '(첫 분기 또는 씨앗 X)'}
+[지난 분기 리뷰에서 다음에 다시 보기로 한 것] ${prevSeeds.length > 0 ? '(이번 분기 기록에서 어떻게 됐는지 보이면 사실로 적는다. 안 보이면 건너뛴다.)' : '(첫 분기이거나 지난 항목이 없음)'}
 ${prevSeeds.length > 0 ? prevSeeds.map(s => '· ' + s).join('\n') : ''}
 ${(_data.trackingFacts && _data.trackingFacts.length > 0) ? `
-[이 분기 추적 항목] (사용자 명시 2026-05-10 — 행동 actual 데이터. 변화·강점·위험 신호 추출 시 활용.)
+[이 분기 추적 항목] (이 사람이 실제로 한 행동의 기록. 변화나 위험 신호의 근거로 쓸 수 있다.)
 ${_data.trackingFacts.map(f => {
   const _corr = (typeof f.moodCorrelation === 'number')
-    ? (f.moodCorrelation > 0.3 ? ` · 한 날 기분 한결 좋음 (+${f.moodCorrelation.toFixed(1)})` : f.moodCorrelation < -0.3 ? ` · 한 날 기분 살짝 무거움 (${f.moodCorrelation.toFixed(1)})` : '')
+    ? (f.moodCorrelation > 0.3 ? ' · 체크한 날이 안 한 날보다 기분이 높았음' : f.moodCorrelation < -0.3 ? ' · 체크한 날이 안 한 날보다 기분이 낮았음' : '')
     : '';
   const _prog = f.progress ? ` · 진척: ${f.progress}` : '';
-  const _check = f.type === 'check' ? `${f.checkedDays}/${f.totalDaysInRange}일 체크${_corr}` : (f.type === 'measurement' ? '측정형' : '');
+  const _check = f.type === 'check' ? `${f.totalDaysInRange}일 중 ${f.checkedDays}일 체크${_corr}` : (f.type === 'measurement' ? '측정형' : '');
   return `- "${f.title}" — ${_check}${_prog}`;
 }).join('\n')}
 
-[활용 가이드]
-- 추적 항목 = 사용자 행동 사실. transformation / pattern / strengths / risk_signals 추출 시 evidence.
-- 모델 자체 추측 X — 위 fact 그대로 인용.` : ''}
+위 사실을 그대로 쓰고 추측을 보태지 않는다.` : ''}
 
-위 데이터로 분기 리뷰 작성. JSON만 출력.`;
+위 데이터로 분기 리뷰를 쓴다. JSON 객체 하나만 출력한다.`;
 
   return {
     // 사용자 명시 2026-05-11 ultrathink: stable system 자체는 backend (review-systems.ts) 가 강제 inject — client system 비움.
@@ -63433,7 +63684,7 @@ function _buildDiarySummaryPrompt(date, messages, entry) {
   if (entry.modes) {
     // V4 fix (사용자 보고 2026-05-21 ultrathink): raw key (period/exam/travel/sick/rest) 직렬화 시 AI 가 영어 'period' → '시험 기간' 등 hallucinate.
     //   20-system-prompt.js:157 의 modeMap 과 동일 한국어 변환 적용. daily summary prompt 가 그 누락된 path.
-    const _modeMap = { exam: '📚 마감/시험', travel: '✈️ 여행 중', sick: '🤒 아픔', rest: '🏖 휴식', period: '🩸 월경' };
+    const _modeMap = { exam: '마감/시험', travel: '여행 중', sick: '아픔', rest: '휴식', period: '월경' };
     const activeModes = Object.keys(entry.modes).filter(k => entry.modes[k]);
     if (activeModes.length) checkinParts.push(`모드: ${activeModes.map(k => _modeMap[k] || k).join(', ')}`);
   }
@@ -75631,7 +75882,7 @@ async function resetTasks() {
 }
 
 // V3.13.x: 앱 버전 — 매 git push 전 갱신. 새 버전 진입 시 튜토리얼 자동 시작.
-const APP_VERSION = 'v4.0.397-ai-outage';
+const APP_VERSION = 'v4.0.398-rules-voice';
 // 사용자 명시 2026-05-01: window 으로 노출 — Sentry release tag (init 안에서 참조).
 try { window.APP_VERSION = APP_VERSION; } catch {}
 

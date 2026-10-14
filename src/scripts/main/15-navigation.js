@@ -72,6 +72,7 @@ function showScreen(name) {
   }
   if (name === 'model') {
     renderModel();
+    if (typeof renderModelRulesTop === 'function') { try { renderModelRulesTop(); } catch (e) { console.warn('[rules]', e); } }
     // V4 (사용자 명시 2026-05-08 ultrathink): 나 탭 진입 시 batch dot 클리어.
     if (typeof _clearNavBatchUpdate === 'function') _clearNavBatchUpdate('model');
   }
@@ -99,6 +100,9 @@ function showScreen(name) {
     if (typeof renderShellBar === 'function') renderShellBar();  // 양생방 안 shellCount 갱신
     if (typeof renderReflectionHome === 'function') renderReflectionHome();
     if (typeof renderRotatingCard === 'function') renderRotatingCard();
+    // 2026-10-15: 규칙 패널 + '더 보기' 상태 (18e-rules-panel.js)
+    if (typeof renderHomeRules === 'function') { try { renderHomeRules(); } catch (e) { console.warn('[rules]', e); } }
+    if (typeof applyHomeMoreState === 'function') { try { applyHomeMoreState(); } catch (e) { console.warn('[home more]', e); } }
     if (typeof runDiagnosesIfNeeded === 'function') {
       try { runDiagnosesIfNeeded(); } catch (e) { console.warn('runDiagnoses:', e); }
     }

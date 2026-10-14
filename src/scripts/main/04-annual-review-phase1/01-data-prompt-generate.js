@@ -58,7 +58,7 @@ function _buildAnnualReviewPrompt(year, data) {
   //   functions/api/_lib/prompts/review-systems.ts REVIEW_ANNUAL_SYSTEM. backend 가 _endpoint='review_annual' 매칭하여 강제 inject.
   //   volatile (사용자 데이터) 만 user message 로 전송 — cache 적용 X (매번 변동).
 
-  const volatile = `${ctx.year}년 연간 리뷰 narrative 작성.
+  const volatile = `${ctx.year}년 연간 리뷰를 쓴다.
 
 [데이터 요약]
 - 일기 ${ctx.stats.entryCount}개 / 깨달음 ${ctx.stats.archiveCount}개 / 진주 ${ctx.stats.pearlCount}개 / 큰 결정 ${ctx.stats.decisionCount}개
@@ -69,13 +69,13 @@ ${ctx.quarterlies.map(q => '· ' + q.quarterKey + ': ' + (q.summary || '')).join
 [일기 발췌 (최근 30개)]
 ${ctx.entries.slice(-30).map(e => '[' + e.date + '] ' + (e.text || '').slice(0, 150)).join('\n').slice(0, 4000)}
 
-[깨달음 카드 top 20]
+[깨달음 카드 20개]
 ${ctx.archive.slice(0, 20).map(a => '· ' + (a.headline || (a.body || '').slice(0, 80))).join('\n').slice(0, 2000)}
 
 [큰 결정 ${ctx.decisions.length}개]
 ${ctx.decisions.map(d => '· ' + (d.title || '') + ': ' + (d.conclusion || '')).join('\n').slice(0, 1000)}
 
-위 데이터로 ${ctx.year}년 연간 리뷰 작성. JSON만 출력.`;
+위 데이터로 ${ctx.year}년 연간 리뷰를 쓴다. JSON 객체 하나만 출력한다.`;
   return {
     // 사용자 명시 2026-05-11 ultrathink: stable system 자체는 backend (review-systems.ts) 가 강제 inject — client system 비움.
     system: undefined,

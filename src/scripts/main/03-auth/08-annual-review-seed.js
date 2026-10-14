@@ -7,19 +7,19 @@ function _buildAnnualReviewSeedData(year) {
     completedAt: new Date().toISOString(),
     yearRange: `${yr} → ${yr + 1}`,
     oneWord: '회복',
-    persona: '자책에서 관찰로 1년 — 결함이 아닌 작동 방식을 본 사람',
-    personaReason: '잘 잔 다음날 4번 중 4번 가벼웠어. 카페 자리잡은 후 글이 술술. 패턴이 보였어.',
+    persona: '올해는 자책하던 자리에서 기록을 보기 시작한 해였어',
+    personaReason: '잘 잔 다음날은 네 번 중 네 번 다 기분이 나았더라. 그리고 카페에 자리 잡고 나서는 글이 길어졌어.',
     // 사용자 명시 2026-05-06 ultrathink: 1-2월 vs 11-12월 너의 모습 한 줄 (정체성 변화 anchor).
     persona_evolution: {
-      start: '미루다가 자책하고, 자책하다 또 미루는 사람',
-      end: '몸의 리듬 보면서 환경부터 바꾸는 사람'
+      start: '1월엔 미루고 자책하고, 자책하다 또 미루는 날이 이어졌어',
+      end: '12월엔 잠 시간 보고 자리부터 바꾸는 날이 더 많았어'
     },
     // 사용자 명시 2026-05-06 ultrathink: 4 분기 narrative — 1년 정체성 궤적.
     trajectory: [
-      { quarter_label: 'Q1 / 봄', line: '"왜 또 못했지" 자책으로 시작' },
-      { quarter_label: 'Q2 / 여름', line: '잠 패턴 발견 — 첫 데이터' },
-      { quarter_label: 'Q3 / 가을', line: '환경 도구로 무게 옮기기 시작' },
-      { quarter_label: 'Q4 / 겨울', line: '몸의 리듬 = 작동 방식 인정' }
+      { quarter_label: 'Q1 / 봄', line: '"왜 또 못했지"라고 쓴 날이 많았어' },
+      { quarter_label: 'Q2 / 여름', line: '잘 잔 다음날이 다르다는 게 처음 보였어' },
+      { quarter_label: 'Q3 / 가을', line: '카페랑 폰 멀리 두기를 쓰기 시작했어' },
+      { quarter_label: 'Q4 / 겨울', line: '마감 임박해야 시작되는 걸 그냥 그렇다고 쓰더라' }
     ],
     stats: [
       { emoji: '📔', num: 226, label: '일기' },
@@ -33,8 +33,8 @@ function _buildAnnualReviewSeedData(year) {
       label: '너는 몰랐지만 내가 발견한 것',
       quote: '"오늘 일찍 잤더니 머리 맑아."',
       dataNum: '+한 단계',
-      dataText: '평일 11시 전 잔 5일 중 4일.\n다음날 mood 한 단계 가벼움.',
-      conclusion: '잘 자는 게 일이 아니라\n<span>너를 살리는 첫 번째 도구</span>였어'
+      dataText: '평일 11시 전에 잔 닷새 중 나흘.\n다음날 기분이 한 단계 높았어.',
+      conclusion: '일찍 잔 날은\n<span>다음날 기분이 달랐어</span>'
     },
     finding2: {
       label: '또 하나',
@@ -42,7 +42,7 @@ function _buildAnnualReviewSeedData(year) {
       friendLowLabel: '집에서\n작업한 날',
       friendHigh: '41',
       friendHighLabel: '카페에서\n작업한 날',
-      conclusion: '환경이 너를 만들어 — <span>의지보다\n자리</span>가 먼저였어'
+      conclusion: '집보다 카페에서 쓴 날이 <span>거의\n두 배</span>였어'
     },
     // 사용자 명시 2026-05-02 ultrathink: 보편 ADHD 자기관찰 — 잠 / 환경 / 회복 / 활용 패턴.
     tree: {
@@ -63,7 +63,7 @@ function _buildAnnualReviewSeedData(year) {
         { name: '감정 후 운동',        emoji: '🏃' },
         { name: '회의 30분 전 정리',   emoji: '📋' }
       ],
-      caption: '이제 이 정도는 너 혼자서도 해낼 수 있어 🫂'
+      caption: '올해 자리 잡은 것들이야'
     },
     beach: {
       diaryCount: 226,
@@ -79,15 +79,15 @@ function _buildAnnualReviewSeedData(year) {
     // 사용자 명시 2026-05-02 ultrathink: best_pearl = 보편 ADHD self-compassion (결함 아닌 작동 방식).
     best_pearl: {
       title: '결함이 아니라 작동 방식',
-      summary: '마감 임박이면 빠르게 진입하는 거 — 고치려 하지 말고 활용해.',
-      whyThisYear: '한 해 동안 일기·깨달음에 자꾸 등장한 한 마디야. "왜 미루지?" 자책하던 시절보다, "임박해야 진입 빠른 게 내 작동 방식" 받아들인 다음부터 일·휴식 둘 다 더 안정적이었어. 머리로 정한 "정상 작동" 보다 몸의 진짜 리듬이 더 정확했던 거야.'
+      summary: '마감이 가까워져야 시작이 빨라지더라. 올해 기록에 가장 자주 나온 말이었어.',
+      whyThisYear: '한 해 동안 일기랑 깨달음에 자꾸 나온 한 마디야. "왜 미루지"라고 쓰던 상반기보다, "임박해야 빨리 시작되는 게 내 방식"이라고 쓰기 시작한 하반기에 일이랑 쉬는 날 둘 다 기록이 고르더라.'
     },
     // 사용자 명시 2026-05-06 ultrathink: best_pearl 다음 4개 — 올해 진주 ranked.
     top_pearls: [
-      { title: '잘 잔 다음날 = 한결 가벼움', note: '4번 중 4번 — 가장 일관된 패턴' },
-      { title: '환경이 의지보다 먼저', note: '집보다 카페에서 글 길이 1.8배' },
-      { title: '거절 후 부채감은 24h 안에 풀어', note: '일주일 미루면 모양만 커져' },
-      { title: '14일 숙성하면 답이 나와', note: '답 모를 땐 결정 미루지 말고 숙성' }
+      { title: '잘 잔 다음날은 기분이 달랐어', note: '네 번 중 네 번 다 그랬어' },
+      { title: '카페에서 쓴 날이 글이 길었어', note: '집에서 쓴 날보다 거의 두 배' },
+      { title: '거절한 다음날 바로 쓴 날은 마음이 빨리 풀렸어', note: '일주일 미룬 날은 더 오래 갔어' },
+      { title: '큰 결정은 2주 두고 보니까 답이 나왔어', note: '올해 한 번, 10월에' }
     ],
     realizations: {
       count: { scrap: 12, memo: 14, reflection: 5 },  // 합 31 = stats 의 깨달음 31 일치
@@ -96,11 +96,11 @@ function _buildAnnualReviewSeedData(year) {
     // 사용자 명시 2026-05-02 ultrathink: 깊은 숙고 = 보편 ADHD 자기관찰 — 기본기 vs 추진력.
     deep: {
       question: '"잘 자고 산책하는 게\n진짜 큰 일을 해내는 길일까?"',
-      conclusion: '"기본기가 곧 추진력 — 회복 챙기면서 한다"',
+      conclusion: '"쉬는 걸 빼면 일도 같이 빠지더라. 같이 간다"',
       date: yr + '.10.05 → 10.18 · 14일'
     },
     // oneLine = 이미 universal — 보존.
-    oneLine: '너 올해 많이 컸어.\n\n자책에서 관찰로,\n회피에서 회복으로.\n\n수고했어 🫂',
+    oneLine: '올해 기록을 나란히 놓으니까\n\n자책하던 날이 줄고\n기록을 보는 날이 늘었더라.\n\n그게 올해였어.',
     // 사용자 명시 2026-04-30: 시드 진주 음악 카테고리 8곡 그대로 (artworkUrl + previewUrl + trackUrl). 자동 재생.
     // 사용자 명시 2026-05-06: 11카드 시퀀스 — card3 = trajectory (음악 X, 한 해 4 흐름 narrative 침묵). 표지 card1 = 마지막 card11 = LNGSHOT Vanilla Days (수미상관).
     songs: {

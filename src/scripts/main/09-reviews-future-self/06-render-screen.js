@@ -187,8 +187,37 @@ function renderReviewScreen(type, reviewData, opts) {
     // Pattern — 핵심 카드 2
     // weekly = {headline, note} 가벼움 / monthly = {headline, evidence, condition} Detective.
     const pat = reviewData.pattern || {};
-    const patHasContent = pat.headline || pat.evidence || pat.condition || pat.note;
-    const patternLabel = type === 'weekly' ? '🌙 이번 주 흐름' : '🔍 패턴 발견';
+    // 2026-10-15: 월간 리뷰가 rules[] (규칙 최대 3개 + 근거 + 반대) 를 주면 pattern 카드 대신 규칙 블록을 그린다.
+    //   rules[0] 은 pattern 과 같은 내용이라 둘 다 그리면 중복. pending[] = 근거 하나뿐인 후보.
+    const _rulesArr = Array.isArray(reviewData.rules)
+      ? reviewData.rules.filter(x => x && typeof x.rule === 'string' && x.rule.trim())
+      : [];
+    const _pendingArr = Array.isArray(reviewData.pending)
+      ? reviewData.pending.filter(x => typeof x === 'string' && x.trim())
+      : [];
+    const rulesBlock = _rulesArr.length > 0 ? `
+    <div style="background:var(--surface); border:1px solid rgba(201,169,110,0.20); border-radius:14px; padding:16px 18px; margin-bottom:14px;">
+      <div style="font-size:11px; color:var(--accent); letter-spacing:0.15em; margin-bottom:10px;">이번 달에 보인 것</div>
+      ${_rulesArr.slice(0, 3).map((x, i) => {
+        const ev = (Array.isArray(x.evidence) ? x.evidence : []).filter(e => e && (e.quote || e.text)).slice(0, 4).map(e => {
+          const d = e.date ? `<span style="color:var(--accent); font-variant-numeric:tabular-nums;">${escapeHtml(String(e.date).slice(5).replace('-', '/'))}</span> ` : '';
+          return `<div style="font-size:12px; color:var(--text-dim); line-height:1.7; padding:4px 0 4px 12px; border-left:2px solid rgba(201,169,110,0.35); margin-top:4px;">${d}${escapeHtml(String(e.quote || e.text || ''))}</div>`;
+        }).join('');
+        const counter = (typeof x.counter === 'string' && x.counter.trim())
+          ? `<div style="font-size:12px; color:var(--text-soft); line-height:1.6; margin-top:8px;">반대: ${escapeHtml(x.counter.trim())}</div>` : '';
+        return `<div style="padding:${i === 0 ? '0' : '12px'} 0 ${i === _rulesArr.length - 1 ? '0' : '12px'}; ${i > 0 ? 'border-top:1px solid var(--border);' : ''}">
+          <div style="font-size:14.5px; font-weight:600; color:var(--text); line-height:1.6; margin-bottom:4px;">${escapeHtml(x.rule.trim())}</div>
+          ${ev}${counter}
+        </div>`;
+      }).join('')}
+      ${_pendingArr.length > 0 ? `
+      <div style="margin-top:14px; padding-top:10px; border-top:1px solid var(--border);">
+        <div style="font-size:11px; color:var(--text-soft); letter-spacing:0.1em; margin-bottom:6px;">아직 한 번뿐</div>
+        ${_pendingArr.slice(0, 4).map(p => `<div style="font-size:12px; color:var(--text-dim); line-height:1.6; margin-top:4px;">${escapeHtml(p.trim())}</div>`).join('')}
+      </div>` : ''}
+    </div>` : '';
+    const patHasContent = !rulesBlock && (pat.headline || pat.evidence || pat.condition || pat.note);
+    const patternLabel = type === 'weekly' ? '이번 주 흐름' : '이번 달에 보인 것';
     const patternBlock = patHasContent ? `
     <div style="background:var(--surface); border:1px solid rgba(201,169,110,0.20); border-radius:14px; padding:16px 18px; margin-bottom:14px;">
       <div style="font-size:11px; color:var(--accent); letter-spacing:0.15em; text-transform:uppercase; margin-bottom:10px;">${patternLabel}</div>
@@ -220,7 +249,7 @@ function renderReviewScreen(type, reviewData, opts) {
     const quotesArr = Array.isArray(reviewData.quotes) ? reviewData.quotes.filter(q => q && q.trim()) : [];
     const quotesBlock = quotesArr.length > 0 ? `
     <div style="margin-bottom:18px;">
-      <div style="font-size:11px; color:var(--accent); letter-spacing:0.15em; text-transform:uppercase; margin-bottom:10px;">📝 너의 인용</div>
+      <div style="font-size:11px; color:var(--accent); letter-spacing:0.15em; margin-bottom:10px;">네가 쓴 말</div>
       <div style="display:flex; gap:10px; overflow-x:auto; padding:2px 2px 8px; -webkit-overflow-scrolling:touch; scrollbar-width:thin;">
         ${quotesArr.map(q => `<div style="flex:0 0 auto; min-width:200px; max-width:280px; font-family:'Gowun Batang',serif; font-size:13.5px; color:var(--text); line-height:1.65; padding:10px 14px; background:var(--surface); border-left:2px solid rgba(126,200,227,0.40); border-radius:0 10px 10px 0; white-space:normal;">"${escapeHtml(q)}"</div>`).join('')}
       </div>
@@ -322,8 +351,9 @@ function renderReviewScreen(type, reviewData, opts) {
       ${heroBlock}
       ${scenesBlock}
       ${flowBlock}
-      ${strengthsBlock}
+      ${rulesBlock}
       ${patternBlock}
+      ${strengthsBlock}
       ${experimentBlock}
       ${seedsBlock}
       ${insightsBlock}
@@ -460,7 +490,10 @@ function saveReview(type) {
     value_align: reviewData.value_align,
     risk_signals: reviewData.risk_signals,
     scenes: reviewData.scenes,
-    seeds: reviewData.seeds
+    seeds: reviewData.seeds,
+    // 2026-10-15: 규칙 중심 월간 리뷰 필드 (18e-rules-panel.js 가 읽음)
+    rules: reviewData.rules,
+    pending: reviewData.pending
   };
 
   // 사용자 보고 2026-05-01 ultrathink: 중복 가드 — 같은 weekKey/monthKey 이미 있으면 replace (auto 가 먼저 push 한 후 사용자 manual click 시 중복 방지)

@@ -235,7 +235,7 @@ function _buildQuarterlyReviewPrompt(quarterKey, stats, data) {
 - 진주: ${stats.pearls}개${stats.dnaPearls ? ` + DNA 진주 ${stats.dnaPearls}개 결정화` : ''}
 - 활성 모드 빈도: ${Object.entries(stats.modeCount).map(([k, v]) => `${k} ${v}일`).join(' / ') || '거의 없음'}
 - 추적 항목 변화: ${stats.trackerStats.map(t => `${t.title} ${t.first}→${t.last}${t.unit || ''}`).join(' / ') || '데이터 부족'}
-- 너의 결: 짚어본 곳 ${stats.problemsTotal} / 잘 풀린 곳 ${stats.strengthsTotal} / 자라는 곳 ${stats.growthCount}
+- 자기 모델 항목 수: 다루어야 할 곳 ${stats.problemsTotal} / 강점 ${stats.strengthsTotal} / 자라는 곳 ${stats.growthCount}
 - 체화 완료 가닥 (누적): ${recentEmbodied}개
 
 [분기 entries 발췌]
@@ -259,24 +259,22 @@ ${JSON.stringify(archiveIn.map(a => ({headline: a.headline, body: (a.body || '')
 [분기 인사이트]
 ${JSON.stringify(insightsIn.map(i => ({content: i.content, type: i.type})), null, 0).slice(0, 1000)}
 
-[지난 분기 씨앗] ${prevSeeds.length > 0 ? '(callback 추천)' : '(첫 분기 또는 씨앗 X)'}
+[지난 분기 리뷰에서 다음에 다시 보기로 한 것] ${prevSeeds.length > 0 ? '(이번 분기 기록에서 어떻게 됐는지 보이면 사실로 적는다. 안 보이면 건너뛴다.)' : '(첫 분기이거나 지난 항목이 없음)'}
 ${prevSeeds.length > 0 ? prevSeeds.map(s => '· ' + s).join('\n') : ''}
 ${(_data.trackingFacts && _data.trackingFacts.length > 0) ? `
-[이 분기 추적 항목] (사용자 명시 2026-05-10 — 행동 actual 데이터. 변화·강점·위험 신호 추출 시 활용.)
+[이 분기 추적 항목] (이 사람이 실제로 한 행동의 기록. 변화나 위험 신호의 근거로 쓸 수 있다.)
 ${_data.trackingFacts.map(f => {
   const _corr = (typeof f.moodCorrelation === 'number')
-    ? (f.moodCorrelation > 0.3 ? ` · 한 날 기분 한결 좋음 (+${f.moodCorrelation.toFixed(1)})` : f.moodCorrelation < -0.3 ? ` · 한 날 기분 살짝 무거움 (${f.moodCorrelation.toFixed(1)})` : '')
+    ? (f.moodCorrelation > 0.3 ? ' · 체크한 날이 안 한 날보다 기분이 높았음' : f.moodCorrelation < -0.3 ? ' · 체크한 날이 안 한 날보다 기분이 낮았음' : '')
     : '';
   const _prog = f.progress ? ` · 진척: ${f.progress}` : '';
-  const _check = f.type === 'check' ? `${f.checkedDays}/${f.totalDaysInRange}일 체크${_corr}` : (f.type === 'measurement' ? '측정형' : '');
+  const _check = f.type === 'check' ? `${f.totalDaysInRange}일 중 ${f.checkedDays}일 체크${_corr}` : (f.type === 'measurement' ? '측정형' : '');
   return `- "${f.title}" — ${_check}${_prog}`;
 }).join('\n')}
 
-[활용 가이드]
-- 추적 항목 = 사용자 행동 사실. transformation / pattern / strengths / risk_signals 추출 시 evidence.
-- 모델 자체 추측 X — 위 fact 그대로 인용.` : ''}
+위 사실을 그대로 쓰고 추측을 보태지 않는다.` : ''}
 
-위 데이터로 분기 리뷰 작성. JSON만 출력.`;
+위 데이터로 분기 리뷰를 쓴다. JSON 객체 하나만 출력한다.`;
 
   return {
     // 사용자 명시 2026-05-11 ultrathink: stable system 자체는 backend (review-systems.ts) 가 강제 inject — client system 비움.
@@ -342,7 +340,7 @@ function _buildDiarySummaryPrompt(date, messages, entry) {
   if (entry.modes) {
     // V4 fix (사용자 보고 2026-05-21 ultrathink): raw key (period/exam/travel/sick/rest) 직렬화 시 AI 가 영어 'period' → '시험 기간' 등 hallucinate.
     //   20-system-prompt.js:157 의 modeMap 과 동일 한국어 변환 적용. daily summary prompt 가 그 누락된 path.
-    const _modeMap = { exam: '📚 마감/시험', travel: '✈️ 여행 중', sick: '🤒 아픔', rest: '🏖 휴식', period: '🩸 월경' };
+    const _modeMap = { exam: '마감/시험', travel: '여행 중', sick: '아픔', rest: '휴식', period: '월경' };
     const activeModes = Object.keys(entry.modes).filter(k => entry.modes[k]);
     if (activeModes.length) checkinParts.push(`모드: ${activeModes.map(k => _modeMap[k] || k).join(', ')}`);
   }

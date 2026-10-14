@@ -9,7 +9,7 @@ function openStrategyBuilder() {
   // 첫 AI 가이드
   _strategyBuilderState.messages.push({
     role: 'assistant',
-    content: '🧬 전략 DNA 같이 만들자.\n\n어떤 상황에서 막혀? 한 줄로 적어봐 — 네가 자주 마주치는 패턴이나 풀고 싶은 고민.'
+    content: '전략 카드를 같이 만들어 보자.\n\n어떤 상황에서 막히는지 한 줄로 적어줘. 자주 겪는 일이든 풀고 싶은 고민이든.'
   });
   const overlay = document.createElement('div');
   overlay.id = 'strategyBuilder';

@@ -230,7 +230,7 @@ async function _intakeAnalyze(intakeWorry) {
     }
   } else {
     // buildSystemPromptParts 미정의 (빌드 부분 깨짐) — 짧은 fallback. backend 가 SYSTEM_PERSONA 자동 prepend.
-    systemBlocks = '너는 "소라고동". 한국어 반말. 친구 카톡 톤.';
+    systemBlocks = '너는 "소라고동"이다. 한국어 반말로, 말하듯이 쓴다. 친구 흉내를 내지 않고 사실을 말하는 사람의 말투로 쓴다. 칭찬하거나 위로하지 않는다. 비유와 이모지를 쓰지 않는다. 심리학 용어와 연구자 이름을 쓰지 않는다. 사용자가 쓴 말을 인용할 때는 실제로 쓴 문장만 그대로 쓴다.';
   }
 
   // intakeWorry → messages + 마지막 4단 instruction (askDeeper 와 동일 instruction).
